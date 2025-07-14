@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",            // oder mindestens "ES2015"
+    "module": "ESNext",
+    "lib": ["DOM", "ES2015"],      // ← HIER WICHTIG!
+    "strict": true,
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  }
+}

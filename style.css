@@ -1,0 +1,339 @@
+body {
+  margin: 0;
+  display: flex;
+  height: 100vh;
+  font-family: sans-serif;
+}
+
+#controls {
+  width: 300px;
+  padding: 10px;
+  background: #f4f4f4;
+  border-right: 1px solid #ccc;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#schemagrid {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: #f0f0f0;
+}
+
+.table {
+  position: absolute;
+  top: 50px;
+  left: 50px;
+  width: 200px;
+  border-radius: 6px;
+}
+
+.title {
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.field {
+  position: relative;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  background: #eee;
+  border-radius: 4px;
+}
+
+.endpoint {
+  position: absolute;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  background: #333;
+  border-radius: 50%;
+  right: -6px;
+  cursor: crosshair;
+}
+
+#addTableBtn {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  padding: 8px 12px;
+  font-size: 16px;
+}
+
+.table .title,
+.table .type {
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+.table input,
+.table select {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 4px;
+}
+
+.vts-schema-table {
+  margin-bottom: 0;
+  min-width: 200px;
+  align-items: stretch;
+  background-color: #3e7e9c;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.vts-schema-buttons {
+  display:flex;
+  align-items: center;
+  cursor:pointer;
+  padding-right: 5px;
+}
+
+.vts-schema-edit-name {
+  margin-right:7px;
+}
+
+.vts-schema-delete {
+  padding-right: 20px;
+  cursor:pointer;
+}
+
+.vts-schema-delete:after {
+  content:"x";
+}
+
+.vts-schema-add:hover {
+  color: #ff8000;
+}
+
+.vts-schema-add:after {
+  content:"+";
+}
+
+.vts-schema-edit {
+  cursor:pointer;
+  padding-left: 20px;
+}
+
+.vts-schema-edit:hover {
+  color: #ff8000;
+}
+
+.vts-schema-edit:after {
+  content:"✎";
+}
+
+.vts-schema-element .vts-schema-add {
+  right:3px;
+}
+
+.vts-schema-element .vts-schema-add {
+  /*@include anAddButton;*/
+}
+
+.vts-schema-element .vts-schema-delete {
+  /*@include aDeleteButton;*/
+  left:3px;
+}
+
+.vts-schema-element .node-edit {
+  /*@include anEditButton;*/
+}
+
+.vts-schema-element {
+  border: 1px solid;
+  cursor: pointer;
+  font-size: 12px;
+  z-index: 12;
+  overflow: hidden;
+  min-width: 80px;
+  min-height: 30px;
+  width: auto;
+  flex-direction: column;
+}
+
+.vts-schema-element-name {
+  cursor: move;
+  font-size: 13px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  background-color: #3e7e9c;
+  color: #f7ebca;
+}
+
+.vts-schema-element-name span {
+  cursor:pointer;
+  margin-left: auto;
+  margin-right: auto;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.vts-schema-extend-span {
+  color: greenyellow;
+}
+
+.vts-schema-type-colum-span {
+  color: darkorange;
+}
+
+.jtk-schema-table {
+  margin-bottom: 0;
+  min-width: 200px;
+  align-items: stretch;
+}
+
+.vts-schema-table-columns {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  position:relative;
+}
+
+.vts-schema-table-column {
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  border:2px solid transparent;
+}
+
+.vts-schema-table-column-edit {
+  margin-left: auto;
+  cursor: pointer;
+  /*@include anEditButton;*/
+}
+
+.vts-schema-edit-name {
+  margin-right:7px;
+  /*@include anEditButton;*/
+}
+
+.vts-schema-table-column-delete, .vts-schema-view-delete {
+  padding: 2px 20px 2px 2px;
+  cursor: pointer;
+  position:static;
+  font-size: 10px;
+}
+
+.vts-schema-table-column-delete {
+  /*@include aDeleteButton;*/
+}
+
+dialog, .modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  min-width: 300px;
+  max-width: 90vw;
+  background: #ffffff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  transform: translate(-50%, -50%);
+  z-index: 2000;
+  padding: 20px;
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Optional: Overlay für eigene modale <div> */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 1999;
+}
+
+.dialog-title {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 10px;
+  color: #3e7e9c;
+}
+
+.dialog-input,
+.dialog-select {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.dialog-button {
+  background-color: #3e7e9c;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.dialog-button:hover {
+  background-color: #316481;
+}
+
+.treeview ul {
+  list-style-type: none;
+  margin-left: 1em;
+  padding-left: 1em;
+  border-left: 1px solid #ccc;
+}
+
+.treeview .folder,
+.treeview .file {
+  cursor: pointer;
+  user-select: none;
+  display: inline-block;
+  margin: 4px 0;
+}
+
+.treeview ul ul {
+  /*display: none; /* Start ausgeklappt */
+}
+
+.treeview .folder.open + ul {
+  display: block;
+}
+
+.folder-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.folder-line button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 4px;
+}
+
+.folder-line button:hover {
+  background-color: #eee;
+  border-radius: 4px;
+}
+
+.treeview-file.active {
+  background-color: #d0e6ff;
+  border-radius: 4px;
+}
