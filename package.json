@@ -2,12 +2,15 @@
   "name": "vtseditor",
   "version": "1.0.0",
   "description": "VTS Editor",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "type": "module",
+  "bin": {
+    "vtseditor": "./cli/dev.js"
   },
-  "keywords": [],
-  "author": "",
+  "scripts": {
+    "dev": "node ./cli/dev.js"
+  },
+  "keywords": ["vts", "editor"],
+  "author": "Stefan Werfling",
   "license": "ISC",
   "dependencies": {
     "@jsplumb/browser-ui": "6.2.10",

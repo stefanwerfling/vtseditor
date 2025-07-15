@@ -1,4 +1,3 @@
-import {SchemaExtends} from '../SchemaExtends.js';
 import {SchemaJsonDataFS, SchemaJsonDataFSType, SchemaJsonSchemaDescription} from '../SchemaJsonData.js';
 import {SchemaTable} from '../Table/SchemaTable.js';
 import {Treeview} from './Treeview.js';
@@ -90,7 +89,7 @@ export class TreeviewEntry {
             const btnAdd = document.createElement('button');
             btnAdd.textContent = '➕';
             btnAdd.classList.add('add-folder');
-            btnAdd.addEventListener('click', ev => {
+            btnAdd.addEventListener('click', () => {
                 const dialog = new TreeviewDialog();
                 dialog.show();
 
@@ -117,7 +116,7 @@ export class TreeviewEntry {
             const btnEdit = document.createElement('button');
             btnEdit.textContent = '📝';
             btnEdit.classList.add('add-folder');
-            btnEdit.addEventListener('click', ev => {
+            btnEdit.addEventListener('click', () => {
                 const dialog = new TreeviewDialog();
                 dialog.setName(this.getName());
                 dialog.setType(this.getType());

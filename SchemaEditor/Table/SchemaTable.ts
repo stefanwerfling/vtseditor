@@ -68,14 +68,8 @@ export class SchemaTable {
      * @param {string} id
      * @param {string} name
      * @param {string} extend
-     * @param {SchemaJsonSchemaFieldDescription} fields
      */
-    public constructor(id: string, name: string, extend: string = 'object', fields: SchemaJsonSchemaFieldDescription[] = [{
-        uuid: null,
-        name: 'id',
-        type: 'number',
-        description: 'Id for entry'
-    }]) {
+    public constructor(id: string, name: string, extend: string = 'object') {
         this._id = id;
         this._name = name;
         this._extend = extend;

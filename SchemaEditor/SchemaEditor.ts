@@ -1,4 +1,4 @@
-import {BrowserJsPlumbInstance, newInstance} from '@jsplumb/browser-ui';
+import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
 import jsPlumbInstance from './jsPlumbInstance.js';
 import {SchemaExtends} from './SchemaExtends.js';
 import {SchemaJsonData, SchemaJsonDataFS} from './SchemaJsonData.js';
@@ -70,12 +70,12 @@ export class SchemaEditor {
 
         this._treeview = new Treeview();
 
-        window.addEventListener('schemaeditor:updatedata', (e: Event) => {
+        window.addEventListener('schemaeditor:updatedata', () => {
            console.log(this.getData());
            this.saveData().then();
         });
 
-        window.addEventListener('schemaeditor:updateview', (e: Event) => {
+        window.addEventListener('schemaeditor:updateview', () => {
             if (this._jsPlumbInstance && this._container) {
                 this._jsPlumbInstance.deleteEveryConnection();
                 this._container.innerHTML = '';
