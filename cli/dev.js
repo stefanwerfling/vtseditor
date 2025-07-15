@@ -3,25 +3,33 @@
 import { createServer } from 'vite';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-const configFile = path.resolve(process.cwd(), 'vtseditor.json');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Falls nicht vorhanden: Konfigurationsdatei anlegen
+const projectRoot = process.cwd();
+
+const configFile = path.resolve(projectRoot, 'vtseditor.json');
+
 if (!fs.existsSync(configFile)) {
     fs.writeFileSync(configFile, JSON.stringify({
         schemaPath: './schemas/schema.json'
     }, null, 2));
-    console.log('✅ vtseditor.json create');
+    console.log('✅ vtseditor.json created');
 }
 
 const config = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
-process.env.VTSEDITOR_SCHEMA_PATH = path.resolve(process.cwd(), config.schemaPath);
+process.env.VTSEDITOR_SCHEMA_PATH = path.resolve(projectRoot, config.schemaPath);
 
-// Vite starten
+// Vite run
 createServer({
-    configFile: path.resolve(new URL('../vite.config.ts', import.meta.url).pathname)
+    configFile: path.resolve(__dirname, '../vite.config.ts'),
+    root: path.resolve(__dirname, '..'),
 }).then(server => {
     return server.listen();
 }).then(() => {
-    console.log('🚀 VTS Editor run http://localhost:5173');
+    console.log('🚀 VTS Editor running at http://localhost:5173');
+}).catch(err => {
+    console.error('❌ Failed to start VTS Editor:', err);
+    process.exit(1);
 });
