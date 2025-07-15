@@ -17,14 +17,16 @@ export type SchemaJsonSchemaFieldDescription = {
     description: string;
 };
 
+export type SchemaJsonSchemaPositionDescription = {
+    x: number;
+    y: number;
+};
+
 export type SchemaJsonSchemaDescription = {
     id: string;
     name: string;
     extend: string;
-    pos: {
-        x: number;
-        y: number;
-    };
+    pos: SchemaJsonSchemaPositionDescription;
     fields: SchemaJsonSchemaFieldDescription[];
     description: string;
 };

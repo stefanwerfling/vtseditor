@@ -1,5 +1,3 @@
-import {SchemaTypes} from './../SchemaTypes.js';
-
 /**
  * Schema table field dialog on close
  */

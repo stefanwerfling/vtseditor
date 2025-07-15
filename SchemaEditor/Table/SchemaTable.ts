@@ -1,7 +1,11 @@
 import {Connection} from '@jsplumb/browser-ui';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../SchemaExtends.js';
-import {SchemaJsonSchemaDescription, SchemaJsonSchemaFieldDescription} from '../SchemaJsonData.js';
+import {
+    SchemaJsonSchemaDescription,
+    SchemaJsonSchemaFieldDescription,
+    SchemaJsonSchemaPositionDescription
+} from '../SchemaJsonData.js';
 import {SchemaTypes} from '../SchemaTypes.js';
 import {SchemaTableDialog} from './SchemaTableDialog.js';
 import {SchemaTableField} from './SchemaTableField.js';
@@ -52,6 +56,15 @@ export class SchemaTable {
     protected _schemaExtend: HTMLSpanElement;
 
     /**
+     * Grid position
+     * @protected
+     */
+    protected _position: SchemaJsonSchemaPositionDescription = {
+        x: 0,
+        y: 0
+    };
+
+    /**
      * columns
      * @protected
      */
@@ -79,8 +92,11 @@ export class SchemaTable {
 
         this._table = document.createElement('div');
         this._table.classList.add(...['table', 'vts-schema-table', 'vts-schema-element']);
-        this._table.style.top = `${50 + Math.random() * 300}px`;
-        this._table.style.left = `${50 + Math.random() * 500}px`;
+
+        this._position = {
+            x: 50 + Math.random() * 300,
+            y: 50 + Math.random() * 500
+        };
 
         const elName = document.createElement('div');
         elName.classList.add(...['vts-schema-element-name']);
@@ -178,6 +194,9 @@ export class SchemaTable {
 
         jsPlumbInstance.bind('drag:stop', (info) => {
             if (info.el === this._table) {
+                this._position.y = this._table.offsetTop;
+                this._position.x = this._table.offsetLeft;
+
                 window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
             }
         });
@@ -244,11 +263,16 @@ export class SchemaTable {
     }
 
     public setPosition(x: number, y: number): void {
+        this._position.x = x;
+        this._position.y = y;
         this._table.style.left = `${x}px`;
         this._table.style.top = `${y}px`;
     }
 
     public updateView(): void {
+        this._table.style.top = `${this._position.y}px`;
+        this._table.style.left = `${this._position.x}px`;
+
         if (this._connection !== null) {
             jsPlumbInstance.deleteConnection(this._connection);
         }
@@ -290,10 +314,7 @@ export class SchemaTable {
             id: this._id,
             name: this._name,
             extend: this._extend,
-            pos: {
-                x: this._table.offsetLeft,
-                y: this._table.offsetTop
-            },
+            pos: this._position,
             fields: fields,
             description: ''
         };
