@@ -23,3 +23,6 @@ npx vtseditor
 
 4. open the vts editor in your browser: http://localhost:5173
 5. create your schemas, have fun
+
+## Screenshot
+<img src="doc/images/screenshot1.png" alt="Screenshot 1" width="450px" />
