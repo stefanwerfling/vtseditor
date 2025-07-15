@@ -3,6 +3,8 @@ import { defineConfig, Plugin } from 'vite';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import {SchemaJsonData} from './SchemaEditor/SchemaJsonData.js';
+import {SchemaGenerator} from './SchemaGenerator/SchemaGenerator.js';
 
 function expressMiddleware(): Plugin {
     return {
@@ -12,11 +14,30 @@ function expressMiddleware(): Plugin {
             app.use(express.json());
 
             const schemaPath = process.env.VTSEDITOR_SCHEMA_PATH || path.resolve('schemas', 'schema.json');
+            const schemaPrefix = process.env.VTSEDITOR_SCHEMA_PREFIX || 'Schema';
+            const createTypes = process.env.VTSEDITOR_CREATE_TYPES === '1';
+            const autoGenerate = process.env.VTSEDITOR_AUTO_GENERATE === '1';
+            const destinationPath = process.env.VTSEDITOR_DESTINATION_PATH || path.resolve('schemas', 'src');
 
             app.post('/api/save-schema', (req, res) => {
-                const schema = req.body;
+                const schema = req.body as SchemaJsonData;
+
                 fs.mkdirSync(path.dirname(schemaPath), { recursive: true });
                 fs.writeFileSync(schemaPath, JSON.stringify(schema, null, 2), 'utf-8');
+
+                if (autoGenerate) {
+                    const gen = new SchemaGenerator({
+                        schemaPrefix: schemaPrefix,
+                        createTypes: createTypes,
+                        destinationPath: destinationPath
+                    });
+
+                    try {
+                        gen.generate(schema.fs);
+                    } catch (e) {
+                        console.log(e);
+                    }
+                }
 
                 res.status(200).json({ success: true });
             });
