@@ -13,6 +13,7 @@ export type SchemaJsonSchemaFieldDescription = {
     uuid: string|null;
     name: string;
     type: string;
+    optional: boolean;
     description: string;
 };
 

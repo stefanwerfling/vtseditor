@@ -25,6 +25,12 @@ export class SchemaTableField {
     protected _type: string = '';
 
     /**
+     * is field optional
+     * @protected
+     */
+    protected _optional: boolean = false;
+
+    /**
      * Column
      * @protected
      */
@@ -57,7 +63,7 @@ export class SchemaTableField {
 
         this._column = document.createElement('div');
         this._column.classList.add('vts-schema-table-column');
-        this._column.style.backgroundColor = '#e5f5f0';
+        this._column.style.backgroundColor = '#ffffff';
 
         const btnDelete = document.createElement('div');
         btnDelete.classList.add(...['vts-schema-table-column-delete', 'vts-schema-delete']);
@@ -70,7 +76,6 @@ export class SchemaTableField {
         content.appendChild(this._contentName);
 
         this._contentType = document.createElement('span');
-        this._contentType.classList.add(...['vts-schema-type-colum-span']);
         content.appendChild(this._contentType);
 
         const btnEdit = document.createElement('div');
@@ -80,12 +85,17 @@ export class SchemaTableField {
             dialog.setTypeOptions(SchemaTypes.getInstance().getTypes([tableId]));
             dialog.setFieldName(this._name);
             dialog.setFieldType(this._type);
+            dialog.setOptional(this._optional);
+
             dialog.show();
+
             dialog.setOnConfirm(dialog1 => {
                 this.setName(dialog1.getFieldName());
                 this.setType(dialog1.getFieldType());
-
+                this.setOptional(dialog1.getOptional());
                 this.updateView();
+
+                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
             });
         });
 
@@ -109,7 +119,29 @@ export class SchemaTableField {
     public setType(type: string): void {
         this._type = type;
         const typename = SchemaTypes.getInstance().getTypeNameBy(type) ?? 'unknown';
-        this._contentType.textContent = `^${typename}`;
+        this._contentType.textContent = `${typename}`;
+
+        this._contentType.classList.remove(...['vts-badge-wh-1', 'vts-badge-wh-2']);
+
+        if (SchemaTypes.getInstance().isTypeASchema(this._type)) {
+            this._contentType.classList.add(...['vts-badge-wh-2']);
+        } else {
+            this._contentType.classList.add(...['vts-badge-wh-1']);
+        }
+    }
+
+    public setOptional(optional: boolean): void {
+        this._optional = optional;
+
+        this._column.classList.remove('optional');
+
+        if (this._optional) {
+            this._column.style.backgroundColor = '#cbeae1';
+            this._column.classList.add('optional');
+
+        } else {
+            this._column.style.backgroundColor = '#ffffff';
+        }
     }
 
     public getElement(): HTMLDivElement {
@@ -147,6 +179,7 @@ export class SchemaTableField {
             uuid: this._id,
             name: this._name,
             type: this._type,
+            optional: this._optional,
             description: ''
         };
     }
@@ -155,5 +188,6 @@ export class SchemaTableField {
         this._id = data.uuid ?? '';
         this.setName(data.name);
         this.setType(data.type);
+        this.setOptional(data.optional);
     }
 }

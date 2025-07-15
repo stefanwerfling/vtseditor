@@ -34,6 +34,12 @@ export class SchemaTableFieldDialog {
     protected _selectType: HTMLSelectElement;
 
     /**
+     * Select optional
+     * @protected
+     */
+    protected _selectOptional: HTMLSelectElement;
+
+    /**
      * on close
      * @protected
      */
@@ -68,6 +74,21 @@ export class SchemaTableFieldDialog {
         this._selectType.classList.add('dialog-select');
 
         this._dialog.appendChild(this._selectType);
+
+        this._selectOptional = document.createElement('select');
+        this._selectOptional.classList.add('dialog-select');
+
+        const optionInc = document.createElement('option');
+        optionInc.value = '0';
+        optionInc.textContent = 'Field must be included';
+        this._selectOptional.appendChild(optionInc);
+
+        const optionOptional = document.createElement('option');
+        optionOptional.value = '1';
+        optionOptional.textContent = 'Field is optional';
+        this._selectOptional.appendChild(optionOptional);
+
+        this._dialog.appendChild(this._selectOptional);
 
         // buttons -----------------------------------------------------------------------------------------------------
 
@@ -174,5 +195,13 @@ export class SchemaTableFieldDialog {
 
     public setFieldType(type: string): void {
         this._selectType.value = type;
+    }
+
+    public getOptional(): boolean {
+        return this._selectOptional.value === '1';
+    }
+
+    public setOptional(optional: boolean): void {
+        this._selectOptional.value = optional ? '1' : '0';
     }
 }

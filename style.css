@@ -201,6 +201,10 @@ body {
   border:2px solid transparent;
 }
 
+.vts-schema-table-column.optional {
+  border: 1px dashed #aaa;
+}
+
 .vts-schema-table-column-edit {
   margin-left: auto;
   cursor: pointer;
@@ -336,4 +340,34 @@ dialog::backdrop {
 .treeview-file.active {
   background-color: #d0e6ff;
   border-radius: 4px;
+}
+
+.vts-badge-wh-1 {
+  margin-left: 4px !important;
+  display: inline-block;
+  min-width: 10px;
+  padding: 3px 7px;
+  font-size: 11px;
+  color: #fff;
+  background-color: #7B3CEC;
+  line-height: 1;
+  vertical-align: middle;
+  white-space: nowrap;
+  text-align: center;
+  border-radius: 10px;
+}
+
+.vts-badge-wh-2 {
+  margin-left: 4px !important;
+  display: inline-block;
+  min-width: 10px;
+  padding: 3px 7px;
+  font-size: 11px;
+  color: #000;
+  background-color: greenyellow;
+  line-height: 1;
+  vertical-align: middle;
+  white-space: nowrap;
+  text-align: center;
+  border-radius: 10px;
 }

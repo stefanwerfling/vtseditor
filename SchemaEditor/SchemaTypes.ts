@@ -16,10 +16,10 @@ export class SchemaTypes {
     public constructor() {
         this._mapTypes.set('string', 'String');
         this._mapTypes.set('number', 'Number');
+        this._mapTypes.set('boolean', 'Boolean');
         this._mapTypes.set('or', 'Or');
         this._mapTypes.set('array', 'Array');
         this._mapTypes.set('null', 'Null');
-        this._mapTypes.set('and', 'And');
     }
 
     /**

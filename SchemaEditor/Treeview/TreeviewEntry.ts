@@ -241,7 +241,7 @@ export class TreeviewEntry {
         }
 
         for (const aSchema of data.schemas) {
-            const schema = new SchemaTable(aSchema.id, aSchema.name, aSchema.extend, aSchema.fields);
+            const schema = new SchemaTable(aSchema.id, aSchema.name, aSchema.extend);
             schema.setData(aSchema);
             this.addSchemaTable(schema);
         }

@@ -99,7 +99,6 @@ export class SchemaTable {
         elName.appendChild(this._schemaName);
 
         this._schemaExtend = document.createElement('span');
-        this._schemaExtend.classList.add(...['vts-schema-extend-span']);
         elName.appendChild(this._schemaExtend);
 
         // Buttons -----------------------------------------------------------------------------------------------------
@@ -143,6 +142,7 @@ export class SchemaTable {
             dialog.setOnConfirm(dialog1 => {
                 const uid = crypto.randomUUID();
                 const field = new SchemaTableField(this._id, uid, dialog1.getFieldName(), dialog1.getFieldType());
+                field.setOptional(dialog1.getOptional());
 
                 this._columns.appendChild(field.getElement());
                 this._fields.set(uid, field);
@@ -191,6 +191,7 @@ export class SchemaTable {
         for (const fieldDesc of fields) {
             const uuid = fieldDesc.uuid ?? crypto.randomUUID();
             const field = new SchemaTableField(this._id, uuid, fieldDesc.name, fieldDesc.type);
+            field.setData(fieldDesc);
 
             this._columns.appendChild(field.getElement());
             this._fields.set(uuid, field);
@@ -226,7 +227,13 @@ export class SchemaTable {
     public setExtend(extend: string): void {
         const extendName = SchemaExtends.getInstance().getExtendNameBy(extend);
         this._extend = extend;
-        this._schemaExtend.textContent = `^${extendName}`;
+        this._schemaExtend.textContent = `${extendName}`;
+
+        if (SchemaExtends.getInstance().isExtendASchema(this._extend)) {
+            this._schemaExtend.classList.add(...['vts-badge-wh-2']);
+        } else {
+            this._schemaExtend.classList.add(...['vts-badge-wh-1']);
+        }
     }
 
     /**
