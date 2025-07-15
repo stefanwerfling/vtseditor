@@ -39,6 +39,11 @@ export type SchemaJsonDataFS = {
     schemas: SchemaJsonSchemaDescription[];
 };
 
+export type SchemaJsonEditorSetting = {
+    controls_width: number;
+};
+
 export type SchemaJsonData = {
-    fs: SchemaJsonDataFS
+    fs: SchemaJsonDataFS;
+    editor: SchemaJsonEditorSetting
 };

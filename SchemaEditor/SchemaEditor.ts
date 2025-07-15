@@ -6,6 +6,9 @@ import {SchemaTypes} from './SchemaTypes.js';
 import {SchemaTable} from './Table/SchemaTable.js';
 import {Treeview} from './Treeview/Treeview.js';
 
+/**
+ * Schema Editor
+ */
 export class SchemaEditor {
 
     /**
@@ -13,6 +16,12 @@ export class SchemaEditor {
      * @protected
      */
     protected _container: HTMLElement | null = null;
+
+    /**
+     * Controls
+     * @protected
+     */
+    protected _controls: HTMLElement | null = null;
 
     /**
      * Button for add Schema
@@ -70,6 +79,8 @@ export class SchemaEditor {
 
         this._treeview = new Treeview();
 
+        // update events -----------------------------------------------------------------------------------------------
+
         window.addEventListener('schemaeditor:updatedata', () => {
            console.log(this.getData());
            this.saveData().then();
@@ -97,12 +108,45 @@ export class SchemaEditor {
             }
         });
 
+        // resizer -----------------------------------------------------------------------------------------------------
+
+        const resizer = document.getElementById('resizer')!;
+        const controls = document.getElementById('controls')!;
+        this._controls = controls;
+
+
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const newWidth = e.clientX;
+
+            if (newWidth > 150 && newWidth < window.innerWidth - 100) {
+                controls.style.width = `${newWidth}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isResizing = false;
+            document.body.style.cursor = 'default';
+        });
+
+        // load data ---------------------------------------------------------------------------------------------------
+
         this.loadData().then();
     }
 
     public getData(): SchemaJsonData {
         return {
-            fs: this._treeview?.getData()!
+            fs: this._treeview?.getData()!,
+            editor: {
+                controls_width: parseInt(this._controls!.style.width , 10) ?? 300
+            }
         };
     }
 
@@ -120,6 +164,10 @@ export class SchemaEditor {
     public setData(data: SchemaJsonData): void {
         this._updateRegisters(data.fs);
         this._treeview?.setData(data.fs);
+
+        if (data.editor) {
+            this._controls!.style.width = `${data.editor.controls_width}px`;
+        }
     }
 
     public async saveData(): Promise<void> {

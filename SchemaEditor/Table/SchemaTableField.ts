@@ -31,6 +31,12 @@ export class SchemaTableField {
     protected _optional: boolean = false;
 
     /**
+     * Description
+     * @protected
+     */
+    protected _description: string = '';
+
+    /**
      * Column
      * @protected
      */
@@ -65,9 +71,17 @@ export class SchemaTableField {
         this._column.classList.add('vts-schema-table-column');
         this._column.style.backgroundColor = '#ffffff';
 
+        // delete button -----------------------------------------------------------------------------------------------
+
         const btnDelete = document.createElement('div');
         btnDelete.classList.add(...['vts-schema-table-column-delete', 'vts-schema-delete']);
+        btnDelete.addEventListener('click', () => {
+
+        });
+
         this._column.appendChild(btnDelete);
+
+        // content -----------------------------------------------------------------------------------------------------
 
         const content = document.createElement('div');
         this._column.appendChild(content);
@@ -78,6 +92,8 @@ export class SchemaTableField {
         this._contentType = document.createElement('span');
         content.appendChild(this._contentType);
 
+        // edit button -------------------------------------------------------------------------------------------------
+
         const btnEdit = document.createElement('div');
         btnEdit.classList.add(...['vts-schema-table-column-edit', 'vts-schema-edit']);
         btnEdit.addEventListener('click', () => {
@@ -86,13 +102,14 @@ export class SchemaTableField {
             dialog.setFieldName(this._name);
             dialog.setFieldType(this._type);
             dialog.setOptional(this._optional);
-
+            dialog.setDescription(this._description);
             dialog.show();
 
             dialog.setOnConfirm(dialog1 => {
                 this.setName(dialog1.getFieldName());
                 this.setType(dialog1.getFieldType());
                 this.setOptional(dialog1.getOptional());
+                this.setDescription(dialog1.getDescription());
                 this.updateView();
 
                 window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
@@ -144,6 +161,10 @@ export class SchemaTableField {
         }
     }
 
+    public setDescription(description: string): void {
+        this._description = description;
+    }
+
     public getElement(): HTMLDivElement {
         return this._column;
     }
@@ -180,7 +201,7 @@ export class SchemaTableField {
             name: this._name,
             type: this._type,
             optional: this._optional,
-            description: ''
+            description: this._description
         };
     }
 
@@ -189,5 +210,6 @@ export class SchemaTableField {
         this.setName(data.name);
         this.setType(data.type);
         this.setOptional(data.optional);
+        this.setDescription(data.description);
     }
 }

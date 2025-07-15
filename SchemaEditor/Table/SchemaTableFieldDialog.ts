@@ -38,6 +38,12 @@ export class SchemaTableFieldDialog {
     protected _selectOptional: HTMLSelectElement;
 
     /**
+     * textarea description
+     * @protected
+     */
+    protected _textareaDescription: HTMLTextAreaElement;
+
+    /**
      * on close
      * @protected
      */
@@ -87,6 +93,12 @@ export class SchemaTableFieldDialog {
         this._selectOptional.appendChild(optionOptional);
 
         this._dialog.appendChild(this._selectOptional);
+
+        this._textareaDescription = document.createElement('textarea');
+        this._textareaDescription.placeholder = 'Your description ...';
+        this._textareaDescription.rows = 8;
+
+        this._dialog.appendChild(this._textareaDescription);
 
         // buttons -----------------------------------------------------------------------------------------------------
 
@@ -201,5 +213,13 @@ export class SchemaTableFieldDialog {
 
     public setOptional(optional: boolean): void {
         this._selectOptional.value = optional ? '1' : '0';
+    }
+
+    public setDescription(description: string): void {
+        this._textareaDescription.value = description;
+    }
+
+    public getDescription(): string {
+        return this._textareaDescription.value;
     }
 }
