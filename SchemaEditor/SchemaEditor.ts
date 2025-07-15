@@ -1,6 +1,8 @@
 import {BrowserJsPlumbInstance, newInstance} from '@jsplumb/browser-ui';
 import jsPlumbInstance from './jsPlumbInstance.js';
 import {SchemaExtends} from './SchemaExtends.js';
+import {SchemaJsonData, SchemaJsonDataFS} from './SchemaJsonData.js';
+import {SchemaTypes} from './SchemaTypes.js';
 import {SchemaTable} from './Table/SchemaTable.js';
 import {Treeview} from './Treeview/Treeview.js';
 
@@ -31,26 +33,22 @@ export class SchemaEditor {
     protected _jsPlumbInstance: BrowserJsPlumbInstance | null = null;
 
     /**
-     * List of tables
-     * @protected
-     */
-    protected _tables: SchemaTable[] = [];
-
-    /**
      * Add a new Schema
-     * @param id
-     * @param name
      * @protected
      */
-    protected _addSchema(id: string, name: string): void {
-        const table = new SchemaTable(id, name);
+    protected _addSchema(): void {
+        if (Treeview.getActiveEntry() === null) {
+            return;
+        }
 
-        this._tables.push(table);
+        const table = new SchemaTable(crypto.randomUUID(), 'NewSchema');
+
+        Treeview.getActiveEntry()!.addSchemaTable(table);
 
         this._container!.appendChild(table.getElement());
         this._jsPlumbInstance!.revalidate(table.getElement());
 
-        SchemaExtends.getInstance().setExtend(id, name);
+        SchemaExtends.getInstance().setExtend(table.getId(), table.getName());
     }
 
     /**
@@ -63,10 +61,85 @@ export class SchemaEditor {
         this._btnAddSchema = document.getElementById("addSchemaBtn");
 
         this._btnAddSchema!.addEventListener("click", () => {
-            this._addSchema(crypto.randomUUID(), 'NewSchema');
+            if (Treeview.getActiveEntry() !== null) {
+                this._addSchema();
+            } else {
+                alert('Please select first a File for your Schema!');
+            }
         })
 
         this._treeview = new Treeview();
+
+        window.addEventListener('schemaeditor:updatedata', (e: Event) => {
+           console.log(this.getData());
+           this.saveData().then();
+        });
+
+        window.addEventListener('schemaeditor:updateview', (e: Event) => {
+            if (this._jsPlumbInstance && this._container) {
+                this._jsPlumbInstance.deleteEveryConnection();
+                this._container.innerHTML = '';
+            }
+
+            const entry = Treeview.getActiveEntry();
+
+            if (entry) {
+                const tables = entry.getSchemaTables();
+
+                for (const table of tables) {
+                    this._container!.appendChild(table.getElement());
+                    this._jsPlumbInstance!.revalidate(table.getElement());
+                }
+
+                for (const table of tables) {
+                    table.updateView();
+                }
+            }
+        });
+
+        this.loadData().then();
     }
 
+    public getData(): SchemaJsonData {
+        return {
+            fs: this._treeview?.getData()!
+        };
+    }
+
+    protected _updateRegisters(data: SchemaJsonDataFS): void {
+        for (const schema of data.schemas) {
+            SchemaExtends.getInstance().setExtend(schema.id, schema.name);
+            SchemaTypes.getInstance().setType(schema.id, schema.name);
+        }
+
+        for (const entry of data.entrys) {
+            this._updateRegisters(entry);
+        }
+    }
+
+    public setData(data: SchemaJsonData): void {
+        this._updateRegisters(data.fs);
+        this._treeview?.setData(data.fs);
+    }
+
+    public async saveData(): Promise<void> {
+        await fetch('/api/save-schema', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.getData())
+        });
+    }
+
+    public async loadData(): Promise<void> {
+        const response = await fetch('/api/load-schema');
+
+        if (!response.ok) {
+            throw new Error(`Can not load: ${response.statusText}`);
+        }
+
+        const data = await response.json() as SchemaJsonData;
+
+        this.setData(data);
+        console.log(data);
+    }
 }

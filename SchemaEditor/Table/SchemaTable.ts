@@ -1,8 +1,8 @@
 import {Connection} from '@jsplumb/browser-ui';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../SchemaExtends.js';
+import {SchemaJsonSchemaDescription, SchemaJsonSchemaFieldDescription} from '../SchemaJsonData.js';
 import {SchemaTypes} from '../SchemaTypes.js';
-import {SchemaFieldDescription} from './../SchemaFieldDescription.js';
 import {SchemaTableDialog} from './SchemaTableDialog.js';
 import {SchemaTableField} from './SchemaTableField.js';
 import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';
@@ -68,9 +68,9 @@ export class SchemaTable {
      * @param {string} id
      * @param {string} name
      * @param {string} extend
-     * @param {SchemaFieldDescription} fields
+     * @param {SchemaJsonSchemaFieldDescription} fields
      */
-    public constructor(id: string, name: string, extend: string = 'object', fields: SchemaFieldDescription[] = [{
+    public constructor(id: string, name: string, extend: string = 'object', fields: SchemaJsonSchemaFieldDescription[] = [{
         uuid: null,
         name: 'id',
         type: 'number',
@@ -131,6 +131,7 @@ export class SchemaTable {
                 SchemaExtends.getInstance().setExtend(this._id, this._name);
 
                 this.updateView();
+                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
             });
         });
 
@@ -153,6 +154,7 @@ export class SchemaTable {
                 this._fields.set(uid, field);
 
                 field.updateView();
+                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
             });
         });
 
@@ -179,13 +181,19 @@ export class SchemaTable {
 
         jsPlumbInstance.manage(this._table);
         jsPlumbInstance.setDraggable(this._table, true);
+
+        jsPlumbInstance.bind('drag:stop', (info) => {
+            if (info.el === this._table) {
+                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+            }
+        });
     }
 
     /**
      * Set the fields
-     * @param {SchemaFieldDescription[]} fields
+     * @param {SchemaJsonSchemaFieldDescription[]} fields
      */
-    public setFields(fields: SchemaFieldDescription[]): void {
+    public setFields(fields: SchemaJsonSchemaFieldDescription[]): void {
         for (const fieldDesc of fields) {
             const uuid = fieldDesc.uuid ?? crypto.randomUUID();
             const field = new SchemaTableField(this._id, uuid, fieldDesc.name, fieldDesc.type);
@@ -234,12 +242,19 @@ export class SchemaTable {
         return this._table;
     }
 
+    public setPosition(x: number, y: number): void {
+        this._table.style.left = `${x}px`;
+        this._table.style.top = `${y}px`;
+    }
+
     public updateView(): void {
         if (this._connection !== null) {
             jsPlumbInstance.deleteConnection(this._connection);
         }
 
         if (SchemaExtends.getInstance().isExtendASchema(this._extend)) {
+            console.log(`Create connection for ${this._id}`);
+
             this._connection = jsPlumbInstance.connect({
                 source: document.getElementById(`endpoint-${this._id}`)!,
                 target: document.getElementById(`targetpoint-${this._extend}`)!,
@@ -257,5 +272,37 @@ export class SchemaTable {
                 }
             });
         }
+
+        for (const [, field] of this._fields) {
+            field.updateView();
+        }
+    }
+
+    public getData(): SchemaJsonSchemaDescription {
+        const fields: SchemaJsonSchemaFieldDescription[] = [];
+
+        for (const [, field] of this._fields.entries()) {
+            fields.push(field.getData());
+        }
+
+        return {
+            id: this._id,
+            name: this._name,
+            extend: this._extend,
+            pos: {
+                x: this._table.offsetLeft,
+                y: this._table.offsetTop
+            },
+            fields: fields,
+            description: ''
+        };
+    }
+
+    public setData(data: SchemaJsonSchemaDescription): void {
+        this._id = data.id;
+        this.setName(data.name);
+        this.setExtend(data.extend);
+        this.setFields(data.fields);
+        this.setPosition(data.pos.x, data.pos.y);
     }
 }

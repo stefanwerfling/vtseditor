@@ -1,14 +1,8 @@
+import {SchemaExtends} from '../SchemaExtends.js';
+import {SchemaJsonDataFS, SchemaJsonDataFSType, SchemaJsonSchemaDescription} from '../SchemaJsonData.js';
+import {SchemaTable} from '../Table/SchemaTable.js';
+import {Treeview} from './Treeview.js';
 import {TreeviewDialog} from './TreeviewDialog.js';
-
-/**
- * Treeview entry type
- */
-export enum TreeviewEntryType {
-    root = 'root',
-    folder = 'folder',
-    file = 'file',
-    schema = 'schema'
-}
 
 /**
  * Treeview entry
@@ -33,7 +27,11 @@ export class TreeviewEntry {
      */
     protected _name: string = '';
 
-    protected _type: TreeviewEntryType|string = '';
+    /**
+     * Type
+     * @protected
+     */
+    protected _type: SchemaJsonDataFSType|string = '';
 
     /**
      * List
@@ -41,7 +39,14 @@ export class TreeviewEntry {
      */
     protected _list: Map<string, TreeviewEntry> = new Map<string, TreeviewEntry>();
 
-    public constructor(id: string = '', name: string = 'Root', type: TreeviewEntryType|string = TreeviewEntryType.root) {
+    /**
+     * List of tables
+     * @protected
+     */
+    protected _tables: SchemaTable[] = [];
+
+    public constructor(id: string = '', name: string = 'Root', type: SchemaJsonDataFSType|string = SchemaJsonDataFSType.root) {
+        this._id = id;
         this._ul = document.createElement('ul');
         this._liFolder = document.createElement('li');
 
@@ -65,20 +70,23 @@ export class TreeviewEntry {
         folderLine.appendChild(this._spanName);
 
         this._spanName.addEventListener('click', () => {
-            if (this.getType() === TreeviewEntryType.file) {
+            if (this.getType() === SchemaJsonDataFSType.file) {
                 document.querySelectorAll('.treeview-file.active').forEach(el => {
                     el.classList.remove('active');
                 });
 
                 this._spanName.classList.add('active');
 
+                Treeview.setActivEntry(this);
+
+                window.dispatchEvent(new CustomEvent('schemaeditor:updateview', {}));
             }
         });
 
 
         // add folder/file ---------------------------------------------------------------------------------------------
 
-        if (type === TreeviewEntryType.root || type === TreeviewEntryType.folder) {
+        if (type === SchemaJsonDataFSType.root || type === SchemaJsonDataFSType.folder) {
             const btnAdd = document.createElement('button');
             btnAdd.textContent = '➕';
             btnAdd.classList.add('add-folder');
@@ -95,6 +103,8 @@ export class TreeviewEntry {
                     const entry = new TreeviewEntry(crypto.randomUUID(), dialog1.getName(), dialog1.getType());
                     this._list.set(entry.getId(), entry);
                     this._liFolder.appendChild(entry.getElement());
+
+                    window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
                 });
             });
 
@@ -103,7 +113,7 @@ export class TreeviewEntry {
 
         // edit folder/file --------------------------------------------------------------------------------------------
 
-        if (type === TreeviewEntryType.folder || type === TreeviewEntryType.file) {
+        if (type === SchemaJsonDataFSType.folder || type === SchemaJsonDataFSType.file) {
             const btnEdit = document.createElement('button');
             btnEdit.textContent = '📝';
             btnEdit.classList.add('add-folder');
@@ -121,6 +131,8 @@ export class TreeviewEntry {
                 dialog.setOnConfirm(dialog1 => {
                     this.setName(dialog1.getName());
                     this.setType(dialog1.getType());
+
+                    window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
                 });
             });
 
@@ -139,21 +151,21 @@ export class TreeviewEntry {
         return this._ul;
     }
 
-    public setType(type: TreeviewEntryType|string): void {
+    public setType(type: SchemaJsonDataFSType|string): void {
         this._type = type;
 
         this._spanName.classList.remove('treeview-file');
 
-        if (type === TreeviewEntryType.file) {
+        if (type === SchemaJsonDataFSType.file) {
             this._spanName.classList.add('treeview-file');
         }
     }
 
     /**
      * Get type
-     * @return {string|TreeviewEntryType}
+     * @return {string|SchemaJsonDataFSType}
      */
-    public getType(): string|TreeviewEntryType {
+    public getType(): string|SchemaJsonDataFSType {
         return this._type;
     }
 
@@ -163,19 +175,19 @@ export class TreeviewEntry {
         let typeIcon = '';
 
         switch (this._type) {
-            case TreeviewEntryType.root:
+            case SchemaJsonDataFSType.root:
                 typeIcon = '🌳';
                 break;
 
-            case TreeviewEntryType.folder:
+            case SchemaJsonDataFSType.folder:
                 typeIcon = '📁';
                 break;
 
-            case TreeviewEntryType.file:
+            case SchemaJsonDataFSType.file:
                 typeIcon = '📄';
                 break;
 
-            case TreeviewEntryType.schema:
+            case SchemaJsonDataFSType.schema:
                 typeIcon = '🧩';
                 break;
         }
@@ -191,4 +203,56 @@ export class TreeviewEntry {
         return this._id;
     }
 
+    public addEntry(entry: TreeviewEntry): void {
+        this._list.set(entry.getId(), entry);
+        this._liFolder.appendChild(entry.getElement());
+    }
+
+    public getData(): SchemaJsonDataFS {
+        const entrys: SchemaJsonDataFS[] = [];
+
+        for (const [, entry] of this._list.entries()) {
+            entrys.push(entry.getData());
+        }
+
+        const schemas: SchemaJsonSchemaDescription[] = [];
+
+        for (const table of this._tables) {
+            schemas.push(table.getData());
+        }
+
+        return {
+            id: this._id,
+            name: this._name,
+            type: this._type,
+            entrys: entrys,
+            schemas: schemas
+        };
+    }
+
+    public setData(data: SchemaJsonDataFS): void {
+        this._id = data.id;
+        this.setType(data.type);
+        this.setName(data.name);
+
+        for (const aEntry of data.entrys) {
+            const entry = new TreeviewEntry(aEntry.id, aEntry.name, aEntry.type);
+            this.addEntry(entry);
+            entry.setData(aEntry);
+        }
+
+        for (const aSchema of data.schemas) {
+            const schema = new SchemaTable(aSchema.id, aSchema.name, aSchema.extend, aSchema.fields);
+            schema.setData(aSchema);
+            this.addSchemaTable(schema);
+        }
+    }
+
+    public addSchemaTable(table: SchemaTable): void {
+        this._tables.push(table);
+    }
+
+    public getSchemaTables(): SchemaTable[] {
+        return this._tables;
+    }
 }

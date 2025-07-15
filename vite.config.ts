@@ -24,7 +24,7 @@ function expressMiddleware(): Plugin {
             app.get('/api/load-schema', (req, res) => {
                 const filePath = path.resolve(__dirname, 'schemas', 'schema.json');
                 if (!fs.existsSync(filePath)) {
-                    return res.status(404).json({ error: 'Datei nicht gefunden' });
+                    return res.status(404).json({ error: 'File not found!' });
                 }
 
                 const content = fs.readFileSync(filePath, 'utf-8');

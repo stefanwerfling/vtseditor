@@ -1,5 +1,6 @@
 import {Connection} from '@jsplumb/browser-ui';
 import jsPlumbInstance from '../jsPlumbInstance.js';
+import {SchemaJsonSchemaFieldDescription} from '../SchemaJsonData.js';
 import {SchemaTypes} from './../SchemaTypes.js';
 import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';
 
@@ -32,10 +33,25 @@ export class SchemaTableField {
     protected _contentName: HTMLSpanElement;
     protected _contentType: HTMLSpanElement;
 
+    /**
+     * Endpoint
+     * @protected
+     */
     protected _endpoint: HTMLDivElement;
 
+    /**
+     * Connection
+     * @protected
+     */
     protected _connection: Connection|null = null;
 
+    /**
+     * Constructor
+     * @param tableId
+     * @param id
+     * @param name
+     * @param type
+     */
     public constructor(tableId: string, id: string, name: string, type: string) {
         this._id = id;
 
@@ -124,5 +140,20 @@ export class SchemaTableField {
                 }
             });
         }
+    }
+
+    public getData(): SchemaJsonSchemaFieldDescription {
+        return {
+            uuid: this._id,
+            name: this._name,
+            type: this._type,
+            description: ''
+        };
+    }
+
+    public setData(data: SchemaJsonSchemaFieldDescription): void {
+        this._id = data.uuid ?? '';
+        this.setName(data.name);
+        this.setType(data.type);
     }
 }
