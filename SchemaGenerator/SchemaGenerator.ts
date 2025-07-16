@@ -152,17 +152,23 @@ export class SchemaGenerator {
                 content += 'Vts.optional(';
             }
 
+            let description = '';
+
+            if (field.description !== '') {
+                description = `{description: '${field.description}'}`;
+            }
+
             switch (field.type) {
                 case 'string':
-                    content += 'Vts.string()';
+                    content += `Vts.string(${description})`;
                     break;
 
                 case 'number':
-                    content += 'Vts.number()';
+                    content += `Vts.number(${description}})`;
                     break;
 
                 case 'boolean':
-                    content += 'Vts.boolean()';
+                    content += `Vts.boolean(${description})`;
                     break;
 
                 default:

@@ -12,6 +12,11 @@ import {SchemaTableField} from './SchemaTableField.js';
 import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';
 
 /**
+ * On delete table
+ */
+export type SchemaTableOnDelete = (table: SchemaTable) => void;
+
+/**
  * Schema table
  */
 export class SchemaTable {
@@ -80,6 +85,12 @@ export class SchemaTable {
     protected _connection: Connection|null = null;
 
     /**
+     * on delete
+     * @protected
+     */
+    protected _onDelete: SchemaTableOnDelete|null = null;
+
+    /**
      * Constructor
      * @param {string} id
      * @param {string} name
@@ -111,6 +122,12 @@ export class SchemaTable {
         const elDelete = document.createElement('div');
         elDelete.title = 'Delete Schema';
         elDelete.classList.add(...['vts-schema-delete', 'vts-schema-delete-vertex']);
+        elDelete.addEventListener('click', () => {
+            if (this._onDelete) {
+                this._onDelete(this);
+            }
+        });
+
         elName.appendChild(elDelete);
 
         this._schemaName = document.createElement('span');
@@ -177,13 +194,15 @@ export class SchemaTable {
                 }
 
                 const uid = crypto.randomUUID();
-                const field = new SchemaTableField(this._id, uid, dialog1.getFieldName(), dialog1.getFieldType());
-                field.setOptional(dialog1.getOptional());
 
-                this._columns.appendChild(field.getElement());
-                this._fields.set(uid, field);
+                this.setFields([{
+                    type: dialog1.getFieldType(),
+                    name: fieldName,
+                    optional: dialog1.getOptional(),
+                    description: dialog1.getDescription(),
+                    uuid: uid
+                }]);
 
-                field.updateView();
                 window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
 
                 return true;
@@ -252,6 +271,17 @@ export class SchemaTable {
                 return true;
             });
 
+            field.setOnDelete(field1 => {
+                if (!confirm(`Do you really want to delete field '${field1.getName()}'?`)) {
+                    return;
+                }
+
+                field1.remove();
+                this._fields.delete(field1.getId());
+
+                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+            });
+
             this._columns.appendChild(field.getElement());
             this._fields.set(uuid, field);
 
@@ -275,6 +305,10 @@ export class SchemaTable {
         return this._name;
     }
 
+    /**
+     * Set name
+     * @param {string} name
+     */
     public setName(name: string): void {
         this._name = name;
         this._schemaName.textContent = name;
@@ -283,6 +317,10 @@ export class SchemaTable {
         SchemaTypes.getInstance().setType(this._id, this._name);
     }
 
+    /**
+     * Set extend
+     * @param {string} extend
+     */
     public setExtend(extend: string): void {
         const extendName = SchemaExtends.getInstance().getExtendNameBy(extend);
         this._extend = extend;
@@ -297,11 +335,17 @@ export class SchemaTable {
 
     /**
      * Return the Element from Table
+     * @return {HTMLDivElement}
      */
     public getElement(): HTMLDivElement {
         return this._table;
     }
 
+    /**
+     * Set Position of table
+     * @param {number} x
+     * @param {number} y
+     */
     public setPosition(x: number, y: number): void {
         this._position.x = x;
         this._position.y = y;
@@ -309,6 +353,9 @@ export class SchemaTable {
         this._table.style.top = `${y}px`;
     }
 
+    /**
+     * Update view
+     */
     public updateView(): void {
         this._table.style.top = `${this._position.y}px`;
         this._table.style.left = `${this._position.x}px`;
@@ -343,6 +390,10 @@ export class SchemaTable {
         }
     }
 
+    /**
+     * Return Data
+     * @return {SchemaJsonSchemaDescription}
+     */
     public getData(): SchemaJsonSchemaDescription {
         const fields: SchemaJsonSchemaFieldDescription[] = [];
 
@@ -360,6 +411,10 @@ export class SchemaTable {
         };
     }
 
+    /**
+     * Set Data
+     * @param {SchemaJsonSchemaDescription} data
+     */
     public setData(data: SchemaJsonSchemaDescription): void {
         this._id = data.id;
         this.setName(data.name);
@@ -368,6 +423,11 @@ export class SchemaTable {
         this.setPosition(data.pos.x, data.pos.y);
     }
 
+    /**
+     * Exist field name
+     * @param {string} name
+     * @return {boolean}
+     */
     public existFieldName(name: string): boolean {
         for (const [, field] of this._fields.entries()) {
             if (name === field.getName()) {
@@ -376,5 +436,13 @@ export class SchemaTable {
         }
 
         return false;
+    }
+
+    /**
+     * Set on delete
+     * @param {SchemaTableOnDelete|null} onDelete
+     */
+    public setOnDelete(onDelete: SchemaTableOnDelete|null): void {
+        this._onDelete = onDelete;
     }
 }

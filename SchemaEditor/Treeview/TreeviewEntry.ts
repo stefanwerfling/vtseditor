@@ -8,10 +8,22 @@ import {TreeviewDialog} from './TreeviewDialog.js';
  */
 export class TreeviewEntry {
 
+    /**
+     * Ul Element
+     * @protected
+     */
     protected _ul: HTMLUListElement;
 
+    /**
+     * Li Element
+     * @protected
+     */
     protected _liFolder: HTMLLIElement;
 
+    /**
+     * Span Name
+     * @protected
+     */
     protected _spanName: HTMLSpanElement;
 
     /**
@@ -44,6 +56,12 @@ export class TreeviewEntry {
      */
     protected _tables: SchemaTable[] = [];
 
+    /**
+     * Constructor
+     * @param {string} id
+     * @param {string} name
+     * @param {SchemaJsonDataFSType|string} type
+     */
     public constructor(id: string = '', name: string = 'Root', type: SchemaJsonDataFSType|string = SchemaJsonDataFSType.root) {
         this._id = id;
         this._ul = document.createElement('ul');
@@ -146,10 +164,17 @@ export class TreeviewEntry {
         this.setName(name);
     }
 
+    /**
+     * Return an element
+     */
     public getElement(): HTMLUListElement {
         return this._ul;
     }
 
+    /**
+     * Set Type
+     * @param {SchemaJsonDataFSType|string} type
+     */
     public setType(type: SchemaJsonDataFSType|string): void {
         this._type = type;
 
@@ -168,6 +193,10 @@ export class TreeviewEntry {
         return this._type;
     }
 
+    /**
+     * Set name
+     * @param {name} name
+     */
     public setName(name: string): void {
         this._name = name;
 
@@ -194,19 +223,35 @@ export class TreeviewEntry {
         this._spanName.textContent = `${typeIcon} ${name}`;
     }
 
+    /**
+     * Get name
+     * @return {string}
+     */
     public getName(): string {
         return this._name;
     }
 
+    /**
+     * Get id
+     * @return {string}
+     */
     public getId(): string {
         return this._id;
     }
 
+    /**
+     * Add an entry
+     * @param {TreeviewEntry} entry
+     */
     public addEntry(entry: TreeviewEntry): void {
         this._list.set(entry.getId(), entry);
         this._liFolder.appendChild(entry.getElement());
     }
 
+    /**
+     * Get data
+     * @return {SchemaJsonDataFS}
+     */
     public getData(): SchemaJsonDataFS {
         const entrys: SchemaJsonDataFS[] = [];
 
@@ -229,6 +274,10 @@ export class TreeviewEntry {
         };
     }
 
+    /**
+     * Set data
+     * @param {SchemaJsonDataFS} data
+     */
     public setData(data: SchemaJsonDataFS): void {
         this._id = data.id;
         this.setType(data.type);
@@ -247,10 +296,18 @@ export class TreeviewEntry {
         }
     }
 
+    /**
+     * Add schema table
+     * @param {SchemaTable} table
+     */
     public addSchemaTable(table: SchemaTable): void {
         this._tables.push(table);
     }
 
+    /**
+     * Return tables
+     * @return {SchemaTable[]}
+     */
     public getSchemaTables(): SchemaTable[] {
         return this._tables;
     }

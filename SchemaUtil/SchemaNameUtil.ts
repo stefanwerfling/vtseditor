@@ -1,6 +1,13 @@
-
+/**
+ * Schema name ultiliti
+ */
 export class SchemaNameUtil {
 
+    /**
+     * Validate name
+     * @param {string} name
+     * @return {string}
+     */
     public static validateName(name: string): string {
         let nName = name.trim();
         nName = nName.replace(/[^a-zA-Z0-9]+/g, '_');

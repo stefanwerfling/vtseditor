@@ -10,6 +10,11 @@ import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';
 export type SchemaTableFieldOnSave = (field: SchemaTableField,  dialog: SchemaTableFieldDialog) => boolean;
 
 /**
+ * On Delete
+ */
+export type SchemaTableFieldOnDelete = (field: SchemaTableField) => void;
+
+/**
  * Schema table field
  */
 export class SchemaTableField {
@@ -81,6 +86,12 @@ export class SchemaTableField {
     protected _onSave: SchemaTableFieldOnSave|null = null;
 
     /**
+     * On Delete
+     * @protected
+     */
+    protected _onDelete: SchemaTableFieldOnDelete|null = null;
+
+    /**
      * Constructor
      * @param tableId
      * @param id
@@ -99,7 +110,9 @@ export class SchemaTableField {
         const btnDelete = document.createElement('div');
         btnDelete.classList.add(...['vts-schema-table-column-delete', 'vts-schema-delete']);
         btnDelete.addEventListener('click', () => {
-
+            if (this._onDelete) {
+                this._onDelete(this);
+            }
         });
 
         this._column.appendChild(btnDelete);
@@ -148,6 +161,14 @@ export class SchemaTableField {
 
         this.setName(name);
         this.setType(type);
+    }
+
+    /**
+     * Return the id
+     * @return {string}
+     */
+    public getId(): string {
+        return this._id;
     }
 
     /**
@@ -280,5 +301,21 @@ export class SchemaTableField {
      */
     public setOnSave(save: SchemaTableFieldOnSave|null): void {
         this._onSave = save;
+    }
+
+    /**
+     * Set on delete
+     * @param {SchemaTableFieldOnDelete|null} onDelete
+     */
+    public setOnDelete(onDelete: SchemaTableFieldOnDelete|null): void {
+        this._onDelete = onDelete;
+    }
+
+    public remove(): void {
+        if (this._connection !== null) {
+            jsPlumbInstance.deleteConnection(this._connection);
+        }
+
+        this._column.remove();
     }
 }
