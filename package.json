@@ -9,13 +9,17 @@
   "scripts": {
     "dev": "node ./cli/dev.js"
   },
-  "keywords": ["vts", "editor"],
+  "keywords": [
+    "vts",
+    "editor"
+  ],
   "author": "Stefan Werfling",
   "license": "ISC",
   "dependencies": {
     "@jsplumb/browser-ui": "6.2.10",
     "express": "^5.1.0",
-    "vite-plugin-express": "^1.0.3"
+    "vite-plugin-express": "^1.0.3",
+    "vts": "github:OpenSourcePKG/vts"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",

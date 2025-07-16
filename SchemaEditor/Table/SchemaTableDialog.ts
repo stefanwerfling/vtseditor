@@ -1,3 +1,5 @@
+import {SchemaNameUtil} from '../../SchemaUtil/SchemaNameUtil.js';
+
 /**
  * Schema table dialog on close
  */
@@ -6,7 +8,7 @@ export type SchemaTableDialogOnClose = () => void;
 /**
  * Schema table dialog on confirm
  */
-export type SchemaTableDialogOnConfirm = (dialog: SchemaTableDialog) => void;
+export type SchemaTableDialogOnConfirm = (dialog: SchemaTableDialog) => boolean;
 
 export class SchemaTableDialog {
 
@@ -87,10 +89,12 @@ export class SchemaTableDialog {
         btnConfirm.classList.add('dialog-button');
         btnConfirm.addEventListener('click', () => {
             if (this._onConfirm) {
-                this._onConfirm(this);
+                if (this._onConfirm(this)) {
+                    this._close();
+                }
+            } else {
+                this._close();
             }
-
-            this._close();
         });
 
 
@@ -152,7 +156,7 @@ export class SchemaTableDialog {
      * @return {string}
      */
     public getSchemaName(): string {
-        return this._inputName.value.trim();
+        return SchemaNameUtil.validateName(this._inputName.value);
     }
 
     public setSchemaName(name: string): void {

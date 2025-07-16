@@ -1,4 +1,5 @@
 import {Connection} from '@jsplumb/browser-ui';
+import {SchemaNameUtil} from '../../SchemaUtil/SchemaNameUtil.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../SchemaExtends.js';
 import {
@@ -11,6 +12,9 @@ import {SchemaTableDialog} from './SchemaTableDialog.js';
 import {SchemaTableField} from './SchemaTableField.js';
 import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';
 
+/**
+ * Schema table
+ */
 export class SchemaTable {
 
     /**
@@ -135,12 +139,22 @@ export class SchemaTable {
             dialog.setExtendOptions(SchemaExtends.getInstance().getExtends([this._id]));
             dialog.setSchemaExtend(this._extend);
             dialog.setOnConfirm(dialog1 => {
-                this.setName(dialog1.getSchemaName());
+                const schemaName = dialog1.getSchemaName();
+                const tId = SchemaExtends.getInstance().getExtendIdByName(schemaName);
+
+                if (tId !== null && tId !== this._id) {
+                    alert('The Schemaname is already exist, please change your name!');
+                    return false;
+                }
+
+                this.setName(schemaName);
                 this.setExtend(dialog1.getSchemaExtend());
                 SchemaExtends.getInstance().setExtend(this._id, this._name);
 
                 this.updateView();
                 window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+
+                return true;
             });
         });
 
@@ -156,6 +170,13 @@ export class SchemaTable {
             dialog.show();
             dialog.setTypeOptions(SchemaTypes.getInstance().getTypes([this._id]));
             dialog.setOnConfirm(dialog1 => {
+                const fieldName = dialog1.getFieldName();
+
+                if (this.existFieldName(fieldName)) {
+                    alert('Please change your Fieldname, it already exist!');
+                    return false;
+                }
+
                 const uid = crypto.randomUUID();
                 const field = new SchemaTableField(this._id, uid, dialog1.getFieldName(), dialog1.getFieldType());
                 field.setOptional(dialog1.getOptional());
@@ -165,6 +186,8 @@ export class SchemaTable {
 
                 field.updateView();
                 window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+
+                return true;
             });
         });
 
@@ -326,5 +349,15 @@ export class SchemaTable {
         this.setExtend(data.extend);
         this.setFields(data.fields);
         this.setPosition(data.pos.x, data.pos.y);
+    }
+
+    public existFieldName(name: string): boolean {
+        for (const [, field] of this._fields.entries()) {
+            if (name === field.getName()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

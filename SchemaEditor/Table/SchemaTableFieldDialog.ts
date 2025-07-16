@@ -1,3 +1,5 @@
+import {SchemaNameUtil} from '../../SchemaUtil/SchemaNameUtil.js';
+
 /**
  * Schema table field dialog on close
  */
@@ -6,7 +8,7 @@ export type SchemaTableFieldDialogOnClose = () => void;
 /**
  * Schema table field dialog on confirm
  */
-export type SchemaTableFieldDialogOnConfirm = (dialog: SchemaTableFieldDialog) => void;
+export type SchemaTableFieldDialogOnConfirm = (dialog: SchemaTableFieldDialog) => boolean;
 
 /**
  * Schema Table field dialog
@@ -123,10 +125,12 @@ export class SchemaTableFieldDialog {
         btnConfirm.classList.add('dialog-button');
         btnConfirm.addEventListener('click', () => {
             if (this._onConfirm) {
-                this._onConfirm(this);
+                if (this._onConfirm(this)) {
+                    this._close();
+                }
+            } else {
+                this._close();
             }
-
-            this._close();
         });
 
 
@@ -188,7 +192,7 @@ export class SchemaTableFieldDialog {
      * @return {string}
      */
     public getFieldName(): string {
-        return this._inputName.value.trim();
+        return SchemaNameUtil.validateName(this._inputName.value);
     }
 
     public setFieldName(name: string): void {

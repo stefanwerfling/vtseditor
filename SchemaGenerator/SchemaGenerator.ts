@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import {SchemaJsonDataFS, SchemaJsonDataFSType, SchemaJsonSchemaDescription} from '../SchemaEditor/SchemaJsonData.js';
+import {SchemaGeneratorIndexSort} from './SchemaGeneratorIndexSort.js';
 
 /**
  * Schema generator options
@@ -54,12 +55,11 @@ export class SchemaGenerator {
         }
 
         this._createFileRegister(data.entrys);
-        console.log(this._fileRegister);
         this._generateEntrys(destPath, data.entrys);
     }
 
     protected _buildName(name: string): string {
-        return `${this._options.schemaPrefix}${name}`;
+        return `${this._options.schemaPrefix}${name.trim()}`;
     }
 
     protected _createFileRegister(entrys: SchemaJsonDataFS[], aPath: string = './'): void {
@@ -87,90 +87,108 @@ export class SchemaGenerator {
         }
     }
 
-    protected _generateEntrys(aPath: string, entrys: SchemaJsonDataFS[]): void {
+    protected _generateEntrys(fullPath: string, entrys: SchemaJsonDataFS[], relPath: string = ''): void {
         for (const entry of entrys) {
+            const newFullPath = path.join(fullPath, entry.name);
+            const newRelPath = path.join(relPath, entry.name);
+
             switch (entry.type) {
                 case SchemaJsonDataFSType.folder:
-                    const newPath = path.join(aPath, entry.name);
-                    fs.mkdirSync(newPath, { recursive: true });
+                    fs.mkdirSync(newFullPath, { recursive: true });
 
-                    this._generateEntrys(newPath, entry.entrys);
+                    this._generateEntrys(newFullPath, entry.entrys, newRelPath);
                     break;
 
                 case SchemaJsonDataFSType.file:
-                    const filePath = path.join(aPath, entry.name);
-                    this._generateFile(filePath, entry.schemas);
+                    this._generateFile(newFullPath, newRelPath, entry.schemas);
                     break;
             }
         }
     }
 
-    protected _generateFile(file: string, schemas: SchemaJsonSchemaDescription[]): void {
+    protected _generateFile(fullPath: string, relPath: string, schemas: SchemaJsonSchemaDescription[]): void {
         let contentHeader = 'import {ExtractSchemaResultType, Vts} from \'vts\';\r\n';
+        let content = this._writeContent(relPath, schemas);
+
+        fs.writeFileSync(`${fullPath}.ts`, `${contentHeader}${content}`, 'utf-8');
+    }
+
+    protected _writeContent(relPath: string, schemas: SchemaJsonSchemaDescription[], writenSchemas: string[] = []): string {
         let content = '\r\n';
+        const sortedSchemas = SchemaGeneratorIndexSort.sortSchemas(schemas);
 
-        for (const schema of schemas) {
-            content += '\r\n';
-
+        for (const schema of sortedSchemas) {
             const schemaName = this._buildName(schema.name);
 
-            content += `export const ${schemaName}  = `;
+            content += this._writeSchema(schemaName, schema);
 
-            if (schema.extend === 'object') {
-                content += 'Vts.object({\r\n';
+            writenSchemas.push(schemaName);
+        }
+
+        return content;
+    }
+
+    protected _writeSchema(schemaName: string, schema: SchemaJsonSchemaDescription): string {
+        let content = '\r\n';
+
+        content += `export const ${schemaName}  = `;
+
+        if (schema.extend === 'object') {
+            content += 'Vts.object({\r\n';
+        } else {
+            const extendSchemaName = this._idRegister.get(schema.extend);
+
+            if (extendSchemaName) {
+                content += `${extendSchemaName}.extend({\r\n`;
             } else {
-                const extendSchemaName = this._idRegister.get(schema.extend);
+                content += 'Vts.object({\r\n';
+            }
+        }
 
-                if (extendSchemaName) {
-                    content += `${extendSchemaName}.extend({\r\n`;
-                } else {
-                    content += 'Vts.object({\r\n';
-                }
+        for (const field of schema.fields) {
+            content += `\t${field.name}: `;
+
+            if (field.optional) {
+                content += 'Vts.optional(';
             }
 
-            for (const field of schema.fields) {
-                content += `\t${field.name}: `;
+            switch (field.type) {
+                case 'string':
+                    content += 'Vts.string()';
+                    break;
 
-                if (field.optional) {
-                    content += 'Vts.optional(';
-                }
+                case 'number':
+                    content += 'Vts.number()';
+                    break;
 
-                switch (field.type) {
-                    case 'string':
-                        content += 'Vts.string()';
-                        break;
+                case 'boolean':
+                    content += 'Vts.boolean()';
+                    break;
 
-                    case 'number':
-                        content += 'Vts.number()';
-                        break;
+                default:
+                    const tschemaName = this._idRegister.get(field.type);
 
-                    case 'boolean':
-                        content += 'Vts.boolean()';
-                        break;
-
-                    default:
-                        const schemaName = this._idRegister.get(field.type);
-
-                        if (schemaName) {
-                            content += `${schemaName}`;
-                        } else {
-                            content += 'Vts.null()';
-                        }
-                }
-
-                if (field.optional) {
-                    content += ')';
-                }
-
-                content += ',\r\n';
+                    if (tschemaName) {
+                        content += `${tschemaName}`;
+                    } else {
+                        content += 'Vts.null()';
+                    }
             }
 
-            content += '});\r\n\r\n';
+            if (field.optional) {
+                content += ')';
+            }
 
+            content += ',\r\n';
+        }
+
+        content += '});\r\n\r\n';
+
+        if (this._options.createTypes) {
             content += `export type ${schema.name} = ExtractSchemaResultType<typeof ${schemaName}>;\r\n\r\n`;
         }
 
-        fs.writeFileSync(`${file}.ts`, `${contentHeader}${content}`, 'utf-8');
+        return content;
     }
 
 }

@@ -16,7 +16,7 @@ if (!fs.existsSync(configFile)) {
         schemaPrefix: 'Schema',
         schemaPath: './schemas/schema.json',
         createTypes: true,
-        autoGenerate: true,
+        autoGenerate: false,
         destinationPath: './schemas/src'
     }, null, 2));
     console.log('✅ vtseditor.json created');

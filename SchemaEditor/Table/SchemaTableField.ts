@@ -113,6 +113,8 @@ export class SchemaTableField {
                 this.updateView();
 
                 window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+
+                return true;
             });
         });
 
@@ -131,6 +133,10 @@ export class SchemaTableField {
     public setName(name: string): void {
         this._name = name;
         this._contentName.textContent = name;
+    }
+
+    public getName(): string {
+        return this._name;
     }
 
     public setType(type: string): void {

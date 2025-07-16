@@ -41,4 +41,14 @@ export class SchemaExtends {
     public isExtendASchema(extend: string): boolean {
         return extend.length > 8;
     }
+
+    public getExtendIdByName(name: string): string|null {
+        for (const [id, tname] of this._mapExtends.entries()) {
+            if (name === tname) {
+                return id;
+            }
+        }
+
+        return null;
+    }
 }
