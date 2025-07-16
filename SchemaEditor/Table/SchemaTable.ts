@@ -1,5 +1,4 @@
 import {Connection} from '@jsplumb/browser-ui';
-import {SchemaNameUtil} from '../../SchemaUtil/SchemaNameUtil.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../SchemaExtends.js';
 import {
@@ -234,6 +233,24 @@ export class SchemaTable {
             const uuid = fieldDesc.uuid ?? crypto.randomUUID();
             const field = new SchemaTableField(this._id, uuid, fieldDesc.name, fieldDesc.type);
             field.setData(fieldDesc);
+            field.setOnSave((field1, dialog) => {
+                const fieldName = dialog.getFieldName();
+
+                if (this.existFieldName(fieldName)) {
+                    alert('Please change your Fieldname, it already exist!');
+                    return false;
+                }
+
+                field1.setName(dialog.getFieldName());
+                field1.setType(dialog.getFieldType());
+                field1.setOptional(dialog.getOptional());
+                field1.setDescription(dialog.getDescription());
+                field1.updateView();
+
+                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+
+                return true;
+            });
 
             this._columns.appendChild(field.getElement());
             this._fields.set(uuid, field);

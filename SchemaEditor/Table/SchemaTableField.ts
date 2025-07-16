@@ -4,6 +4,14 @@ import {SchemaJsonSchemaFieldDescription} from '../SchemaJsonData.js';
 import {SchemaTypes} from './../SchemaTypes.js';
 import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';
 
+/**
+ * On Save
+ */
+export type SchemaTableFieldOnSave = (field: SchemaTableField,  dialog: SchemaTableFieldDialog) => boolean;
+
+/**
+ * Schema table field
+ */
 export class SchemaTableField {
 
     /**
@@ -42,7 +50,16 @@ export class SchemaTableField {
      */
     protected _column: HTMLDivElement;
 
+    /**
+     * Span content name
+     * @protected
+     */
     protected _contentName: HTMLSpanElement;
+
+    /**
+     * Span content type
+     * @protected
+     */
     protected _contentType: HTMLSpanElement;
 
     /**
@@ -56,6 +73,12 @@ export class SchemaTableField {
      * @protected
      */
     protected _connection: Connection|null = null;
+
+    /**
+     * On Save
+     * @protected
+     */
+    protected _onSave: SchemaTableFieldOnSave|null = null;
 
     /**
      * Constructor
@@ -106,14 +129,11 @@ export class SchemaTableField {
             dialog.show();
 
             dialog.setOnConfirm(dialog1 => {
-                this.setName(dialog1.getFieldName());
-                this.setType(dialog1.getFieldType());
-                this.setOptional(dialog1.getOptional());
-                this.setDescription(dialog1.getDescription());
-                this.updateView();
+                if (this._onSave) {
+                    return this._onSave(this, dialog1);
+                }
 
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
-
+                // close dialog
                 return true;
             });
         });
@@ -130,15 +150,27 @@ export class SchemaTableField {
         this.setType(type);
     }
 
+    /**
+     * Set the name for field
+     * @param {string} name
+     */
     public setName(name: string): void {
         this._name = name;
         this._contentName.textContent = name;
     }
 
+    /**
+     * Get field name
+     * @return {string}
+     */
     public getName(): string {
         return this._name;
     }
 
+    /**
+     * Set field Type
+     * @param {string} type
+     */
     public setType(type: string): void {
         this._type = type;
         const typename = SchemaTypes.getInstance().getTypeNameBy(type) ?? 'unknown';
@@ -153,6 +185,10 @@ export class SchemaTableField {
         }
     }
 
+    /**
+     * Set optional
+     * @param {boolean} optional
+     */
     public setOptional(optional: boolean): void {
         this._optional = optional;
 
@@ -167,14 +203,25 @@ export class SchemaTableField {
         }
     }
 
+    /**
+     * Set description
+     * @param {string} description
+     */
     public setDescription(description: string): void {
         this._description = description;
     }
 
+    /**
+     * Return the element
+     * @return {HTMLDivElement}
+     */
     public getElement(): HTMLDivElement {
         return this._column;
     }
 
+    /**
+     * Update view, create connection new/right on ui
+     */
     public updateView(): void {
         if (this._connection !== null) {
             jsPlumbInstance.deleteConnection(this._connection);
@@ -201,6 +248,10 @@ export class SchemaTableField {
         }
     }
 
+    /**
+     * Return the date from field
+     * @return {SchemaJsonSchemaFieldDescription}
+     */
     public getData(): SchemaJsonSchemaFieldDescription {
         return {
             uuid: this._id,
@@ -211,11 +262,23 @@ export class SchemaTableField {
         };
     }
 
+    /**
+     * Set data for field
+     * @param {SchemaJsonSchemaFieldDescription} data
+     */
     public setData(data: SchemaJsonSchemaFieldDescription): void {
         this._id = data.uuid ?? '';
         this.setName(data.name);
         this.setType(data.type);
         this.setOptional(data.optional);
         this.setDescription(data.description);
+    }
+
+    /**
+     * Set on save
+     * @param {SchemaTableFieldOnSave|null} save
+     */
+    public setOnSave(save: SchemaTableFieldOnSave|null): void {
+        this._onSave = save;
     }
 }
