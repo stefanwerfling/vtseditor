@@ -1,5 +1,5 @@
 /**
- * Schema name ultiliti
+ * Schema name util
  */
 export class SchemaNameUtil {
 

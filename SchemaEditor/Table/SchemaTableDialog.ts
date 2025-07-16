@@ -54,12 +54,22 @@ export class SchemaTableDialog {
 
         this._dialog.appendChild(title);
 
+        const labelName = document.createElement('div');
+        labelName.classList.add('dialog-label');
+        labelName.textContent = 'Schemaname';
+        this._dialog.appendChild(labelName);
+
         this._inputName = document.createElement('input');
         this._inputName.type = 'text';
         this._inputName.classList.add('dialog-input');
-        this._inputName.placeholder = 'Schema-name';
+        this._inputName.placeholder = 'Schemaname';
 
         this._dialog.appendChild(this._inputName);
+
+        const labelExtend = document.createElement('div');
+        labelExtend.classList.add('dialog-label');
+        labelExtend.textContent = 'Extend';
+        this._dialog.appendChild(labelExtend);
 
         this._selectExtend = document.createElement('select');
         this._selectExtend.classList.add('dialog-select');
@@ -85,7 +95,7 @@ export class SchemaTableDialog {
         btns.appendChild(btnCancel);
 
         const btnConfirm = document.createElement('button');
-        btnConfirm.textContent = 'Ok';
+        btnConfirm.textContent = 'Save';
         btnConfirm.classList.add('dialog-button');
         btnConfirm.addEventListener('click', () => {
             if (this._onConfirm) {

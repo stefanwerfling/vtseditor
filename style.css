@@ -187,7 +187,7 @@ body {
   color: darkorange;
 }
 
-.jtk-schema-table {
+.vts-schema-table {
   margin-bottom: 0;
   min-width: 200px;
   align-items: stretch;
@@ -209,6 +209,12 @@ body {
 
 .vts-schema-table-column.optional {
   border: 1px dashed #aaa;
+}
+
+.vts-schema-column-buttons {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
 }
 
 .vts-schema-table-column-edit {
@@ -301,6 +307,19 @@ dialog::backdrop {
   background-color: #316481;
 }
 
+.centered-button {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.dialog-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #555;
+  margin-top: 10px;
+}
+
 .treeview ul {
   list-style-type: none;
   margin-left: 1em;
@@ -371,6 +390,21 @@ dialog::backdrop {
   font-size: 11px;
   color: #000;
   background-color: greenyellow;
+  line-height: 1;
+  vertical-align: middle;
+  white-space: nowrap;
+  text-align: center;
+  border-radius: 10px;
+}
+
+.vts-badge-wh-3 {
+  margin-left: 4px !important;
+  display: inline-block;
+  min-width: 10px;
+  padding: 3px 7px;
+  font-size: 11px;
+  color: #000;
+  background-color: orange;
   line-height: 1;
   vertical-align: middle;
   white-space: nowrap;

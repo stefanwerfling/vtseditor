@@ -108,6 +108,20 @@ export class SchemaEditor {
             }
         });
 
+        window.addEventListener('schemaeditor:deletetable', (event: Event) => {
+            const customEvent = event as CustomEvent<{ id: string }>;
+            const rootEntry = this._treeview?.getRoot();
+
+            if (rootEntry) {
+                if (rootEntry.isSchemaTableUse(customEvent.detail.id)) {
+                    alert('Your Schema is used and can not delete!');
+                    return;
+                }
+
+                rootEntry.removeSchemaTable(customEvent.detail.id);
+            }
+        });
+
         // resizer -----------------------------------------------------------------------------------------------------
 
         const resizer = document.getElementById('resizer')!;

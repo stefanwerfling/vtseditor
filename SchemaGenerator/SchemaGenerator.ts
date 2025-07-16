@@ -43,6 +43,10 @@ export class SchemaGenerator {
         this._options = options;
     }
 
+    /**
+     * Generate
+     * @param {SchemaJsonDataFS} data
+     */
     public generate(data: SchemaJsonDataFS): void {
         const destPath = this._options.destinationPath;
 
@@ -56,8 +60,15 @@ export class SchemaGenerator {
 
         this._createFileRegister(data.entrys);
         this._generateEntrys(destPath, data.entrys);
+        this._generateIndex(destPath);
     }
 
+    /**
+     * Build name
+     * @param {string} name
+     * @return {string}
+     * @protected
+     */
     protected _buildName(name: string): string {
         return `${this._options.schemaPrefix}${name.trim()}`;
     }
@@ -79,10 +90,17 @@ export class SchemaGenerator {
     }
 
     protected _createSchemaRegister(file: string, schemas: SchemaJsonSchemaDescription[]): void {
-        for (const schema of schemas) {
+        const sortedSchemas = SchemaGeneratorIndexSort.sortSchemas(schemas);
+
+        for (const schema of sortedSchemas) {
             const schemaName = this._buildName(schema.name);
 
             this._fileRegister.set(schemaName, file);
+
+            if (this._options.createTypes) {
+                this._fileRegister.set(schema.name.trim(), file);
+            }
+
             this._idRegister.set(schema.id, schemaName);
         }
     }
@@ -152,34 +170,7 @@ export class SchemaGenerator {
                 content += 'Vts.optional(';
             }
 
-            let description = '';
-
-            if (field.description !== '') {
-                description = `{description: '${field.description}'}`;
-            }
-
-            switch (field.type) {
-                case 'string':
-                    content += `Vts.string(${description})`;
-                    break;
-
-                case 'number':
-                    content += `Vts.number(${description}})`;
-                    break;
-
-                case 'boolean':
-                    content += `Vts.boolean(${description})`;
-                    break;
-
-                default:
-                    const tschemaName = this._idRegister.get(field.type);
-
-                    if (tschemaName) {
-                        content += `${tschemaName}`;
-                    } else {
-                        content += 'Vts.null()';
-                    }
-            }
+            content += this._writeType(field.type, field.subtypes, field.description);
 
             if (field.optional) {
                 content += ')';
@@ -195,6 +186,99 @@ export class SchemaGenerator {
         }
 
         return content;
+    }
+
+    protected _writeType(type: string, subtypes: string[] = [], description: string = ''): string {
+        let content = '';
+
+        let tdescription = '';
+
+        if (description !== '') {
+            tdescription = `{description: '${description}'}`;
+        }
+
+        switch (type) {
+            case 'string':
+                content += `Vts.string(${tdescription})`;
+                break;
+
+            case 'number':
+                content += `Vts.number(${tdescription})`;
+                break;
+
+            case 'boolean':
+                content += `Vts.boolean(${tdescription})`;
+                break;
+
+            case 'array':
+                let subType = 'Vts.null()';
+
+                if (subtypes.length > 0) {
+                    subType = this._writeType(subtypes[0], [], description);
+                }
+
+                content += `Vts.array(${subType})`;
+                break;
+
+            case 'or':
+                const tSubtypes: string[] = [];
+
+                for (const aSubtype of subtypes) {
+                    tSubtypes.push(this._writeType(aSubtype));
+                }
+
+                content += `Vts.or([${tSubtypes.join(', ')}])`;
+                break;
+
+            default:
+                const tschemaName = this._idRegister.get(type);
+
+                if (tschemaName) {
+                    content += `${tschemaName}`;
+                } else {
+                    content += 'Vts.null()';
+                }
+        }
+
+        return content;
+    }
+
+    protected _generateIndex(aPath: string): void {
+        const indexFile = path.join(aPath, 'index');
+
+        const list: Map<string, string[]> = new Map<string, string[]>();
+
+        for (const [schemaName, file] of this._fileRegister) {
+            let schemaList: string[] = [];
+
+            if (list.has(file)) {
+                const tschemaList = list.get(file);
+
+                if (tschemaList) {
+                    schemaList = tschemaList;
+                }
+            }
+
+            schemaList.push(schemaName);
+
+            list.set(file, schemaList);
+        }
+
+        // -------------------------------------------------------------------------------------------------------------
+
+        let content = '';
+
+        for (const [file, schemas] of list.entries()) {
+            content += 'export {\r\n';
+
+            for (const schema of schemas) {
+                content += `\t${schema},\r\n`;
+            }
+
+            content += `} from './${file}.js';\r\n`;
+        }
+
+        fs.writeFileSync(`${indexFile}.ts`, content, 'utf-8');
     }
 
 }

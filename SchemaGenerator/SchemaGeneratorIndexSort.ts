@@ -49,6 +49,12 @@ export class SchemaGeneratorIndexSort {
                 if (isSchemaId(typeId)) {
                     visit(schemaMap.get(typeId)!);
                 }
+
+                for (const subType of field.subtypes) {
+                    if (isSchemaId(subType)) {
+                        visit(schemaMap.get(subType)!);
+                    }
+                }
             }
 
             visiting.delete(schema.id);

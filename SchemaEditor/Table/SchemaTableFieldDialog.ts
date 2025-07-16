@@ -34,6 +34,12 @@ export class SchemaTableFieldDialog {
     protected _selectType: HTMLSelectElement;
 
     /**
+     * select Subtypes
+     * @protected
+     */
+    protected _selectSubTypes: HTMLSelectElement[] = [];
+
+    /**
      * Select optional
      * @protected
      */
@@ -58,6 +64,24 @@ export class SchemaTableFieldDialog {
     protected _onConfirm: SchemaTableFieldDialogOnConfirm|null = null;
 
     /**
+     * type options
+     * @protected
+     */
+    protected _typeOptions: Map<string, string> = new Map<string, string>();
+
+    /**
+     * Subtypes div
+     * @protected
+     */
+    protected _subtypesDiv: HTMLDivElement;
+
+    /**
+     * subtypes select div
+     * @protected
+     */
+    protected _subtypesSelectsDiv: HTMLDivElement;
+
+    /**
      * constructor
      */
     public constructor() {
@@ -69,6 +93,13 @@ export class SchemaTableFieldDialog {
 
         this._dialog.appendChild(title);
 
+        // fieldname ---------------------------------------------------------------------------------------------------
+
+        const labelName = document.createElement('div');
+        labelName.classList.add('dialog-label');
+        labelName.textContent = 'Fieldname';
+        this._dialog.appendChild(labelName);
+
         this._inputName = document.createElement('input');
         this._inputName.type = 'text';
         this._inputName.classList.add('dialog-input');
@@ -76,10 +107,58 @@ export class SchemaTableFieldDialog {
 
         this._dialog.appendChild(this._inputName);
 
+        // type --------------------------------------------------------------------------------------------------------
+
+        const labelType = document.createElement('div');
+        labelType.classList.add('dialog-label');
+        labelType.textContent = 'Type';
+        this._dialog.appendChild(labelType);
+
         this._selectType = document.createElement('select');
         this._selectType.classList.add('dialog-select');
+        this._selectType.addEventListener('change', (event) => {
+            this._clearSubtypesSelects();
+            const target = event.target as HTMLSelectElement;
+
+            this._visableSubtypes(target.value);
+        });
 
         this._dialog.appendChild(this._selectType);
+
+        // subtypes ----------------------------------------------------------------------------------------------------
+
+        this._subtypesDiv = document.createElement('div');
+        this._dialog.appendChild(this._subtypesDiv);
+
+        const labelSubTypes = document.createElement('div');
+        labelSubTypes.classList.add('dialog-label');
+        labelSubTypes.textContent = 'Subtypes';
+        this._subtypesDiv.appendChild(labelSubTypes);
+
+        this._subtypesSelectsDiv = document.createElement('div');
+        this._subtypesDiv.appendChild(this._subtypesSelectsDiv);
+
+        const btnAddSubtype = document.createElement('button');
+        btnAddSubtype.textContent = '+';
+        btnAddSubtype.style.margin = 'auto';
+        btnAddSubtype.classList.add(...['dialog-button', 'centered-button']);
+        btnAddSubtype.addEventListener('click', () => {
+            if (this.getFieldType() === 'array' && this._selectSubTypes.length > 0) {
+                alert('You can only add one subtype for array!');
+                return;
+            }
+
+            this._addSubtypesSelect();
+        });
+
+        this._subtypesDiv.appendChild(btnAddSubtype);
+
+        // optional ----------------------------------------------------------------------------------------------------
+
+        const labelOptional = document.createElement('div');
+        labelOptional.classList.add('dialog-label');
+        labelOptional.textContent = 'Optional';
+        this._dialog.appendChild(labelOptional);
 
         this._selectOptional = document.createElement('select');
         this._selectOptional.classList.add('dialog-select');
@@ -95,6 +174,13 @@ export class SchemaTableFieldDialog {
         this._selectOptional.appendChild(optionOptional);
 
         this._dialog.appendChild(this._selectOptional);
+
+        // description -------------------------------------------------------------------------------------------------
+
+        const labelDescription = document.createElement('div');
+        labelDescription.classList.add('dialog-label');
+        labelDescription.textContent = 'Description';
+        this._dialog.appendChild(labelDescription);
 
         this._textareaDescription = document.createElement('textarea');
         this._textareaDescription.placeholder = 'Your description ...';
@@ -121,7 +207,7 @@ export class SchemaTableFieldDialog {
         btns.appendChild(btnCancel);
 
         const btnConfirm = document.createElement('button');
-        btnConfirm.textContent = 'Ok';
+        btnConfirm.textContent = 'Save';
         btnConfirm.classList.add('dialog-button');
         btnConfirm.addEventListener('click', () => {
             if (this._onConfirm) {
@@ -148,6 +234,49 @@ export class SchemaTableFieldDialog {
         this._dialog.remove();
     }
 
+    protected _addSubtypesSelect(): HTMLSelectElement {
+        const selectType = document.createElement('select');
+        selectType.classList.add('dialog-select');
+
+        for (const [typeName, typeValue] of this._typeOptions.entries()) {
+            const option = document.createElement('option');
+            option.value = typeName;
+            option.textContent = typeValue;
+
+            selectType.appendChild(option);
+        }
+
+        this._subtypesSelectsDiv.appendChild(selectType);
+        this._selectSubTypes.push(selectType);
+
+        return selectType;
+    }
+
+    protected _clearSubtypesSelects(): void {
+        for (const select of this._selectSubTypes) {
+            if (select.parentElement) {
+                select.parentElement.removeChild(select);
+            }
+        }
+
+        this._selectSubTypes = [];
+    }
+
+    protected _visableSubtypes(value: string): void {
+        switch (value) {
+            case 'array':
+                this._subtypesDiv.style.display = 'block';
+                break;
+
+            case 'or':
+                this._subtypesDiv.style.display = 'block';
+                break;
+
+            default:
+                this._subtypesDiv.style.display = 'none';
+        }
+    }
+
     /**
      * Show the dialog
      */
@@ -168,6 +297,7 @@ export class SchemaTableFieldDialog {
      * @param {Map<string, string>} options
      */
     public setTypeOptions(options: Map<string, string>): void {
+        this._typeOptions = options;
         this._selectType.innerHTML = '';
 
         for (const [typeName, typeValue] of options.entries()) {
@@ -207,8 +337,40 @@ export class SchemaTableFieldDialog {
         return this._selectType.value;
     }
 
+    /**
+     * Set field type
+     * @param {string} type
+     */
     public setFieldType(type: string): void {
         this._selectType.value = type;
+        this._visableSubtypes(type);
+    }
+
+    /**
+     * Get Field subtypes
+     * @return {string[]}
+     */
+    public getFieldSubTypes(): string[] {
+        const list: string[] = [];
+
+        for (const select of this._selectSubTypes) {
+            list.push(select.value);
+        }
+
+        return list;
+    }
+
+    /**
+     * Set field subtypes
+     * @param {string[]} subtypes
+     */
+    public setFieldSubTypes(subtypes: string[]): void {
+        this._clearSubtypesSelects();
+
+        for (const aSubtype of subtypes) {
+            const el = this._addSubtypesSelect();
+            el.value = aSubtype;
+        }
     }
 
     public getOptional(): boolean {

@@ -38,6 +38,12 @@ export class SchemaTableField {
     protected _type: string = '';
 
     /**
+     * subtypes
+     * @protected
+     */
+    protected _subtypes: string[] = [];
+
+    /**
      * is field optional
      * @protected
      */
@@ -93,12 +99,13 @@ export class SchemaTableField {
 
     /**
      * Constructor
-     * @param tableId
-     * @param id
-     * @param name
-     * @param type
+     * @param {string} tableId
+     * @param {string} id
+     * @param {string} name
+     * @param {string} type
+     * @param {string[]} subtypes
      */
-    public constructor(tableId: string, id: string, name: string, type: string) {
+    public constructor(tableId: string, id: string, name: string, type: string, subtypes: string[] = []) {
         this._id = id;
 
         this._column = document.createElement('div');
@@ -128,6 +135,12 @@ export class SchemaTableField {
         this._contentType = document.createElement('span');
         content.appendChild(this._contentType);
 
+        // Buttons -----------------------------------------------------------------------------------------------------
+
+        const elBtn = document.createElement('div');
+        elBtn.classList.add(...['vts-schema-column-buttons']);
+        this._column.appendChild(elBtn);
+
         // edit button -------------------------------------------------------------------------------------------------
 
         const btnEdit = document.createElement('div');
@@ -137,6 +150,7 @@ export class SchemaTableField {
             dialog.setTypeOptions(SchemaTypes.getInstance().getTypes([tableId]));
             dialog.setFieldName(this._name);
             dialog.setFieldType(this._type);
+            dialog.setFieldSubTypes(this._subtypes);
             dialog.setOptional(this._optional);
             dialog.setDescription(this._description);
             dialog.show();
@@ -151,15 +165,16 @@ export class SchemaTableField {
             });
         });
 
-        this._column.appendChild(btnEdit);
+        elBtn.appendChild(btnEdit);
 
         // for connection
         this._endpoint = document.createElement('div');
         this._endpoint.id = `endpoint-column-${this._id}`;
         this._endpoint.classList.add('endpoint');
-        this._column.appendChild(this._endpoint);
+        elBtn.appendChild(this._endpoint);
 
         this.setName(name);
+        this.setSubTypes(subtypes);
         this.setType(type);
     }
 
@@ -204,6 +219,50 @@ export class SchemaTableField {
         } else {
             this._contentType.classList.add(...['vts-badge-wh-1']);
         }
+
+        switch (type) {
+            case 'array':
+            case 'or':
+                for (const subtype of this._subtypes) {
+                    const span = document.createElement('span');
+                    const subtypename = SchemaTypes.getInstance().getTypeNameBy(subtype) ?? 'unknown';
+
+                    span.textContent = `${subtypename}`;
+
+                    if (SchemaTypes.getInstance().isTypeASchema(subtype)) {
+                        span.classList.add(...['vts-badge-wh-2']);
+                    } else {
+                        span.classList.add(...['vts-badge-wh-3']);
+                    }
+
+                    this._contentType.appendChild(span);
+                }
+                break;
+        }
+    }
+
+    /**
+     * Return type
+     * @return {string}
+     */
+    public getType(): string {
+        return this._type;
+    }
+
+    /**
+     * Return subtypes
+     * @return {string[]}
+     */
+    public getSubTypes(): string[] {
+        return this._subtypes;
+    }
+
+    /**
+     * Set subtypes
+     * @param {string[]} subtypes
+     */
+    public setSubTypes(subtypes: string[]): void {
+        this._subtypes = subtypes;
     }
 
     /**
@@ -278,6 +337,7 @@ export class SchemaTableField {
             uuid: this._id,
             name: this._name,
             type: this._type,
+            subtypes: this._subtypes,
             optional: this._optional,
             description: this._description
         };
@@ -290,6 +350,11 @@ export class SchemaTableField {
     public setData(data: SchemaJsonSchemaFieldDescription): void {
         this._id = data.uuid ?? '';
         this.setName(data.name);
+
+        if (data.subtypes) {
+            this.setSubTypes(data.subtypes);
+        }
+
         this.setType(data.type);
         this.setOptional(data.optional);
         this.setDescription(data.description);
@@ -311,6 +376,9 @@ export class SchemaTableField {
         this._onDelete = onDelete;
     }
 
+    /**
+     * Remove
+     */
     public remove(): void {
         if (this._connection !== null) {
             jsPlumbInstance.deleteConnection(this._connection);

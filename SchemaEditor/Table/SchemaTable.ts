@@ -187,15 +187,15 @@ export class SchemaTable {
             dialog.setTypeOptions(SchemaTypes.getInstance().getTypes([this._id]));
             dialog.setOnConfirm(dialog1 => {
                 const fieldName = dialog1.getFieldName();
+                const uid = crypto.randomUUID();
 
-                if (this.existFieldName(fieldName)) {
+                if (this.existFieldName(uid, fieldName)) {
                     alert('Please change your Fieldname, it already exist!');
                     return false;
                 }
 
-                const uid = crypto.randomUUID();
-
                 this.setFields([{
+                    subtypes: dialog1.getFieldSubTypes(),
                     type: dialog1.getFieldType(),
                     name: fieldName,
                     optional: dialog1.getOptional(),
@@ -255,12 +255,13 @@ export class SchemaTable {
             field.setOnSave((field1, dialog) => {
                 const fieldName = dialog.getFieldName();
 
-                if (this.existFieldName(fieldName)) {
+                if (this.existFieldName(field1.getId(), fieldName)) {
                     alert('Please change your Fieldname, it already exist!');
                     return false;
                 }
 
                 field1.setName(dialog.getFieldName());
+                field1.setSubTypes(dialog.getFieldSubTypes());
                 field1.setType(dialog.getFieldType());
                 field1.setOptional(dialog.getOptional());
                 field1.setDescription(dialog.getDescription());
@@ -425,13 +426,16 @@ export class SchemaTable {
 
     /**
      * Exist field name
+     * @param {string} fieldId
      * @param {string} name
      * @return {boolean}
      */
-    public existFieldName(name: string): boolean {
+    public existFieldName(fieldId: string, name: string): boolean {
         for (const [, field] of this._fields.entries()) {
-            if (name === field.getName()) {
-                return true;
+            if (field.getId() !== fieldId) {
+                if (name === field.getName()) {
+                    return true;
+                }
             }
         }
 
@@ -445,4 +449,20 @@ export class SchemaTable {
     public setOnDelete(onDelete: SchemaTableOnDelete|null): void {
         this._onDelete = onDelete;
     }
+
+    /**
+     * Is schema table use
+     * @param {string} id
+     * @return {boolean}
+     */
+    public isSchemaTableUse(id: string): boolean {
+        for (const [, field] of this._fields.entries()) {
+            if (field.getType() === id) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 }

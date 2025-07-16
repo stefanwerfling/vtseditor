@@ -302,6 +302,14 @@ export class TreeviewEntry {
      */
     public addSchemaTable(table: SchemaTable): void {
         this._tables.push(table);
+
+        table.setOnDelete(table1 => {
+            window.dispatchEvent(new CustomEvent('schemaeditor:deletetable', {
+                detail: {
+                    id: table1.getId()
+                }
+            }));
+        });
     }
 
     /**
@@ -311,4 +319,29 @@ export class TreeviewEntry {
     public getSchemaTables(): SchemaTable[] {
         return this._tables;
     }
+
+    /**
+     * Is schema table use
+     * @param id
+     */
+    public isSchemaTableUse(id: string): boolean {
+        for (const [, entry] of this._list.entries()) {
+            if (entry.isSchemaTableUse(id)) {
+                return true;
+            }
+        }
+
+        for (const table of this._tables) {
+            if (table.isSchemaTableUse(id)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public removeSchemaTable(id: string): void {
+
+    }
+
 }
