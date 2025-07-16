@@ -307,24 +307,28 @@ export class SchemaTableField {
             jsPlumbInstance.deleteConnection(this._connection);
         }
 
-        if (SchemaTypes.getInstance().isTypeASchema(this._type)) {
-            this._connection = jsPlumbInstance.connect({
-                source: document.getElementById(`endpoint-column-${this._id}`)!,
-                target: document.getElementById(`targetpoint-${this._type}`)!,
-                anchors: ['Right', 'Left'],
-                connector: {
-                    type: 'Flowchart',
-                    options: {
-                        cornerRadius: 5,
-                        stub: 20
+        const types: string[] = [this._type, ...this._subtypes];
+
+        for (const atype of types) {
+            if (SchemaTypes.getInstance().isTypeASchema(atype)) {
+                this._connection = jsPlumbInstance.connect({
+                    source: document.getElementById(`endpoint-column-${this._id}`)!,
+                    target: document.getElementById(`targetpoint-${atype}`)!,
+                    anchors: ['Right', 'Left'],
+                    connector: {
+                        type: 'Flowchart',
+                        options: {
+                            cornerRadius: 5,
+                            stub: 20
+                        }
+                    },
+                    paintStyle: {
+                        stroke: '#3e7e9c',
+                        strokeWidth: 2,
+                        dashstyle: '4 2'
                     }
-                },
-                paintStyle: {
-                    stroke: '#3e7e9c',
-                    strokeWidth: 2,
-                    dashstyle: '4 2'
-                }
-            });
+                });
+            }
         }
     }
 
