@@ -1,4 +1,5 @@
 import {Connection} from '@jsplumb/browser-ui';
+import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../SchemaExtends.js';
 import {
@@ -20,6 +21,16 @@ export type SchemaTableOnDelete = (table: SchemaTable) => void;
  * Schema table
  */
 export class SchemaTable {
+
+    public static painStyle: PaintStyle = {
+        stroke: '#000000',
+        strokeWidth: 2
+    };
+
+    public static painStyleHover: PaintStyle = {
+        stroke: '#ff6600',
+        strokeWidth: 2,
+    };
 
     /**
      * Id
@@ -106,6 +117,14 @@ export class SchemaTable {
 
         this._table = document.createElement('div');
         this._table.classList.add(...['table', 'vts-schema-table', 'vts-schema-element']);
+
+        this._table.addEventListener('mouseenter', () => {
+            this._setConnectionHoverByElement(true);
+        });
+
+        this._table.addEventListener('mouseleave', () => {
+            this._setConnectionHoverByElement(false);
+        });
 
         this._position = {
             x: 50 + Math.random() * 300,
@@ -379,10 +398,25 @@ export class SchemaTable {
                         stub: 20
                     }
                 },
-                paintStyle: {
-                    stroke: '#000000',
-                    strokeWidth: 2
-                }
+                paintStyle: SchemaTable.painStyle,
+                hoverPaintStyle: SchemaTable.painStyleHover,
+                endpoints: ['Blank', 'Blank'],
+                overlays: [
+                    {
+                        type: 'Arrow',
+                        options: {
+                            location: 0,
+                            direction: -1,
+                            width: 10,
+                            length: 14,
+                            foldback: 0.7,
+                            paintStyle: {
+                                fill: '#000000',
+                                stroke: 'none'
+                            }
+                        }
+                    }
+                ]
             });
         }
 
@@ -487,4 +521,23 @@ export class SchemaTable {
         this._table.remove();
     }
 
+    protected _setConnectionHoverByElement(hover: boolean) {
+        const connections = jsPlumbInstance.getConnections() as Connection[];
+
+        connections.forEach(conn => {
+            if (!conn.source || !conn.target) {
+                return;
+            }
+
+            if (this._table.contains(conn.source) || this._table.contains(conn.target)) {
+                if (hover) {
+                    conn.addClass('hovered-connection');
+                } else {
+                    conn.removeClass('hovered-connection');
+                }
+
+                jsPlumbInstance.repaintEverything();
+            }
+        });
+    }
 }

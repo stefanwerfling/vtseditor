@@ -326,7 +326,29 @@ export class SchemaTableField {
                         stroke: '#3e7e9c',
                         strokeWidth: 2,
                         dashstyle: '4 2'
-                    }
+                    },
+                    hoverPaintStyle: {
+                        stroke: '#ff6600',
+                        strokeWidth: 2,
+                        dashstyle: '4 2'
+                    },
+                    endpoints: ['Blank', 'Blank'],
+                    overlays: [
+                        {
+                            type: 'Arrow',
+                            options: {
+                                location: 0,
+                                direction: -1,
+                                width: 10,
+                                length: 14,
+                                foldback: 0.7,
+                                paintStyle: {
+                                    fill: '#3e7e9c',
+                                    stroke: 'none'
+                                }
+                            }
+                        }
+                    ]
                 });
             }
         }

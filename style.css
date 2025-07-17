@@ -109,6 +109,10 @@ body {
   border-radius: 4px;
 }
 
+.vts-schema-table:hover {
+  border: 1px solid #ff8000;
+}
+
 .vts-schema-buttons {
   display:flex;
   align-items: center;
@@ -225,6 +229,10 @@ body {
   border:2px solid transparent;
 }
 
+.vts-schema-table-column:hover {
+  background-color: #ffe6cc !important;
+}
+
 .vts-schema-table-column.optional {
   border: 1px dashed #aaa;
 }
@@ -274,6 +282,8 @@ dialog, .modal {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 dialog::backdrop {
@@ -482,4 +492,9 @@ button.add-folder {
   white-space: nowrap;
   text-align: center;
   border-radius: 10px;
+}
+
+.jtk-connector.hovered-connection path {
+  stroke: #ff6600 !important;
+  stroke-width: 2px !important;
 }
