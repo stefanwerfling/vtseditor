@@ -29,8 +29,13 @@ With the editor, you can:
 This is especially useful for large projects, team collaboration, or when sharing schema definitions with non-developers.
 
 ### Screenshots
+#### Schema in use
 <img src="doc/images/screenshot1.png" alt="Screenshot 1" width="450px" />
+
+#### Schema with Extend
 <img src="doc/images/screenshot2.png" alt="Screenshot 2" width="450px" />
+
+#### Schema field edit
 <img src="doc/images/screenshot_edit1.png" alt="Screenshot Edit 1" width="450px" />
 
 ### Install
