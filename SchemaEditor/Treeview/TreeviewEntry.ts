@@ -18,7 +18,13 @@ export class TreeviewEntry {
      * Li Element
      * @protected
      */
-    protected _liFolder: HTMLLIElement;
+    protected _liElement: HTMLLIElement;
+
+    /**
+     * span toggle
+     * @protected
+     */
+    protected _spanToggle: HTMLSpanElement;
 
     /**
      * Span Name
@@ -65,19 +71,61 @@ export class TreeviewEntry {
     public constructor(id: string = '', name: string = 'Root', type: SchemaJsonDataFSType|string = SchemaJsonDataFSType.root) {
         this._id = id;
         this._ul = document.createElement('ul');
-        this._liFolder = document.createElement('li');
+        this._liElement = document.createElement('li');
 
         const folderLine = document.createElement('div');
         folderLine.classList.add('folder-line');
-        this._liFolder.appendChild(folderLine);
+        this._liElement.appendChild(folderLine);
+
+        // toggle ------------------------------------------------------------------------------------------------------
+        this._spanToggle = document.createElement('span');
+        this._spanToggle.classList.add('toggle-icon');
+        this._spanToggle.textContent = '▼';
+        this._spanToggle.addEventListener("click", () => {
+            const line = this._spanToggle.parentElement;
+
+            if (!line) {
+                return;
+            }
+
+            const parentLi = line.closest('li');
+
+            if (!parentLi) {
+                return;
+            }
+
+            const uls = Array.from(parentLi.children).filter(
+                el => el.tagName === 'UL'
+            ) as HTMLUListElement[];
+
+            const isOpen = line.classList.toggle('open');
+
+            for (const ul of uls) {
+                ul.style.display = isOpen ? 'block' : 'none';
+            }
+
+            this._spanToggle.textContent = isOpen ? '▼' : '▶';
+        });
+
+        folderLine.appendChild(this._spanToggle);
+        this._spanToggle.parentElement?.classList.add('open');
+        const parentLi = this._spanToggle.closest('li');
+
+        if (parentLi) {
+            parentLi.querySelectorAll('ul').forEach(ul => {
+                ul.style.display = 'block';
+            });
+        }
 
         // add button delete -------------------------------------------------------------------------------------------
 
-        const btnDelete = document.createElement('button');
-        btnDelete.textContent = '🗑';
-        btnDelete.classList.add('delete-folder');
+        if (type !== SchemaJsonDataFSType.root) {
+            const btnDelete = document.createElement('button');
+            btnDelete.textContent = '🗑';
+            btnDelete.classList.add('delete-folder');
 
-        folderLine.appendChild(btnDelete);
+            folderLine.appendChild(btnDelete);
+        }
 
         // set span name -----------------------------------------------------------------------------------------------
 
@@ -112,14 +160,18 @@ export class TreeviewEntry {
                 dialog.show();
 
                 const types = new Map<string, string>();
-                types.set('folder', '📁 Folder');
+
+                if (this._tables.length === 0) {
+                    types.set('folder', '📁 Folder');
+                }
+
                 types.set('file', '📄 File');
 
                 dialog.setTypeOptions(types);
                 dialog.setOnConfirm(dialog1 => {
                     const entry = new TreeviewEntry(crypto.randomUUID(), dialog1.getName(), dialog1.getType());
                     this._list.set(entry.getId(), entry);
-                    this._liFolder.appendChild(entry.getElement());
+                    this._liElement.appendChild(entry.getElement());
 
                     window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
                 });
@@ -141,7 +193,11 @@ export class TreeviewEntry {
                 dialog.show();
 
                 const types = new Map<string, string>();
-                types.set('folder', '📁 Folder');
+
+                if (this._tables.length === 0) {
+                    types.set('folder', '📁 Folder');
+                }
+
                 types.set('file', '📄 File');
 
                 dialog.setTypeOptions(types);
@@ -158,7 +214,7 @@ export class TreeviewEntry {
 
         // -------------------------------------------------------------------------------------------------------------
 
-        this._ul.appendChild(this._liFolder);
+        this._ul.appendChild(this._liElement);
 
         this.setType(type);
         this.setName(name);
@@ -179,9 +235,11 @@ export class TreeviewEntry {
         this._type = type;
 
         this._spanName.classList.remove('treeview-file');
+        this._spanToggle.style.display = 'block';
 
         if (type === SchemaJsonDataFSType.file) {
             this._spanName.classList.add('treeview-file');
+            this._spanToggle.style.display = 'none';
         }
     }
 
@@ -245,7 +303,7 @@ export class TreeviewEntry {
      */
     public addEntry(entry: TreeviewEntry): void {
         this._list.set(entry.getId(), entry);
-        this._liFolder.appendChild(entry.getElement());
+        this._liElement.appendChild(entry.getElement());
     }
 
     /**

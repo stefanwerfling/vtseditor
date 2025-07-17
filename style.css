@@ -11,7 +11,25 @@ body {
   background-color: #f4f4f4;
   padding: 10px;
   box-sizing: border-box;
-  overflow: auto;
+  max-height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+#controls h2,
+#controls button {
+  flex: 0 0 auto;
+}
+
+.button-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.button-row button {
+  flex: 1;
 }
 
 #resizer {
@@ -25,7 +43,7 @@ body {
   position: relative;
   flex: 1;
   background-color: #fff;
-  overflow: hidden;
+  overflow: scroll;
 }
 
 .table {
@@ -329,53 +347,98 @@ dialog::backdrop {
   margin-top: 10px;
 }
 
-.treeview ul {
-  list-style-type: none;
-  margin-left: 1em;
-  padding-left: 1em;
-  border-left: 1px solid #ccc;
+/**
+ * Treeview
+ */
+#treeview {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  margin-top: 10px;
+  border: 1px solid #ccc;
+  padding: 8px;
+  font-family: sans-serif;
+  font-size: 14px;
+  background-color: #fff;
 }
 
-.treeview .folder,
-.treeview .file {
-  cursor: pointer;
-  user-select: none;
-  display: inline-block;
-  margin: 4px 0;
+.treeview ul {
+  list-style-type: none;
+  margin: 0;
+  padding-left: 1em;
+  border-left: 1px dashed #ccc;
 }
 
 .treeview ul ul {
-  /*display: none; /* Start ausgeklappt */
-}
-
-.treeview .folder.open + ul {
-  display: block;
+  margin-left: 0.5em;
 }
 
 .folder-line {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.folder-line:hover {
+  background-color: #f0f4f8;
+}
+
+.treeview .folder {
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+}
+
+.treeview-file {
+  font-style: italic;
+  color: #555;
+}
+
+.treeview-file.active {
+  background-color: #d0e6ff;
+  border-radius: 4px;
+  padding: 2px 4px;
 }
 
 .folder-line button {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 12px;
   padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.2s ease;
 }
 
 .folder-line button:hover {
-  background-color: #eee;
-  border-radius: 4px;
+  background-color: #e0e0e0;
 }
 
-.treeview-file.active {
-  background-color: #d0e6ff;
-  border-radius: 4px;
+button.delete-folder {
+  color: #c00;
 }
 
+button.add-folder {
+  color: #006400;
+}
+
+.toggle-icon {
+  display: inline-block;
+  width: 1em;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.3s ease;
+}
+
+.folder-line.open > .toggle-icon {
+  transform: rotate(90deg);
+}
+
+/**
+ * Badge
+ */
 .vts-badge-wh-1 {
   margin-left: 4px !important;
   display: inline-block;
