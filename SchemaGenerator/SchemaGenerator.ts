@@ -13,6 +13,7 @@ export type SchemaGeneratorOptions = {
     createIndex: boolean;
     destinationPath: string;
     code_indent: string;
+    code_comment: boolean;
 };
 
 /**
@@ -162,11 +163,17 @@ export class SchemaGenerator {
     }
 
     protected _writeContent(relPath: string, schemas: SchemaJsonSchemaDescription[], writenSchemas: string[] = []): string {
-        let content = '\r\n';
+        let content = '';
         const sortedSchemas = SchemaGeneratorIndexSort.sortSchemas(schemas);
 
         for (const schema of sortedSchemas) {
             const schemaName = this._buildName(schema.name);
+
+            if (content === '') {
+                content += '\r\n';
+            } else {
+                content += '\r\n\r\n';
+            }
 
             content += this._writeSchema(schemaName, schema);
 
@@ -178,6 +185,12 @@ export class SchemaGenerator {
 
     protected _writeSchema(schemaName: string, schema: SchemaJsonSchemaDescription): string {
         let content = '';
+
+        if (this._options.code_comment) {
+            content += '/**\r\n';
+            content += ` * Schema of ${schema.name}\r\n`;
+            content += ' */\r\n'
+        }
 
         content += `export const ${schemaName}  = `;
 
@@ -213,10 +226,19 @@ export class SchemaGenerator {
             content += ',\r\n';
         }
 
-        content += '});\r\n';
+        content += '});';
 
         if (this._options.createTypes) {
-            content += `\r\nexport type ${schema.name} = ExtractSchemaResultType<typeof ${schemaName}>;\r\n`;
+
+            content += '\r\n\r\n';
+
+            if (this._options.code_comment) {
+                content += '/**\r\n';
+                content += ` * Type of schema ${schema.name}\r\n`;
+                content += ' */\r\n'
+            }
+
+            content += `export type ${schema.name} = ExtractSchemaResultType<typeof ${schemaName}>;`;
         }
 
         return content;

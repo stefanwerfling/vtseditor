@@ -19,6 +19,7 @@ function expressMiddleware(): Plugin {
             const createIndex = process.env.VTSEDITOR_CREATE_INDEX === '1';
             const autoGenerate = process.env.VTSEDITOR_AUTO_GENERATE === '1';
             const destinationPath = process.env.VTSEDITOR_DESTINATION_PATH || path.resolve('schemas', 'src');
+            const codeComment = process.env.VTSEDITOR_CODE_COMMENT === '1';
 
             console.log('VTS Editor Options:');
             console.log(`\tSchema-Path: ${schemaPath}`);
@@ -27,6 +28,7 @@ function expressMiddleware(): Plugin {
             console.log(`\tCreate Index: ${createIndex ? 'true' : 'false'}`);
             console.log(`\tAuto Generate files by save: ${autoGenerate ? 'true' : 'false'}`);
             console.log(`\tDestination-Path: ${destinationPath}`);
+            console.log(`\tCode comments: ${createIndex ? 'true' : 'false'}`);
             console.log(' ');
 
             app.post('/api/save-schema', (req, res) => {
@@ -41,7 +43,8 @@ function expressMiddleware(): Plugin {
                         createTypes: createTypes,
                         createIndex: createIndex,
                         destinationPath: destinationPath,
-                        code_indent: '    '
+                        code_indent: '    ',
+                        code_comment: codeComment
                     });
 
                     try {
