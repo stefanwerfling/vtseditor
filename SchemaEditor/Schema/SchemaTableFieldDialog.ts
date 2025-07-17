@@ -128,6 +128,7 @@ export class SchemaTableFieldDialog {
         // subtypes ----------------------------------------------------------------------------------------------------
 
         this._subtypesDiv = document.createElement('div');
+        this._subtypesDiv.classList.add('dialog-subtypes');
         this._dialog.appendChild(this._subtypesDiv);
 
         const labelSubTypes = document.createElement('div');
@@ -136,6 +137,7 @@ export class SchemaTableFieldDialog {
         this._subtypesDiv.appendChild(labelSubTypes);
 
         this._subtypesSelectsDiv = document.createElement('div');
+        this._subtypesSelectsDiv.classList.add('dialog-subtypes-list');
         this._subtypesDiv.appendChild(this._subtypesSelectsDiv);
 
         const btnAddSubtype = document.createElement('button');

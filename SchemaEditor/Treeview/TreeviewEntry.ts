@@ -1,5 +1,5 @@
 import {SchemaJsonDataFS, SchemaJsonDataFSType, SchemaJsonSchemaDescription} from '../SchemaJsonData.js';
-import {SchemaTable} from '../Table/SchemaTable.js';
+import {SchemaTable} from '../Schema/SchemaTable.js';
 import {Treeview} from './Treeview.js';
 import {TreeviewDialog} from './TreeviewDialog.js';
 
@@ -332,6 +332,10 @@ export class TreeviewEntry {
         }
 
         for (const table of this._tables) {
+            if (table.getId() === id) {
+                continue;
+            }
+
             if (table.isSchemaTableUse(id)) {
                 return true;
             }
@@ -340,8 +344,23 @@ export class TreeviewEntry {
         return false;
     }
 
-    public removeSchemaTable(id: string): void {
+    public removeSchemaTable(id: string): boolean {
+        for (let i = 0; i < this._tables.length; i++) {
+            const table = this._tables[i];
+            if (table.getId() === id) {
+                table.remove();
+                this._tables.splice(i, 1);
+                return true;
+            }
+        }
 
+        for (const [, entry] of this._list.entries()) {
+            if (entry.removeSchemaTable(id)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 }

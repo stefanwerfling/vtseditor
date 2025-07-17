@@ -16,6 +16,7 @@ function expressMiddleware(): Plugin {
             const schemaPath = process.env.VTSEDITOR_SCHEMA_PATH || path.resolve('schemas', 'schema.json');
             const schemaPrefix = process.env.VTSEDITOR_SCHEMA_PREFIX || 'Schema';
             const createTypes = process.env.VTSEDITOR_CREATE_TYPES === '1';
+            const createIndex = process.env.VTSEDITOR_CREATE_INDEX === '1';
             const autoGenerate = process.env.VTSEDITOR_AUTO_GENERATE === '1';
             const destinationPath = process.env.VTSEDITOR_DESTINATION_PATH || path.resolve('schemas', 'src');
 
@@ -29,6 +30,7 @@ function expressMiddleware(): Plugin {
                     const gen = new SchemaGenerator({
                         schemaPrefix: schemaPrefix,
                         createTypes: createTypes,
+                        createIndex: createIndex,
                         destinationPath: destinationPath
                     });
 

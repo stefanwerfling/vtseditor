@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import {SchemaJsonDataFS, SchemaJsonDataFSType, SchemaJsonSchemaDescription} from '../SchemaEditor/SchemaJsonData.js';
+import {SchemaPathUtil} from '../SchemaUtil/SchemaPathUtil.js';
 import {SchemaGeneratorIndexSort} from './SchemaGeneratorIndexSort.js';
 
 /**
@@ -9,6 +10,7 @@ import {SchemaGeneratorIndexSort} from './SchemaGeneratorIndexSort.js';
 export type SchemaGeneratorOptions = {
     schemaPrefix: string;
     createTypes: boolean;
+    createIndex: boolean;
     destinationPath: string;
 };
 
@@ -36,6 +38,12 @@ export class SchemaGenerator {
     protected _idRegister: Map<string, string> = new Map<string, string>();
 
     /**
+     * file used schemas
+     * @protected
+     */
+    protected _fileUsedSchemas: string[] = [];
+
+    /**
      * constructor
      * @param {SchemaGeneratorOptions} options
      */
@@ -60,7 +68,10 @@ export class SchemaGenerator {
 
         this._createFileRegister(data.entrys);
         this._generateEntrys(destPath, data.entrys);
-        this._generateIndex(destPath);
+
+        if (this._options.createIndex) {
+            this._generateIndex(destPath);
+        }
     }
 
     /**
@@ -125,8 +136,23 @@ export class SchemaGenerator {
     }
 
     protected _generateFile(fullPath: string, relPath: string, schemas: SchemaJsonSchemaDescription[]): void {
+        // reset used schemas
+        this._fileUsedSchemas = [];
+
         let contentHeader = 'import {ExtractSchemaResultType, Vts} from \'vts\';\r\n';
         let content = this._writeContent(relPath, schemas);
+
+        for (const schemaImport of this._fileUsedSchemas) {
+            const importPath = this._fileRegister.get(schemaImport);
+
+            if (importPath) {
+                if (importPath !== relPath) {
+                    const relativImportPath = SchemaPathUtil.getRelativeImportPath(`./${relPath}`, `./${importPath}.js`);
+
+                    contentHeader += `import {${schemaImport}} from '${relativImportPath}';\r\n`;
+                }
+            }
+        }
 
         fs.writeFileSync(`${fullPath}.ts`, `${contentHeader}${content}`, 'utf-8');
     }
@@ -157,6 +183,10 @@ export class SchemaGenerator {
             const extendSchemaName = this._idRegister.get(schema.extend);
 
             if (extendSchemaName) {
+                if (this._fileUsedSchemas.indexOf(extendSchemaName) === -1) {
+                    this._fileUsedSchemas.push(extendSchemaName);
+                }
+
                 content += `${extendSchemaName}.extend({\r\n`;
             } else {
                 content += 'Vts.object({\r\n';
@@ -234,6 +264,10 @@ export class SchemaGenerator {
                 const tschemaName = this._idRegister.get(type);
 
                 if (tschemaName) {
+                    if (this._fileUsedSchemas.indexOf(tschemaName) === -1) {
+                        this._fileUsedSchemas.push(tschemaName);
+                    }
+
                     content += `${tschemaName}`;
                 } else {
                     content += 'Vts.null()';

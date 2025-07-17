@@ -3,7 +3,7 @@ import jsPlumbInstance from './jsPlumbInstance.js';
 import {SchemaExtends} from './SchemaExtends.js';
 import {SchemaJsonData, SchemaJsonDataFS} from './SchemaJsonData.js';
 import {SchemaTypes} from './SchemaTypes.js';
-import {SchemaTable} from './Table/SchemaTable.js';
+import {SchemaTable} from './Schema/SchemaTable.js';
 import {Treeview} from './Treeview/Treeview.js';
 
 /**
@@ -118,7 +118,11 @@ export class SchemaEditor {
                     return;
                 }
 
-                rootEntry.removeSchemaTable(customEvent.detail.id);
+                if (confirm('Do you really want to delete Schema?')) {
+                    if (rootEntry.removeSchemaTable(customEvent.detail.id)) {
+                        window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+                    }
+                }
             }
         });
 

@@ -456,13 +456,35 @@ export class SchemaTable {
      * @return {boolean}
      */
     public isSchemaTableUse(id: string): boolean {
+        if (this._extend === id) {
+            return true;
+        }
+
         for (const [, field] of this._fields.entries()) {
             if (field.getType() === id) {
+                return true;
+            }
+
+            const subtypes = field.getSubTypes();
+
+            if (subtypes.indexOf(id) > -1) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * Remove all
+     */
+    public remove(): void {
+        for (const [id, field] of this._fields.entries()) {
+            field.remove();
+            this._fields.delete(id);
+        }
+
+        this._table.remove();
     }
 
 }

@@ -16,6 +16,7 @@ if (!fs.existsSync(configFile)) {
         schemaPrefix: 'Schema',
         schemaPath: './schemas/schema.json',
         createTypes: true,
+        createIndex: true,
         autoGenerate: false,
         destinationPath: './schemas/src'
     }, null, 2));
@@ -27,6 +28,7 @@ const config = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
 process.env.VTSEDITOR_SCHEMA_PATH = path.resolve(projectRoot, config.schemaPath);
 process.env.VTSEDITOR_SCHEMA_PREFIX = config.schemaPrefix;
 process.env.VTSEDITOR_CREATE_TYPES = config.createTypes ? '1' : '0';
+process.env.VTSEDITOR_CREATE_INDEX = config.createIndex ? '1' : '0';
 process.env.VTSEDITOR_AUTO_GENERATE = config.autoGenerate ? '1' : '0';
 process.env.VTSEDITOR_DESTINATION_PATH = path.resolve(projectRoot, config.destinationPath);
 
