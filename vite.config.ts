@@ -40,7 +40,8 @@ function expressMiddleware(): Plugin {
                         schemaPrefix: schemaPrefix,
                         createTypes: createTypes,
                         createIndex: createIndex,
-                        destinationPath: destinationPath
+                        destinationPath: destinationPath,
+                        code_indent: '    '
                     });
 
                     try {

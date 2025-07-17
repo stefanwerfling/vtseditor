@@ -12,6 +12,7 @@ export type SchemaGeneratorOptions = {
     createTypes: boolean;
     createIndex: boolean;
     destinationPath: string;
+    code_indent: string;
 };
 
 /**
@@ -176,7 +177,7 @@ export class SchemaGenerator {
     }
 
     protected _writeSchema(schemaName: string, schema: SchemaJsonSchemaDescription): string {
-        let content = '\r\n';
+        let content = '';
 
         content += `export const ${schemaName}  = `;
 
@@ -197,7 +198,7 @@ export class SchemaGenerator {
         }
 
         for (const field of schema.fields) {
-            content += `\t${field.name}: `;
+            content += `${this._options.code_indent}${field.name}: `;
 
             if (field.optional) {
                 content += 'Vts.optional(';
@@ -212,10 +213,10 @@ export class SchemaGenerator {
             content += ',\r\n';
         }
 
-        content += '});\r\n\r\n';
+        content += '});\r\n';
 
         if (this._options.createTypes) {
-            content += `export type ${schema.name} = ExtractSchemaResultType<typeof ${schemaName}>;\r\n\r\n`;
+            content += `\r\nexport type ${schema.name} = ExtractSchemaResultType<typeof ${schemaName}>;\r\n`;
         }
 
         return content;
@@ -309,7 +310,7 @@ export class SchemaGenerator {
             content += 'export {\r\n';
 
             for (const schema of schemas) {
-                content += `\t${schema},\r\n`;
+                content += `${this._options.code_indent}${schema},\r\n`;
             }
 
             content += `} from './${file}.js';\r\n`;
