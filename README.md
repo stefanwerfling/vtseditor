@@ -80,6 +80,12 @@ Special thanks to the following companys:
 				<br /><sub><b>JetBrains</b></sub>
 			</a>
         </td>
+        <td align="center">
+            <a href="https://github.com/OpenSourcePKG">
+				<img src="https://raw.githubusercontent.com/OpenSourcePKG/.github/main/profile/pegenaulogo250.png" width="80" alt=""/>
+				<br /><sub><b>Pegenau GmbH & Co. KG</b></sub>
+			</a>
+        </td>
 	</tr>
 </table>
 
