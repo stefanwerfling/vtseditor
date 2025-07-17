@@ -28,7 +28,10 @@ With the editor, you can:
 
 This is especially useful for large projects, team collaboration, or when sharing schema definitions with non-developers.
 
+### Screenshots
 <img src="doc/images/screenshot1.png" alt="Screenshot 1" width="450px" />
+<img src="doc/images/screenshot2.png" alt="Screenshot 2" width="450px" />
+<img src="doc/images/screenshot_edit1.png" alt="Screenshot Edit 1" width="450px" />
 
 ### Install
 
@@ -43,8 +46,10 @@ npm install --save-dev git+https://github.com/stefanwerfling/vtseditor.git
   "schemaPrefix": "Schema",
   "schemaPath": "./schemas/schema.json",
   "createTypes": true,
+  "createIndex": true,
   "autoGenerate": true,
-  "destinationPath": "./schemas/src"
+  "destinationPath": "./schemas/src",
+  "code_comment": true
 }
 ```
 3. start the vts editor
