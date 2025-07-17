@@ -66,10 +66,13 @@ export class SchemaGenerator {
             throw new Error(`❌ Schema data start not by root`);
         }
 
+        console.info(`Generate file in: ${destPath}`);
+
         this._createFileRegister(data.entrys);
         this._generateEntrys(destPath, data.entrys);
 
         if (this._options.createIndex) {
+            console.info(`Generate index in: ${destPath}`);
             this._generateIndex(destPath);
         }
     }

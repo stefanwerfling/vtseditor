@@ -20,6 +20,15 @@ function expressMiddleware(): Plugin {
             const autoGenerate = process.env.VTSEDITOR_AUTO_GENERATE === '1';
             const destinationPath = process.env.VTSEDITOR_DESTINATION_PATH || path.resolve('schemas', 'src');
 
+            console.log('VTS Editor Options:');
+            console.log(`\tSchema-Path: ${schemaPath}`);
+            console.log(`\tSchema-Prefix: ${schemaPrefix}`);
+            console.log(`\tCreate Types: ${createTypes ? 'true' : 'false'}`);
+            console.log(`\tCreate Index: ${createIndex ? 'true' : 'false'}`);
+            console.log(`\tAuto Generate files by save: ${autoGenerate ? 'true' : 'false'}`);
+            console.log(`\tDestination-Path: ${destinationPath}`);
+            console.log(' ');
+
             app.post('/api/save-schema', (req, res) => {
                 const schema = req.body as SchemaJsonData;
 
