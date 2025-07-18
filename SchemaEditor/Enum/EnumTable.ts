@@ -359,4 +359,17 @@ export class EnumTable {
             }
         });
     }
+
+    /**
+     * Remove all
+     */
+    public remove(): void {
+        for (const [id, value] of this._values.entries()) {
+            value.remove();
+            this._values.delete(id);
+        }
+
+        this._table.remove();
+    }
+
 }

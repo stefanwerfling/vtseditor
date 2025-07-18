@@ -122,44 +122,17 @@ export class SchemaEditor {
         // update events -----------------------------------------------------------------------------------------------
 
         window.addEventListener('schemaeditor:updatedata', () => {
-           console.log(this.getData());
-           this.saveData().then();
+            const rootEntry = this._treeview?.getRoot();
+
+            if (rootEntry) {
+                rootEntry.sortingEntrys();
+            }
+
+            this.saveData().then();
         });
 
         window.addEventListener('schemaeditor:updateview', () => {
-            if (this._jsPlumbInstance && this._container) {
-                this._jsPlumbInstance.deleteEveryConnection();
-                this._container.innerHTML = '';
-            }
-
-            const entry = Treeview.getActiveEntry();
-
-            if (entry) {
-                // Schemas ---------------------------------------------------------------------------------------------
-                const sTables = entry.getSchemaTables();
-
-                for (const table of sTables) {
-                    this._container!.appendChild(table.getElement());
-                    this._jsPlumbInstance!.revalidate(table.getElement());
-                }
-
-                // Enums -----------------------------------------------------------------------------------------------
-                const sEnums = entry.getEnumTables();
-
-                for (const tenum of sEnums) {
-                    this._container!.appendChild(tenum.getElement());
-                    this._jsPlumbInstance!.revalidate(tenum.getElement());
-                }
-
-                // updates view ----------------------------------------------------------------------------------------
-                for (const tenum of sEnums) {
-                    tenum.updateView();
-                }
-
-                for (const table of sTables) {
-                    table.updateView();
-                }
-            }
+            this._updateView();
         });
 
         window.addEventListener('schemaeditor:deleteschematable', (event: Event) => {
@@ -177,6 +150,16 @@ export class SchemaEditor {
                         window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
                     }
                 }
+            }
+        });
+
+        window.addEventListener('schemaeditor:sortingentrys', (event: Event) => {
+            const rootEntry = this._treeview?.getRoot();
+
+            if (rootEntry) {
+                rootEntry.sortingEntrys();
+                this._updateTreeview();
+                this._updateView();
             }
         });
 
@@ -211,6 +194,48 @@ export class SchemaEditor {
         // load data ---------------------------------------------------------------------------------------------------
 
         this.loadData().then();
+    }
+
+    protected _updateView(): void {
+        if (this._jsPlumbInstance && this._container) {
+            this._jsPlumbInstance.deleteEveryConnection();
+            this._container.innerHTML = '';
+        }
+
+        const entry = Treeview.getActiveEntry();
+
+        if (entry) {
+            // Schemas ---------------------------------------------------------------------------------------------
+            const sTables = entry.getSchemaTables();
+
+            for (const table of sTables) {
+                this._container!.appendChild(table.getElement());
+                this._jsPlumbInstance!.revalidate(table.getElement());
+            }
+
+            // Enums -----------------------------------------------------------------------------------------------
+            const sEnums = entry.getEnumTables();
+
+            for (const tenum of sEnums) {
+                this._container!.appendChild(tenum.getElement());
+                this._jsPlumbInstance!.revalidate(tenum.getElement());
+            }
+
+            // updates view ----------------------------------------------------------------------------------------
+            for (const tenum of sEnums) {
+                tenum.updateView();
+            }
+
+            for (const table of sTables) {
+                table.updateView();
+            }
+        }
+    }
+
+    public _updateTreeview(): void {
+        const data = this.getData();
+        this._treeview?.getRoot().removeEntrys();
+        this.setData(data);
     }
 
     /**
@@ -279,6 +304,6 @@ export class SchemaEditor {
         const data = await response.json() as SchemaJsonData;
 
         this.setData(data);
-        console.log(data);
     }
+
 }

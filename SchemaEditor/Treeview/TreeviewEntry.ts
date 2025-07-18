@@ -1,11 +1,11 @@
 import {EnumTable} from '../Enum/EnumTable.js';
+import {SchemaTable} from '../Schema/SchemaTable.js';
 import {
     SchemaJsonDataFS,
     SchemaJsonDataFSType,
     SchemaJsonEnumDescription,
     SchemaJsonSchemaDescription
 } from '../SchemaJsonData.js';
-import {SchemaTable} from '../Schema/SchemaTable.js';
 import {Treeview} from './Treeview.js';
 import {TreeviewDialog} from './TreeviewDialog.js';
 
@@ -129,16 +129,6 @@ export class TreeviewEntry {
             });
         }
 
-        // add button delete -------------------------------------------------------------------------------------------
-
-        if (type !== SchemaJsonDataFSType.root) {
-            const btnDelete = document.createElement('button');
-            btnDelete.textContent = '🗑';
-            btnDelete.classList.add('delete-folder');
-
-            folderLine.appendChild(btnDelete);
-        }
-
         // set span name -----------------------------------------------------------------------------------------------
 
         this._spanName = document.createElement('span');
@@ -192,6 +182,18 @@ export class TreeviewEntry {
             folderLine.appendChild(btnAdd);
         }
 
+        // add sorting -------------------------------------------------------------------------------------------------
+
+        if (type === SchemaJsonDataFSType.root) {
+            const btnSorting = document.createElement('button');
+            btnSorting.textContent = '↕️';
+            btnSorting.classList.add('add-folder');
+            btnSorting.addEventListener('click', () => {
+                window.dispatchEvent(new CustomEvent('schemaeditor:sortingentrys', {}));
+            });
+            folderLine.appendChild(btnSorting);
+        }
+
         // edit folder/file --------------------------------------------------------------------------------------------
 
         if (type === SchemaJsonDataFSType.folder || type === SchemaJsonDataFSType.file) {
@@ -225,6 +227,16 @@ export class TreeviewEntry {
         }
 
         // -------------------------------------------------------------------------------------------------------------
+
+        // add button delete -------------------------------------------------------------------------------------------
+
+        if (type !== SchemaJsonDataFSType.root) {
+            const btnDelete = document.createElement('button');
+            btnDelete.textContent = '🗑';
+            btnDelete.classList.add('delete-folder');
+
+            folderLine.appendChild(btnDelete);
+        }
 
         this._ul.appendChild(this._liElement);
 
@@ -476,6 +488,51 @@ export class TreeviewEntry {
         }
 
         return false;
+    }
+
+    /**
+     * Remove entrys
+     */
+    public removeEntrys(): void {
+        for (const aenum of this._enums) {
+            aenum.remove();
+        }
+
+        for (const atable of this._tables) {
+            atable.remove();
+        }
+
+        for (const [, entry] of this._list.entries()) {
+            entry.removeEntrys();
+            this._liElement.removeChild(entry.getElement());
+        }
+
+        this._list.clear();
+    }
+
+    /**
+     * Sorting entrys
+     */
+    public sortingEntrys(): void {
+        for (const [, entry] of this._list.entries()) {
+            entry.sortingEntrys();
+        }
+
+        this._list = new Map(
+            Array.from(this._list.entries()).sort((
+                [, a],
+                [, b]
+            ) => {
+                const typeOrder = (type: string) => (type === 'folder' ? 0 : 1);
+                const typeDiff = typeOrder(a.getType()) - typeOrder(b.getType());
+
+                if (typeDiff !== 0) {
+                    return typeDiff;
+                }
+
+                return a.getName().localeCompare(b.getName());
+            })
+        );
     }
 
 }

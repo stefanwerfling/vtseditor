@@ -240,7 +240,14 @@ export class SchemaTableFieldDialog {
         this._dialog.remove();
     }
 
+    /**
+     * Add subtypes select
+     * @protected
+     */
     protected _addSubtypesSelect(): HTMLSelectElement {
+        const itemDiv = document.createElement('div');
+        itemDiv.classList.add('dialog-subtypes-item');
+
         const selectType = document.createElement('select');
         selectType.classList.add('dialog-select');
 
@@ -252,7 +259,25 @@ export class SchemaTableFieldDialog {
             selectType.appendChild(option);
         }
 
-        this._subtypesSelectsDiv.appendChild(selectType);
+        itemDiv.appendChild(selectType);
+
+        const btnDelete = document.createElement('button');
+        btnDelete.classList.add('delete-button');
+        btnDelete.textContent = '🗑️';
+        btnDelete.title = 'Delete subtype';
+        btnDelete.addEventListener('click', ev => {
+           itemDiv.remove();
+
+            const index = this._selectSubTypes.indexOf(selectType);
+
+            if (index !== -1) {
+                this._selectSubTypes.splice(index, 1);
+            }
+        });
+
+        itemDiv.appendChild(btnDelete);
+
+        this._subtypesSelectsDiv.appendChild(itemDiv);
         this._selectSubTypes.push(selectType);
 
         return selectType;
@@ -268,6 +293,11 @@ export class SchemaTableFieldDialog {
         this._selectSubTypes = [];
     }
 
+    /**
+     * Visable subtypes
+     * @param {string} value
+     * @protected
+     */
     protected _visableSubtypes(value: string): void {
         switch (value) {
             case 'array':
@@ -313,6 +343,10 @@ export class SchemaTableFieldDialog {
 
             this._selectType.appendChild(option);
         }
+
+        // default
+        this._selectType.value = 'string';
+        this._visableSubtypes('string');
     }
 
     /**
@@ -331,6 +365,10 @@ export class SchemaTableFieldDialog {
         return SchemaNameUtil.validateName(this._inputName.value);
     }
 
+    /**
+     * Set field name
+     * @param {string} name
+     */
     public setFieldName(name: string): void {
         this._inputName.value = name;
     }
@@ -379,19 +417,36 @@ export class SchemaTableFieldDialog {
         }
     }
 
+    /**
+     * Get optional
+     * @return {string}
+     */
     public getOptional(): boolean {
         return this._selectOptional.value === '1';
     }
 
+    /**
+     * Set optional
+     * @param {string} optional
+     */
     public setOptional(optional: boolean): void {
         this._selectOptional.value = optional ? '1' : '0';
     }
 
+    /**
+     * Set description
+     * @param {string} description
+     */
     public setDescription(description: string): void {
         this._textareaDescription.value = description;
     }
 
+    /**
+     * Get description
+     * @return
+     */
     public getDescription(): string {
         return this._textareaDescription.value;
     }
+
 }

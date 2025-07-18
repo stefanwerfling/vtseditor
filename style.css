@@ -313,8 +313,7 @@ dialog::backdrop {
   color: #3e7e9c;
 }
 
-.dialog-input,
-.dialog-select {
+.dialog-input {
   padding: 6px 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -346,10 +345,38 @@ dialog::backdrop {
 .dialog-subtypes-list {
   display: flex;
   flex-direction: column;
-  gap: 6px; /* Abstand zwischen den Selects */
+  gap: 6px;
   margin-bottom: 8px;
   max-height: 200px;
   overflow-y: auto;
+}
+
+.dialog-subtypes-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dialog-select {
+  flex: 1; /* füllt den verfügbaren Platz */
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.delete-button {
+  background: none;
+  border: none;
+  color: #d00;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.delete-button:hover {
+  color: #900;
 }
 
 .centered-button {
