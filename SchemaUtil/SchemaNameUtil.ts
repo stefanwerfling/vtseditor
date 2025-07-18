@@ -29,6 +29,6 @@ export class SchemaNameUtil {
      * @return {string}
      */
     public static validateEnumName(name: string): string {
-        return this.validateName(name).toUpperCase();
+        return this.validateName(name);
     }
 }
