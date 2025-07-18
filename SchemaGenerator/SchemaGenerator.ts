@@ -201,7 +201,10 @@ export class SchemaGenerator {
         // write imports -----------------------------------------------------------------------------------------------
 
         if (schemas.length > 0) {
-            content += '\r\n';
+            if (enums.length > 0) {
+                content += '\r\n\r\n';
+            }
+
             content += this._writeContent(schemas);
 
             contentHeader = 'import {ExtractSchemaResultType, Vts} from \'vts\';\r\n';
@@ -221,7 +224,7 @@ export class SchemaGenerator {
                 }
             }
 
-            content += '\r\n';
+            contentHeader += '\r\n';
         }
 
         // write to file -----------------------------------------------------------------------------------------------
@@ -274,7 +277,7 @@ export class SchemaGenerator {
         for (const schema of sortedSchemas) {
             const schemaName = this._buildName(schema.name);
 
-            if (content === '') {
+            if (content !== '') {
                 content += '\r\n\r\n';
             }
 
