@@ -189,24 +189,31 @@ export class SchemaGenerator {
         // reset used schemas
         this._fileUsedSchemas = [];
 
+        let contentHeader = '';
+
         // write schemas and enums -------------------------------------------------------------------------------------
         let content = this._writeEnumContent(enums);
 
-        content += '\r\n';
-        content += this._writeContent(schemas);
-
         // write imports -----------------------------------------------------------------------------------------------
 
-        let contentHeader = 'import {ExtractSchemaResultType, Vts} from \'vts\';\r\n';
+        if (schemas.length > 0) {
+            content += '\r\n';
+            content += this._writeContent(schemas);
 
-        for (const schemaImport of this._fileUsedSchemas) {
-            const importPath = this._fileRegister.get(schemaImport);
+            contentHeader = 'import {ExtractSchemaResultType, Vts} from \'vts\';\r\n';
 
-            if (importPath) {
-                if (importPath !== relPath) {
-                    const relativImportPath = SchemaPathUtil.getRelativeImportPath(`./${relPath}`, `./${importPath}.js`);
+            for (const schemaImport of this._fileUsedSchemas) {
+                const importPath = this._fileRegister.get(schemaImport);
 
-                    contentHeader += `import {${schemaImport}} from '${relativImportPath}';\r\n`;
+                if (importPath) {
+                    if (importPath !== relPath) {
+                        const relativImportPath = SchemaPathUtil.getRelativeImportPath(
+                            `./${relPath}`,
+                            `./${importPath}.js`
+                        );
+
+                        contentHeader += `import {${schemaImport}} from '${relativImportPath}';\r\n`;
+                    }
                 }
             }
         }
