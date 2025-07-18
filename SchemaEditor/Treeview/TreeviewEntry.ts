@@ -366,10 +366,12 @@ export class TreeviewEntry {
             entry.setData(aEntry);
         }
 
-        for (const aEnum of data.enums) {
-            const tenum = new EnumTable(aEnum.id, aEnum.name);
-            tenum.setData(aEnum);
-            this.addEnumTable(tenum);
+        if (data.enums) {
+            for (const aEnum of data.enums) {
+                const tenum = new EnumTable(aEnum.id, aEnum.name);
+                tenum.setData(aEnum);
+                this.addEnumTable(tenum);
+            }
         }
 
         for (const aSchema of data.schemas) {
