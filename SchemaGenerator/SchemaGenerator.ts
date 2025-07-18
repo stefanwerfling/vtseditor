@@ -190,9 +190,13 @@ export class SchemaGenerator {
         this._fileUsedSchemas = [];
 
         let contentHeader = '';
+        let content = '';
 
         // write schemas and enums -------------------------------------------------------------------------------------
-        let content = this._writeEnumContent(enums);
+
+        if (enums.length > 0) {
+            content += this._writeEnumContent(enums);
+        }
 
         // write imports -----------------------------------------------------------------------------------------------
 
