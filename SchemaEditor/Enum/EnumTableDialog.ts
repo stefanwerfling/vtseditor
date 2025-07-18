@@ -1,19 +1,19 @@
 import {SchemaNameUtil} from '../../SchemaUtil/SchemaNameUtil.js';
 
 /**
- * Schema table dialog on close
+ * Enum table dialog on close
  */
-export type SchemaTableDialogOnClose = () => void;
+export type EnumTableDialogOnClose = () => void;
 
 /**
- * Schema table dialog on confirm
+ * Enum table dialog on confirm
  */
-export type SchemaTableDialogOnConfirm = (dialog: SchemaTableDialog) => boolean;
+export type EnumTableDialogOnConfirm = (dialog: EnumTableDialog) => boolean;
 
 /**
- * Schema table dialog
+ * Enum table dialog
  */
-export class SchemaTableDialog {
+export class EnumTableDialog {
 
     /**
      * Dialog element
@@ -28,22 +28,16 @@ export class SchemaTableDialog {
     protected _inputName: HTMLInputElement;
 
     /**
-     * Select Extend
-     * @protected
-     */
-    protected _selectExtend: HTMLSelectElement;
-
-    /**
      * on close
      * @protected
      */
-    protected _onClose: SchemaTableDialogOnClose|null = null;
+    protected _onClose: EnumTableDialogOnClose|null = null;
 
     /**
      * on confirm
      * @protected
      */
-    protected _onConfirm: SchemaTableDialogOnConfirm|null = null;
+    protected _onConfirm: EnumTableDialogOnConfirm|null = null;
 
     /**
      * constructor
@@ -53,31 +47,21 @@ export class SchemaTableDialog {
 
         const title = document.createElement('div');
         title.classList.add('dialog-title');
-        title.textContent = 'Edit Schema';
+        title.textContent = 'Edit Enum';
 
         this._dialog.appendChild(title);
 
         const labelName = document.createElement('div');
         labelName.classList.add('dialog-label');
-        labelName.textContent = 'Schemaname';
+        labelName.textContent = 'Enumname';
         this._dialog.appendChild(labelName);
 
         this._inputName = document.createElement('input');
         this._inputName.type = 'text';
         this._inputName.classList.add('dialog-input');
-        this._inputName.placeholder = 'Schemaname';
+        this._inputName.placeholder = 'Enumname';
 
         this._dialog.appendChild(this._inputName);
-
-        const labelExtend = document.createElement('div');
-        labelExtend.classList.add('dialog-label');
-        labelExtend.textContent = 'Extend';
-        this._dialog.appendChild(labelExtend);
-
-        this._selectExtend = document.createElement('select');
-        this._selectExtend.classList.add('dialog-select');
-
-        this._dialog.appendChild(this._selectExtend);
 
         // buttons -----------------------------------------------------------------------------------------------------
 
@@ -120,10 +104,6 @@ export class SchemaTableDialog {
         document.body.appendChild(this._dialog);
     }
 
-    /**
-     * Close dialog
-     * @protected
-     */
     protected _close(): void {
         this._dialog.close();
         this._dialog.remove();
@@ -138,65 +118,35 @@ export class SchemaTableDialog {
 
     /**
      * Set on close
-     * @param {SchemaTableDialogOnClose} event
+     * @param {EnumTableDialogOnClose} event
      */
-    public setOnClose(event: SchemaTableDialogOnClose): void {
+    public setOnClose(event: EnumTableDialogOnClose): void {
         this._onClose = event;
     }
 
     /**
-     * Set types options
-     * @param {Map<string, string>} options
-     */
-    public setExtendOptions(options: Map<string, string>): void {
-        this._selectExtend.innerHTML = '';
-
-        for (const [typeName, typeValue] of options.entries()) {
-            const option = document.createElement('option');
-            option.value = typeName;
-            option.textContent = typeValue;
-
-            this._selectExtend.appendChild(option);
-        }
-    }
-
-    /**
      * Set on confirm
-     * @param {SchemaTableDialogOnConfirm} event
+     * @param {EnumTableDialogOnConfirm} event
      */
-    public setOnConfirm(event: SchemaTableDialogOnConfirm): void {
+    public setOnConfirm(event: EnumTableDialogOnConfirm): void {
         this._onConfirm = event;
     }
 
     /**
-     * Get schema name value
+     * Get enum name value
      * @return {string}
      */
-    public getSchemaName(): string {
+    public getEnumName(): string {
         return SchemaNameUtil.validateName(this._inputName.value);
     }
 
     /**
-     * Set schema name
+     * Set enum name
      * @param {string} name
      */
-    public setSchemaName(name: string): void {
+    public setEnumName(name: string): void {
         this._inputName.value = name;
     }
 
-    /**
-     * Return schema extend
-     * @return {string}
-     */
-    public getSchemaExtend(): string {
-        return this._selectExtend.value;
-    }
 
-    /**
-     * Set schema extend
-     * @param {string} extend
-     */
-    public setSchemaExtend(extend: string): void {
-        this._selectExtend.value = extend;
-    }
 }

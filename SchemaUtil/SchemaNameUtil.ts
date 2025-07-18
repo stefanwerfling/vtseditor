@@ -22,4 +22,13 @@ export class SchemaNameUtil {
 
         return nName;
     }
+
+    /**
+     * Validate enum name
+     * @param {string} name
+     * @return {string}
+     */
+    public static validateEnumName(name: string): string {
+        return this.validateName(name).toUpperCase();
+    }
 }

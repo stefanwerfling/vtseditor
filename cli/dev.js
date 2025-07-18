@@ -19,7 +19,7 @@ if (!fs.existsSync(configFile)) {
         createIndex: true,
         autoGenerate: false,
         destinationPath: './schemas/src',
-        code_comment: true
+        codeComment: true
     }, null, 2));
     console.log('✅ vtseditor.json created');
 }
@@ -32,7 +32,7 @@ process.env.VTSEDITOR_CREATE_TYPES = config.createTypes ? '1' : '0';
 process.env.VTSEDITOR_CREATE_INDEX = config.createIndex ? '1' : '0';
 process.env.VTSEDITOR_AUTO_GENERATE = config.autoGenerate ? '1' : '0';
 process.env.VTSEDITOR_DESTINATION_PATH = path.resolve(projectRoot, config.destinationPath);
-process.env.VTSEDITOR_CODE_COMMENT = config.code_comment ? '1' : '0';
+process.env.VTSEDITOR_CODE_COMMENT = config.codeComment ? '1' : '0';
 
 // Vite run
 createServer({

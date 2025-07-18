@@ -1,19 +1,19 @@
 import {SchemaNameUtil} from '../../SchemaUtil/SchemaNameUtil.js';
 
 /**
- * Schema table dialog on close
+ * Enum table value dialog on close
  */
-export type SchemaTableDialogOnClose = () => void;
+export type EnumTableValueDialogOnClose = () => void;
 
 /**
- * Schema table dialog on confirm
+ * Enum table value dialog on confirm
  */
-export type SchemaTableDialogOnConfirm = (dialog: SchemaTableDialog) => boolean;
+export type EnumTableValueDialogOnConfirm = (dialog: EnumTableValueDialog) => boolean;
 
 /**
- * Schema table dialog
+ * Enum table value dialog
  */
-export class SchemaTableDialog {
+export class EnumTableValueDialog {
 
     /**
      * Dialog element
@@ -28,22 +28,22 @@ export class SchemaTableDialog {
     protected _inputName: HTMLInputElement;
 
     /**
-     * Select Extend
+     * Input value
      * @protected
      */
-    protected _selectExtend: HTMLSelectElement;
+    protected _inputValue: HTMLInputElement;
 
     /**
      * on close
      * @protected
      */
-    protected _onClose: SchemaTableDialogOnClose|null = null;
+    protected _onClose: EnumTableValueDialogOnClose|null = null;
 
     /**
      * on confirm
      * @protected
      */
-    protected _onConfirm: SchemaTableDialogOnConfirm|null = null;
+    protected _onConfirm: EnumTableValueDialogOnConfirm|null = null;
 
     /**
      * constructor
@@ -53,31 +53,37 @@ export class SchemaTableDialog {
 
         const title = document.createElement('div');
         title.classList.add('dialog-title');
-        title.textContent = 'Edit Schema';
+        title.textContent = 'Add/Edit Field';
 
         this._dialog.appendChild(title);
 
+        // Name --------------------------------------------------------------------------------------------------------
+
         const labelName = document.createElement('div');
         labelName.classList.add('dialog-label');
-        labelName.textContent = 'Schemaname';
+        labelName.textContent = 'Name';
         this._dialog.appendChild(labelName);
 
         this._inputName = document.createElement('input');
         this._inputName.type = 'text';
         this._inputName.classList.add('dialog-input');
-        this._inputName.placeholder = 'Schemaname';
+        this._inputName.placeholder = 'Name';
 
         this._dialog.appendChild(this._inputName);
 
-        const labelExtend = document.createElement('div');
-        labelExtend.classList.add('dialog-label');
-        labelExtend.textContent = 'Extend';
-        this._dialog.appendChild(labelExtend);
+        // Value -------------------------------------------------------------------------------------------------------
 
-        this._selectExtend = document.createElement('select');
-        this._selectExtend.classList.add('dialog-select');
+        const labelValue = document.createElement('div');
+        labelValue.classList.add('dialog-label');
+        labelValue.textContent = 'Value';
+        this._dialog.appendChild(labelValue);
 
-        this._dialog.appendChild(this._selectExtend);
+        this._inputValue = document.createElement('input');
+        this._inputValue.type = 'text';
+        this._inputValue.classList.add('dialog-input');
+        this._inputValue.placeholder = 'Value';
+
+        this._dialog.appendChild(this._inputValue);
 
         // buttons -----------------------------------------------------------------------------------------------------
 
@@ -121,7 +127,7 @@ export class SchemaTableDialog {
     }
 
     /**
-     * Close dialog
+     * close dialog
      * @protected
      */
     protected _close(): void {
@@ -138,65 +144,38 @@ export class SchemaTableDialog {
 
     /**
      * Set on close
-     * @param {SchemaTableDialogOnClose} event
+     * @param {EnumTableValueDialogOnClose} event
      */
-    public setOnClose(event: SchemaTableDialogOnClose): void {
+    public setOnClose(event: EnumTableValueDialogOnClose): void {
         this._onClose = event;
     }
 
     /**
-     * Set types options
-     * @param {Map<string, string>} options
-     */
-    public setExtendOptions(options: Map<string, string>): void {
-        this._selectExtend.innerHTML = '';
-
-        for (const [typeName, typeValue] of options.entries()) {
-            const option = document.createElement('option');
-            option.value = typeName;
-            option.textContent = typeValue;
-
-            this._selectExtend.appendChild(option);
-        }
-    }
-
-    /**
      * Set on confirm
-     * @param {SchemaTableDialogOnConfirm} event
+     * @param {EnumTableValueDialogOnConfirm} event
      */
-    public setOnConfirm(event: SchemaTableDialogOnConfirm): void {
+    public setOnConfirm(event: EnumTableValueDialogOnConfirm): void {
         this._onConfirm = event;
     }
 
     /**
-     * Get schema name value
+     * Get name value
      * @return {string}
      */
-    public getSchemaName(): string {
+    public getName(): string {
         return SchemaNameUtil.validateName(this._inputName.value);
     }
 
-    /**
-     * Set schema name
-     * @param {string} name
-     */
-    public setSchemaName(name: string): void {
+    public setName(name: string): void {
         this._inputName.value = name;
     }
 
-    /**
-     * Return schema extend
-     * @return {string}
-     */
-    public getSchemaExtend(): string {
-        return this._selectExtend.value;
+    public getValue(): string {
+        return this._inputValue.value;
     }
 
-    /**
-     * Set schema extend
-     * @param {string} extend
-     */
-    public setSchemaExtend(extend: string): void {
-        this._selectExtend.value = extend;
+    public setValue(value: string): void {
+        this._inputValue.value = value;
     }
+
 }

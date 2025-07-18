@@ -6,7 +6,8 @@ export enum SchemaJsonDataFSType {
     root = 'root',
     folder = 'folder',
     file = 'file',
-    schema = 'schema'
+    schema = 'schema',
+    enum = 'enum'
 }
 
 export type SchemaJsonSchemaFieldDescription = {
@@ -32,12 +33,27 @@ export type SchemaJsonSchemaDescription = {
     description: string;
 };
 
+export type SchemaJsonEnumValueDescription = {
+    uuid: string;
+    name: string;
+    value: string;
+};
+
+export type SchemaJsonEnumDescription = {
+    id: string;
+    name: string;
+    pos: SchemaJsonSchemaPositionDescription;
+    values: SchemaJsonEnumValueDescription[];
+    description: string;
+};
+
 export type SchemaJsonDataFS = {
     id: string;
     name: string;
     type: SchemaJsonDataFSType|string
     entrys: SchemaJsonDataFS[];
     schemas: SchemaJsonSchemaDescription[];
+    enums: SchemaJsonEnumDescription[];
 };
 
 export type SchemaJsonEditorSetting = {

@@ -64,7 +64,7 @@ npm install --save-dev git+https://github.com/stefanwerfling/vtseditor.git
   "createIndex": true,
   "autoGenerate": true,
   "destinationPath": "./schemas/src",
-  "code_comment": true
+  "codeComment": true
 }
 ```
 3. start the vts editor

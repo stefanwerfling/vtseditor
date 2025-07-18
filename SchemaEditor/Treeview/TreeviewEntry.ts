@@ -1,4 +1,10 @@
-import {SchemaJsonDataFS, SchemaJsonDataFSType, SchemaJsonSchemaDescription} from '../SchemaJsonData.js';
+import {EnumTable} from '../Enum/EnumTable.js';
+import {
+    SchemaJsonDataFS,
+    SchemaJsonDataFSType,
+    SchemaJsonEnumDescription,
+    SchemaJsonSchemaDescription
+} from '../SchemaJsonData.js';
 import {SchemaTable} from '../Schema/SchemaTable.js';
 import {Treeview} from './Treeview.js';
 import {TreeviewDialog} from './TreeviewDialog.js';
@@ -61,6 +67,12 @@ export class TreeviewEntry {
      * @protected
      */
     protected _tables: SchemaTable[] = [];
+
+    /**
+     * List of enums
+     * @protected
+     */
+    protected _enums: EnumTable[] = [];
 
     /**
      * Constructor
@@ -317,6 +329,12 @@ export class TreeviewEntry {
             entrys.push(entry.getData());
         }
 
+        const enums: SchemaJsonEnumDescription[] = [];
+
+        for (const aenum of this._enums) {
+            enums.push(aenum.getData());
+        }
+
         const schemas: SchemaJsonSchemaDescription[] = [];
 
         for (const table of this._tables) {
@@ -328,7 +346,8 @@ export class TreeviewEntry {
             name: this._name,
             type: this._type,
             entrys: entrys,
-            schemas: schemas
+            schemas: schemas,
+            enums: enums,
         };
     }
 
@@ -347,6 +366,12 @@ export class TreeviewEntry {
             entry.setData(aEntry);
         }
 
+        for (const aEnum of data.enums) {
+            const tenum = new EnumTable(aEnum.id, aEnum.name);
+            tenum.setData(aEnum);
+            this.addEnumTable(tenum);
+        }
+
         for (const aSchema of data.schemas) {
             const schema = new SchemaTable(aSchema.id, aSchema.name, aSchema.extend);
             schema.setData(aSchema);
@@ -362,7 +387,7 @@ export class TreeviewEntry {
         this._tables.push(table);
 
         table.setOnDelete(table1 => {
-            window.dispatchEvent(new CustomEvent('schemaeditor:deletetable', {
+            window.dispatchEvent(new CustomEvent('schemaeditor:deleteschematable', {
                 detail: {
                     id: table1.getId()
                 }
@@ -371,7 +396,23 @@ export class TreeviewEntry {
     }
 
     /**
-     * Return tables
+     * Add enum table
+     * @param table
+     */
+    public addEnumTable(table: EnumTable): void {
+        this._enums.push(table);
+
+        table.setOnDelete(table1 => {
+            window.dispatchEvent(new CustomEvent('schemaeditor:deleteenumtable', {
+                detail: {
+                    id: table1.getId()
+                }
+            }));
+        });
+    }
+
+    /**
+     * Return schema tables
      * @return {SchemaTable[]}
      */
     public getSchemaTables(): SchemaTable[] {
@@ -379,8 +420,17 @@ export class TreeviewEntry {
     }
 
     /**
+     * Return enum tables
+     * @return {EnumTable[]}
+     */
+    public getEnumTables(): EnumTable[] {
+        return this._enums;
+    }
+
+    /**
      * Is schema table use
-     * @param id
+     * @param {string} id
+     * @return {boolean}
      */
     public isSchemaTableUse(id: string): boolean {
         for (const [, entry] of this._list.entries()) {
@@ -402,6 +452,11 @@ export class TreeviewEntry {
         return false;
     }
 
+    /**
+     * Remove a Schema table
+     * @param {string} id
+     * @return {boolean}
+     */
     public removeSchemaTable(id: string): boolean {
         for (let i = 0; i < this._tables.length; i++) {
             const table = this._tables[i];

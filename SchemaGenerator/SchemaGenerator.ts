@@ -1,6 +1,11 @@
 import fs from 'fs';
 import path from 'path';
-import {SchemaJsonDataFS, SchemaJsonDataFSType, SchemaJsonSchemaDescription} from '../SchemaEditor/SchemaJsonData.js';
+import {
+    SchemaJsonDataFS,
+    SchemaJsonDataFSType,
+    SchemaJsonEnumDescription,
+    SchemaJsonSchemaDescription
+} from '../SchemaEditor/SchemaJsonData.js';
 import {SchemaPathUtil} from '../SchemaUtil/SchemaPathUtil.js';
 import {SchemaGeneratorIndexSort} from './SchemaGeneratorIndexSort.js';
 
@@ -38,6 +43,12 @@ export class SchemaGenerator {
      * @protected
      */
     protected _idRegister: Map<string, string> = new Map<string, string>();
+
+    /**
+     * List of enums
+     * @protected
+     */
+    protected _enumRegister: string[] = [];
 
     /**
      * file used schemas
@@ -100,6 +111,7 @@ export class SchemaGenerator {
                 case SchemaJsonDataFSType.file:
                     const filePath = path.join(aPath, entry.name);
                     this._createSchemaRegister(filePath, entry.schemas);
+                    this._createEnumRegister(filePath, entry.enums);
                     break;
             }
         }
@@ -121,6 +133,21 @@ export class SchemaGenerator {
         }
     }
 
+    protected _createEnumRegister(file: string, enums: SchemaJsonEnumDescription[]): void {
+        for (const aenum of enums) {
+            this._fileRegister.set(aenum.name, file);
+            this._idRegister.set(aenum.id, aenum.name);
+            this._enumRegister.push(aenum.id);
+        }
+    }
+
+    /**
+     * Generate entrys to content
+     * @param {string} fullPath
+     * @param {SchemaJsonDataFS[]} entrys
+     * @param {string} relPath
+     * @protected
+     */
     protected _generateEntrys(fullPath: string, entrys: SchemaJsonDataFS[], relPath: string = ''): void {
         for (const entry of entrys) {
             const newFullPath = path.join(fullPath, entry.name);
@@ -134,18 +161,43 @@ export class SchemaGenerator {
                     break;
 
                 case SchemaJsonDataFSType.file:
-                    this._generateFile(newFullPath, newRelPath, entry.schemas);
+                    this._generateFile(
+                        newFullPath,
+                        newRelPath,
+                        entry.schemas,
+                        entry.enums
+                    );
                     break;
             }
         }
     }
 
-    protected _generateFile(fullPath: string, relPath: string, schemas: SchemaJsonSchemaDescription[]): void {
+    /**
+     * Generate file
+     * @param {string} fullPath
+     * @param {string} relPath
+     * @param {SchemaJsonSchemaDescription[]} schemas
+     * @param {SchemaJsonEnumDescription[]} enums
+     * @protected
+     */
+    protected _generateFile(
+        fullPath: string,
+        relPath: string,
+        schemas: SchemaJsonSchemaDescription[],
+        enums: SchemaJsonEnumDescription[]
+    ): void {
         // reset used schemas
         this._fileUsedSchemas = [];
 
+        // write schemas and enums -------------------------------------------------------------------------------------
+        let content = this._writeEnumContent(enums);
+
+        content += '\r\n';
+        content += this._writeContent(schemas);
+
+        // write imports -----------------------------------------------------------------------------------------------
+
         let contentHeader = 'import {ExtractSchemaResultType, Vts} from \'vts\';\r\n';
-        let content = this._writeContent(relPath, schemas);
 
         for (const schemaImport of this._fileUsedSchemas) {
             const importPath = this._fileRegister.get(schemaImport);
@@ -159,10 +211,52 @@ export class SchemaGenerator {
             }
         }
 
+        // write to file -----------------------------------------------------------------------------------------------
+
         fs.writeFileSync(`${fullPath}.ts`, `${contentHeader}${content}`, 'utf-8');
     }
 
-    protected _writeContent(relPath: string, schemas: SchemaJsonSchemaDescription[], writenSchemas: string[] = []): string {
+    /**
+     * Write Enum content
+     * @param {SchemaJsonEnumDescription[]} enums
+     * @protected
+     */
+    protected _writeEnumContent(enums: SchemaJsonEnumDescription[]): string {
+        let content = '';
+
+        for (const aenum of enums) {
+            if (content === '') {
+                content += '\r\n';
+            } else {
+                content += '\r\n\r\n';
+            }
+
+            if (this._options.code_comment) {
+                content += '/**\r\n';
+                content += ` * Enum ${aenum.name}\r\n`;
+                content += ' */\r\n'
+            }
+
+            content += `export enum ${aenum.name} {\r\n`;
+
+            for (const tvalue of aenum.values) {
+                content += `${this._options.code_indent}${tvalue.name} = '${tvalue.value}',\r\n`
+            }
+
+            content += '}';
+        }
+
+        return content;
+    }
+
+    /**
+     * Write content
+     * @param {SchemaJsonSchemaDescription[]} schemas
+     * @param {string[]} writenSchemas
+     * @return {string}
+     * @protected
+     */
+    protected _writeContent(schemas: SchemaJsonSchemaDescription[], writenSchemas: string[] = []): string {
         let content = '';
         const sortedSchemas = SchemaGeneratorIndexSort.sortSchemas(schemas);
 
@@ -183,6 +277,13 @@ export class SchemaGenerator {
         return content;
     }
 
+    /**
+     * Write Schema
+     * @param {string} schemaName
+     * @param {SchemaJsonSchemaDescription} schema
+     * @return {string}
+     * @protected
+     */
     protected _writeSchema(schemaName: string, schema: SchemaJsonSchemaDescription): string {
         let content = '';
 
@@ -244,6 +345,14 @@ export class SchemaGenerator {
         return content;
     }
 
+    /**
+     * Write Type
+     * @param {string} type
+     * @param {string[]} subtypes
+     * @param {string} description
+     * @return {string}
+     * @protected
+     */
     protected _writeType(type: string, subtypes: string[] = [], description: string = ''): string {
         let content = '';
 
@@ -287,6 +396,7 @@ export class SchemaGenerator {
                 break;
 
             default:
+                const isEnum = this._enumRegister.indexOf(type) !== -1;
                 const tschemaName = this._idRegister.get(type);
 
                 if (tschemaName) {
@@ -294,7 +404,11 @@ export class SchemaGenerator {
                         this._fileUsedSchemas.push(tschemaName);
                     }
 
-                    content += `${tschemaName}`;
+                    if (isEnum) {
+                        content += `Vts.enum(${tschemaName})`;
+                    } else {
+                        content += `${tschemaName}`;
+                    }
                 } else {
                     content += 'Vts.null()';
                 }
@@ -303,6 +417,11 @@ export class SchemaGenerator {
         return content;
     }
 
+    /**
+     * Generate Index file
+     * @param {string} aPath
+     * @protected
+     */
     protected _generateIndex(aPath: string): void {
         const indexFile = path.join(aPath, 'index');
 
@@ -329,13 +448,17 @@ export class SchemaGenerator {
         let content = '';
 
         for (const [file, schemas] of list.entries()) {
+            if (content.length !== 0) {
+                content += '\r\n';
+            }
+
             content += 'export {\r\n';
 
             for (const schema of schemas) {
                 content += `${this._options.code_indent}${schema},\r\n`;
             }
 
-            content += `} from './${file}.js';\r\n`;
+            content += `} from './${file}.js';`;
         }
 
         fs.writeFileSync(`${indexFile}.ts`, content, 'utf-8');

@@ -1,4 +1,5 @@
 import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
+import {EnumTable} from './Enum/EnumTable.js';
 import jsPlumbInstance from './jsPlumbInstance.js';
 import {SchemaExtends} from './SchemaExtends.js';
 import {SchemaJsonData, SchemaJsonDataFS} from './SchemaJsonData.js';
@@ -28,6 +29,12 @@ export class SchemaEditor {
      * @protected
      */
     protected _btnAddSchema: HTMLElement | null = null;
+
+    /**
+     * Button for add enum
+     * @protected
+     */
+    protected _btnAddEnum: HTMLElement | null = null;
 
     /**
      * Treeview
@@ -61,21 +68,54 @@ export class SchemaEditor {
     }
 
     /**
+     * Add a new Enum
+     * @protected
+     */
+    protected _addEnum(): void {
+        if (Treeview.getActiveEntry() === null) {
+            return;
+        }
+
+        const table = new EnumTable(crypto.randomUUID(), 'NewEnum');
+
+        Treeview.getActiveEntry()!.addEnumTable(table);
+
+        this._container!.appendChild(table.getElement());
+        this._jsPlumbInstance!.revalidate(table.getElement());
+    }
+
+    /**
      * Init
      */
     public init() {
         this._jsPlumbInstance = jsPlumbInstance;
         this._container = jsPlumbInstance.getContainer();
 
-        this._btnAddSchema = document.getElementById("addSchemaBtn");
+        // add schema button -------------------------------------------------------------------------------------------
 
-        this._btnAddSchema!.addEventListener("click", () => {
+        this._btnAddSchema = document.getElementById('addSchemaBtn');
+
+        this._btnAddSchema!.addEventListener('click', () => {
             if (Treeview.getActiveEntry() !== null) {
                 this._addSchema();
             } else {
                 alert('Please select first a File for your Schema!');
             }
         })
+
+        // add enum button ---------------------------------------------------------------------------------------------
+
+        this._btnAddEnum = document.getElementById('addEnumBtn');
+
+        this._btnAddEnum!.addEventListener('click', () => {
+            if (Treeview.getActiveEntry() !== null) {
+                this._addEnum();
+            } else {
+                alert('Please select first a File for your Schema!');
+            }
+        });
+
+        // treeview ----------------------------------------------------------------------------------------------------
 
         this._treeview = new Treeview();
 
@@ -95,20 +135,34 @@ export class SchemaEditor {
             const entry = Treeview.getActiveEntry();
 
             if (entry) {
-                const tables = entry.getSchemaTables();
+                // Schemas ---------------------------------------------------------------------------------------------
+                const sTables = entry.getSchemaTables();
 
-                for (const table of tables) {
+                for (const table of sTables) {
                     this._container!.appendChild(table.getElement());
                     this._jsPlumbInstance!.revalidate(table.getElement());
                 }
 
-                for (const table of tables) {
+                // Enums -----------------------------------------------------------------------------------------------
+                const sEnums = entry.getEnumTables();
+
+                for (const tenum of sEnums) {
+                    this._container!.appendChild(tenum.getElement());
+                    this._jsPlumbInstance!.revalidate(tenum.getElement());
+                }
+
+                // updates view ----------------------------------------------------------------------------------------
+                for (const tenum of sEnums) {
+                    tenum.updateView();
+                }
+
+                for (const table of sTables) {
                     table.updateView();
                 }
             }
         });
 
-        window.addEventListener('schemaeditor:deletetable', (event: Event) => {
+        window.addEventListener('schemaeditor:deleteschematable', (event: Event) => {
             const customEvent = event as CustomEvent<{ id: string }>;
             const rootEntry = this._treeview?.getRoot();
 
@@ -135,7 +189,7 @@ export class SchemaEditor {
 
         let isResizing = false;
 
-        resizer.addEventListener('mousedown', (e) => {
+        resizer.addEventListener('mousedown', () => {
             isResizing = true;
             document.body.style.cursor = 'col-resize';
         });
@@ -159,6 +213,10 @@ export class SchemaEditor {
         this.loadData().then();
     }
 
+    /**
+     * Return the data
+     * @return {SchemaJsonData}
+     */
     public getData(): SchemaJsonData {
         return {
             fs: this._treeview?.getData()!,
@@ -168,6 +226,11 @@ export class SchemaEditor {
         };
     }
 
+    /**
+     * Update registers
+     * @param {SchemaJsonDataFS} data
+     * @protected
+     */
     protected _updateRegisters(data: SchemaJsonDataFS): void {
         for (const schema of data.schemas) {
             SchemaExtends.getInstance().setExtend(schema.id, schema.name);
@@ -179,6 +242,10 @@ export class SchemaEditor {
         }
     }
 
+    /**
+     * Set data
+     * @param {SchemaJsonData} data
+     */
     public setData(data: SchemaJsonData): void {
         this._updateRegisters(data.fs);
         this._treeview?.setData(data.fs);
@@ -188,6 +255,9 @@ export class SchemaEditor {
         }
     }
 
+    /**
+     * Save data to vite server
+     */
     public async saveData(): Promise<void> {
         await fetch('/api/save-schema', {
             method: 'POST',
@@ -196,6 +266,9 @@ export class SchemaEditor {
         });
     }
 
+    /**
+     * Load data by vite server
+     */
     public async loadData(): Promise<void> {
         const response = await fetch('/api/load-schema');
 

@@ -113,6 +113,10 @@ body {
   border: 1px solid #ff8000;
 }
 
+.vts-enum-table {
+  background-color: #3e9c3e;
+}
+
 .vts-schema-buttons {
   display:flex;
   align-items: center;
@@ -191,6 +195,10 @@ body {
   align-items: center;
   background-color: #3e7e9c;
   color: #f7ebca;
+}
+
+.vts-enum-element-name {
+  background-color: #3e9c3e;
 }
 
 .vts-schema-element-name span {
@@ -492,6 +500,22 @@ button.add-folder {
   white-space: nowrap;
   text-align: center;
   border-radius: 10px;
+}
+
+.vts-badge-wh-4 {
+  margin-left: 4px !important;
+  display: inline-block;
+  min-width: 10px;
+  padding: 3px 7px;
+  font-size: 11px;
+  color: #000;
+  background-color: #ffffff;
+  line-height: 1;
+  vertical-align: middle;
+  white-space: nowrap;
+  text-align: center;
+  border-radius: 10px;
+  border: 1px solid #000;
 }
 
 .jtk-connector.hovered-connection path {

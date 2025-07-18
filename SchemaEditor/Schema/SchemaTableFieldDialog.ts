@@ -231,6 +231,10 @@ export class SchemaTableFieldDialog {
         document.body.appendChild(this._dialog);
     }
 
+    /**
+     * close dialog
+     * @protected
+     */
     protected _close(): void {
         this._dialog.close();
         this._dialog.remove();
