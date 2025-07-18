@@ -216,6 +216,8 @@ export class SchemaGenerator {
                     }
                 }
             }
+
+            content += '\r\n';
         }
 
         // write to file -----------------------------------------------------------------------------------------------
@@ -232,9 +234,7 @@ export class SchemaGenerator {
         let content = '';
 
         for (const aenum of enums) {
-            if (content === '') {
-                content += '\r\n';
-            } else {
+            if (content !== '') {
                 content += '\r\n\r\n';
             }
 
@@ -271,8 +271,6 @@ export class SchemaGenerator {
             const schemaName = this._buildName(schema.name);
 
             if (content === '') {
-                content += '\r\n';
-            } else {
                 content += '\r\n\r\n';
             }
 
