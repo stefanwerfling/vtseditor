@@ -153,7 +153,7 @@ export class SchemaEditor {
             }
         });
 
-        window.addEventListener('schemaeditor:sortingentrys', (event: Event) => {
+        window.addEventListener('schemaeditor:sortingentrys', () => {
             const rootEntry = this._treeview?.getRoot();
 
             if (rootEntry) {

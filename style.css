@@ -313,6 +313,16 @@ dialog::backdrop {
   color: #3e7e9c;
 }
 
+.dialog-body {
+  font-size: 14px;
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .dialog-input {
   padding: 6px 10px;
   border: 1px solid #ccc;

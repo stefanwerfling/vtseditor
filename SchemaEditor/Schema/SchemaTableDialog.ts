@@ -1,25 +1,10 @@
 import {SchemaNameUtil} from '../../SchemaUtil/SchemaNameUtil.js';
-
-/**
- * Schema table dialog on close
- */
-export type SchemaTableDialogOnClose = () => void;
-
-/**
- * Schema table dialog on confirm
- */
-export type SchemaTableDialogOnConfirm = (dialog: SchemaTableDialog) => boolean;
+import {BaseDialog} from '../Base/BaseDialog.js';
 
 /**
  * Schema table dialog
  */
-export class SchemaTableDialog {
-
-    /**
-     * Dialog element
-     * @protected
-     */
-    protected _dialog: HTMLDialogElement;
+export class SchemaTableDialog extends BaseDialog {
 
     /**
      * Input name
@@ -34,114 +19,37 @@ export class SchemaTableDialog {
     protected _selectExtend: HTMLSelectElement;
 
     /**
-     * on close
-     * @protected
-     */
-    protected _onClose: SchemaTableDialogOnClose|null = null;
-
-    /**
-     * on confirm
-     * @protected
-     */
-    protected _onConfirm: SchemaTableDialogOnConfirm|null = null;
-
-    /**
      * constructor
      */
     public constructor() {
-        this._dialog = document.createElement('dialog');
+        super();
+        this.setDialogTitle('Edit Schema');
 
-        const title = document.createElement('div');
-        title.classList.add('dialog-title');
-        title.textContent = 'Edit Schema';
-
-        this._dialog.appendChild(title);
+        // name --------------------------------------------------------------------------------------------------------
 
         const labelName = document.createElement('div');
         labelName.classList.add('dialog-label');
         labelName.textContent = 'Schemaname';
-        this._dialog.appendChild(labelName);
+        this._divBody.appendChild(labelName);
 
         this._inputName = document.createElement('input');
         this._inputName.type = 'text';
         this._inputName.classList.add('dialog-input');
         this._inputName.placeholder = 'Schemaname';
 
-        this._dialog.appendChild(this._inputName);
+        this._divBody.appendChild(this._inputName);
+
+        // Extend ------------------------------------------------------------------------------------------------------
 
         const labelExtend = document.createElement('div');
         labelExtend.classList.add('dialog-label');
         labelExtend.textContent = 'Extend';
-        this._dialog.appendChild(labelExtend);
+        this._divBody.appendChild(labelExtend);
 
         this._selectExtend = document.createElement('select');
         this._selectExtend.classList.add('dialog-select');
 
-        this._dialog.appendChild(this._selectExtend);
-
-        // buttons -----------------------------------------------------------------------------------------------------
-
-        const btns = document.createElement('div');
-        btns.classList.add('dialog-buttons');
-
-        const btnCancel = document.createElement('button');
-        btnCancel.textContent = 'Cancel';
-        btnCancel.classList.add('dialog-button');
-        btnCancel.addEventListener('click', () => {
-            if (this._onClose) {
-                this._onClose();
-            }
-
-            this._close();
-        });
-
-        btns.appendChild(btnCancel);
-
-        const btnConfirm = document.createElement('button');
-        btnConfirm.textContent = 'Save';
-        btnConfirm.classList.add('dialog-button');
-        btnConfirm.addEventListener('click', () => {
-            if (this._onConfirm) {
-                if (this._onConfirm(this)) {
-                    this._close();
-                }
-            } else {
-                this._close();
-            }
-        });
-
-
-        btns.appendChild(btnConfirm);
-
-        this._dialog.appendChild(btns);
-
-        // -------------------------------------------------------------------------------------------------------------
-
-        document.body.appendChild(this._dialog);
-    }
-
-    /**
-     * Close dialog
-     * @protected
-     */
-    protected _close(): void {
-        this._dialog.close();
-        this._dialog.remove();
-    }
-
-    /**
-     * Show the dialog
-     */
-    public show(): void {
-        this._dialog.showModal();
-    }
-
-    /**
-     * Set on close
-     * @param {SchemaTableDialogOnClose} event
-     */
-    public setOnClose(event: SchemaTableDialogOnClose): void {
-        this._onClose = event;
+        this._divBody.appendChild(this._selectExtend);
     }
 
     /**
@@ -158,14 +66,6 @@ export class SchemaTableDialog {
 
             this._selectExtend.appendChild(option);
         }
-    }
-
-    /**
-     * Set on confirm
-     * @param {SchemaTableDialogOnConfirm} event
-     */
-    public setOnConfirm(event: SchemaTableDialogOnConfirm): void {
-        this._onConfirm = event;
     }
 
     /**
@@ -199,4 +99,5 @@ export class SchemaTableDialog {
     public setSchemaExtend(extend: string): void {
         this._selectExtend.value = extend;
     }
+
 }

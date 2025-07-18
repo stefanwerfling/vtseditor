@@ -226,8 +226,6 @@ export class TreeviewEntry {
             folderLine.appendChild(btnEdit);
         }
 
-        // -------------------------------------------------------------------------------------------------------------
-
         // add button delete -------------------------------------------------------------------------------------------
 
         if (type !== SchemaJsonDataFSType.root) {
@@ -237,6 +235,8 @@ export class TreeviewEntry {
 
             folderLine.appendChild(btnDelete);
         }
+
+        // -------------------------------------------------------------------------------------------------------------
 
         this._ul.appendChild(this._liElement);
 

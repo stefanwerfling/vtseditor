@@ -1,25 +1,10 @@
 import {SchemaNameUtil} from '../../SchemaUtil/SchemaNameUtil.js';
-
-/**
- * Schema table field dialog on close
- */
-export type SchemaTableFieldDialogOnClose = () => void;
-
-/**
- * Schema table field dialog on confirm
- */
-export type SchemaTableFieldDialogOnConfirm = (dialog: SchemaTableFieldDialog) => boolean;
+import {BaseDialog} from '../Base/BaseDialog.js';
 
 /**
  * Schema Table field dialog
  */
-export class SchemaTableFieldDialog {
-
-    /**
-     * Dialog element
-     * @protected
-     */
-    protected _dialog: HTMLDialogElement;
+export class SchemaTableFieldDialog extends BaseDialog {
 
     /**
      * Input name
@@ -52,18 +37,6 @@ export class SchemaTableFieldDialog {
     protected _textareaDescription: HTMLTextAreaElement;
 
     /**
-     * on close
-     * @protected
-     */
-    protected _onClose: SchemaTableFieldDialogOnClose|null = null;
-
-    /**
-     * on confirm
-     * @protected
-     */
-    protected _onConfirm: SchemaTableFieldDialogOnConfirm|null = null;
-
-    /**
      * type options
      * @protected
      */
@@ -85,34 +58,29 @@ export class SchemaTableFieldDialog {
      * constructor
      */
     public constructor() {
-        this._dialog = document.createElement('dialog');
-
-        const title = document.createElement('div');
-        title.classList.add('dialog-title');
-        title.textContent = 'Add/Edit Field';
-
-        this._dialog.appendChild(title);
+        super();
+        this.setDialogTitle('Add/Edit Field');
 
         // fieldname ---------------------------------------------------------------------------------------------------
 
         const labelName = document.createElement('div');
         labelName.classList.add('dialog-label');
         labelName.textContent = 'Fieldname';
-        this._dialog.appendChild(labelName);
+        this._divBody.appendChild(labelName);
 
         this._inputName = document.createElement('input');
         this._inputName.type = 'text';
         this._inputName.classList.add('dialog-input');
         this._inputName.placeholder = 'Fieldname';
 
-        this._dialog.appendChild(this._inputName);
+        this._divBody.appendChild(this._inputName);
 
         // type --------------------------------------------------------------------------------------------------------
 
         const labelType = document.createElement('div');
         labelType.classList.add('dialog-label');
         labelType.textContent = 'Type';
-        this._dialog.appendChild(labelType);
+        this._divBody.appendChild(labelType);
 
         this._selectType = document.createElement('select');
         this._selectType.classList.add('dialog-select');
@@ -123,13 +91,13 @@ export class SchemaTableFieldDialog {
             this._visableSubtypes(target.value);
         });
 
-        this._dialog.appendChild(this._selectType);
+        this._divBody.appendChild(this._selectType);
 
         // subtypes ----------------------------------------------------------------------------------------------------
 
         this._subtypesDiv = document.createElement('div');
         this._subtypesDiv.classList.add('dialog-subtypes');
-        this._dialog.appendChild(this._subtypesDiv);
+        this._divBody.appendChild(this._subtypesDiv);
 
         const labelSubTypes = document.createElement('div');
         labelSubTypes.classList.add('dialog-label');
@@ -160,7 +128,7 @@ export class SchemaTableFieldDialog {
         const labelOptional = document.createElement('div');
         labelOptional.classList.add('dialog-label');
         labelOptional.textContent = 'Optional';
-        this._dialog.appendChild(labelOptional);
+        this._divBody.appendChild(labelOptional);
 
         this._selectOptional = document.createElement('select');
         this._selectOptional.classList.add('dialog-select');
@@ -175,69 +143,20 @@ export class SchemaTableFieldDialog {
         optionOptional.textContent = 'Field is optional';
         this._selectOptional.appendChild(optionOptional);
 
-        this._dialog.appendChild(this._selectOptional);
+        this._divBody.appendChild(this._selectOptional);
 
         // description -------------------------------------------------------------------------------------------------
 
         const labelDescription = document.createElement('div');
         labelDescription.classList.add('dialog-label');
         labelDescription.textContent = 'Description';
-        this._dialog.appendChild(labelDescription);
+        this._divBody.appendChild(labelDescription);
 
         this._textareaDescription = document.createElement('textarea');
         this._textareaDescription.placeholder = 'Your description ...';
         this._textareaDescription.rows = 8;
 
-        this._dialog.appendChild(this._textareaDescription);
-
-        // buttons -----------------------------------------------------------------------------------------------------
-
-        const btns = document.createElement('div');
-        btns.classList.add('dialog-buttons');
-
-        const btnCancel = document.createElement('button');
-        btnCancel.textContent = 'Cancel';
-        btnCancel.classList.add('dialog-button');
-        btnCancel.addEventListener('click', () => {
-            if (this._onClose) {
-                this._onClose();
-            }
-
-            this._close();
-        });
-
-        btns.appendChild(btnCancel);
-
-        const btnConfirm = document.createElement('button');
-        btnConfirm.textContent = 'Save';
-        btnConfirm.classList.add('dialog-button');
-        btnConfirm.addEventListener('click', () => {
-            if (this._onConfirm) {
-                if (this._onConfirm(this)) {
-                    this._close();
-                }
-            } else {
-                this._close();
-            }
-        });
-
-
-        btns.appendChild(btnConfirm);
-
-        this._dialog.appendChild(btns);
-
-        // -------------------------------------------------------------------------------------------------------------
-
-        document.body.appendChild(this._dialog);
-    }
-
-    /**
-     * close dialog
-     * @protected
-     */
-    protected _close(): void {
-        this._dialog.close();
-        this._dialog.remove();
+        this._divBody.appendChild(this._textareaDescription);
     }
 
     /**
@@ -265,7 +184,7 @@ export class SchemaTableFieldDialog {
         btnDelete.classList.add('delete-button');
         btnDelete.textContent = '🗑️';
         btnDelete.title = 'Delete subtype';
-        btnDelete.addEventListener('click', ev => {
+        btnDelete.addEventListener('click', () => {
            itemDiv.remove();
 
             const index = this._selectSubTypes.indexOf(selectType);
@@ -314,21 +233,6 @@ export class SchemaTableFieldDialog {
     }
 
     /**
-     * Show the dialog
-     */
-    public show(): void {
-        this._dialog.showModal();
-    }
-
-    /**
-     * Set on close
-     * @param {SchemaTableFieldDialogOnClose} event
-     */
-    public setOnClose(event: SchemaTableFieldDialogOnClose): void {
-        this._onClose = event;
-    }
-
-    /**
      * Set types options
      * @param {Map<string, string>} options
      */
@@ -347,14 +251,6 @@ export class SchemaTableFieldDialog {
         // default
         this._selectType.value = 'string';
         this._visableSubtypes('string');
-    }
-
-    /**
-     * Set on confirm
-     * @param {SchemaTableFieldDialogOnConfirm} event
-     */
-    public setOnConfirm(event: SchemaTableFieldDialogOnConfirm): void {
-        this._onConfirm = event;
     }
 
     /**
