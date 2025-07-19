@@ -196,6 +196,21 @@ export class SchemaTable {
 
         elBtn.appendChild(elBtnEdit);
 
+        // Button sorting ----------------------------------------------------------------------------------------------
+
+        const elBtnSort = document.createElement('div');
+        elBtnSort.classList.add(...['vts-schema-sort-name']);
+        elBtnSort.title = 'Sortieren';
+        elBtnSort.addEventListener('click', () => {
+            if (confirm('Do you want to sort the fields by name?')) {
+                this.sortingFields();
+                this.updateView();
+                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+            }
+        });
+
+        elBtn.appendChild(elBtnSort);
+
         // Button add --------------------------------------------------------------------------------------------------
 
         const elBtnAdd = document.createElement('div');
@@ -215,7 +230,7 @@ export class SchemaTable {
                     return false;
                 }
 
-                this.setFields([{
+                this.addFields([{
                     subtypes: dialog1.getFieldSubTypes(),
                     type: dialog1.getFieldType(),
                     name: fieldName,
@@ -265,50 +280,58 @@ export class SchemaTable {
     }
 
     /**
-     * Set the fields
+     * Add the fields
      * @param {SchemaJsonSchemaFieldDescription[]} fields
      */
-    public setFields(fields: SchemaJsonSchemaFieldDescription[]): void {
+    public addFields(fields: SchemaJsonSchemaFieldDescription[]): void {
         for (const fieldDesc of fields) {
-            const uuid = fieldDesc.uuid ?? crypto.randomUUID();
-            const field = new SchemaTableField(this._id, uuid, fieldDesc.name, fieldDesc.type);
-            field.setData(fieldDesc);
-            field.setOnSave((field1, dialog) => {
-                const fieldName = dialog.getFieldName();
-
-                if (this.existFieldName(field1.getId(), fieldName)) {
-                    alert('Please change your Fieldname, it already exist!');
-                    return false;
-                }
-
-                field1.setName(dialog.getFieldName());
-                field1.setSubTypes(dialog.getFieldSubTypes());
-                field1.setType(dialog.getFieldType());
-                field1.setOptional(dialog.getOptional());
-                field1.setDescription(dialog.getDescription());
-                field1.updateView();
-
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
-
-                return true;
-            });
-
-            field.setOnDelete(field1 => {
-                if (!confirm(`Do you really want to delete field '${field1.getName()}'?`)) {
-                    return;
-                }
-
-                field1.remove();
-                this._fields.delete(field1.getId());
-
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
-            });
-
-            this._columns.appendChild(field.getElement());
-            this._fields.set(uuid, field);
-
-            field.updateView();
+            this.addField(fieldDesc);
         }
+    }
+
+    /**
+     * Add a field
+     * @param {SchemaJsonSchemaFieldDescription[]} fieldDesc
+     */
+    public addField(fieldDesc: SchemaJsonSchemaFieldDescription): void {
+        const uuid = fieldDesc.uuid ?? crypto.randomUUID();
+        const field = new SchemaTableField(this._id, uuid, fieldDesc.name, fieldDesc.type);
+        field.setData(fieldDesc);
+        field.setOnSave((field1, dialog) => {
+            const fieldName = dialog.getFieldName();
+
+            if (this.existFieldName(field1.getId(), fieldName)) {
+                alert('Please change your Fieldname, it already exist!');
+                return false;
+            }
+
+            field1.setName(dialog.getFieldName());
+            field1.setSubTypes(dialog.getFieldSubTypes());
+            field1.setType(dialog.getFieldType());
+            field1.setOptional(dialog.getOptional());
+            field1.setDescription(dialog.getDescription());
+            field1.updateView();
+
+            window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+
+            return true;
+        });
+
+        field.setOnDelete(field1 => {
+            if (!confirm(`Do you really want to delete field '${field1.getName()}'?`)) {
+                return;
+            }
+
+            field1.remove();
+            this._fields.delete(field1.getId());
+
+            window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+        });
+
+        this._columns.appendChild(field.getElement());
+        this._fields.set(uuid, field);
+
+        field.updateView();
     }
 
     /**
@@ -456,7 +479,7 @@ export class SchemaTable {
         this._id = data.id;
         this.setName(data.name);
         this.setExtend(data.extend);
-        this.setFields(data.fields);
+        this.addFields(data.fields);
         this.setPosition(data.pos.x, data.pos.y);
     }
 
@@ -543,4 +566,21 @@ export class SchemaTable {
             }
         });
     }
+
+    public sortingFields(): void {
+        const sortedFields = Array.from(this._fields.values()).sort((a, b) =>
+            a.getName().localeCompare(b.getName())
+        );
+
+        this._columns.innerHTML = '';
+
+        for (const field of sortedFields) {
+            this._columns.appendChild(field.getElement());
+        }
+
+        this._fields = new Map(
+            sortedFields.map(field => [field.getName(), field])
+        );
+    }
+
 }

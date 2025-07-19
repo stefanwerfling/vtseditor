@@ -147,6 +147,7 @@ body {
 
 .vts-schema-edit {
   cursor:pointer;
+  margin-right: 7px;
   padding-left: 20px;
 }
 
@@ -156,6 +157,26 @@ body {
 
 .vts-schema-edit:after {
   content:"✎";
+}
+
+.vts-schema-sort-name {
+  margin-right: 7px;
+}
+
+.vts-schema-edit {
+  cursor: pointer;
+}
+
+.vts-schema-edit:hover {
+  color: #ff8000;
+}
+
+.vts-schema-sort-name:hover {
+  color: #ff8000;
+}
+
+.vts-schema-sort-name:after {
+  content: "⇅";
 }
 
 .vts-schema-element .vts-schema-add {
