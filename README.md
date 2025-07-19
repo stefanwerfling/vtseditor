@@ -51,8 +51,15 @@ This is especially useful for large projects, team collaboration, or when sharin
 ### Install
 
 1. install the vts editor
-```bash
+
+for your project: 
+```shell
 npm install --save-dev git+https://github.com/stefanwerfling/vtseditor.git
+```
+
+for global:
+```shell
+npm install -g git+https://github.com/stefanwerfling/vtseditor.git
 ```
 
 2. create your config ```vtseditor.json``` and add your config:
@@ -76,7 +83,7 @@ npm install --save-dev git+https://github.com/stefanwerfling/vtseditor.git
 }
 ```
 3. start the vts editor
-```bash
+```shell
 npx vtseditor
 ```
 
