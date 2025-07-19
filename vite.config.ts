@@ -3,6 +3,8 @@ import { defineConfig, Plugin } from 'vite';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import {SchemaErrors} from 'vts';
+import {SchemaConfig} from './Config/Config.js';
 import {SchemaJsonData} from './SchemaEditor/SchemaJsonData.js';
 import {SchemaGenerator} from './SchemaGenerator/SchemaGenerator.js';
 
@@ -13,13 +15,49 @@ function expressMiddleware(): Plugin {
             const app = express();
             app.use(express.json());
 
-            const schemaPath = process.env.VTSEDITOR_SCHEMA_PATH || path.resolve('schemas', 'schema.json');
-            const schemaPrefix = process.env.VTSEDITOR_SCHEMA_PREFIX || 'Schema';
-            const createTypes = process.env.VTSEDITOR_CREATE_TYPES === '1';
-            const createIndex = process.env.VTSEDITOR_CREATE_INDEX === '1';
-            const autoGenerate = process.env.VTSEDITOR_AUTO_GENERATE === '1';
-            const destinationPath = process.env.VTSEDITOR_DESTINATION_PATH || path.resolve('schemas', 'src');
-            const codeComment = process.env.VTSEDITOR_CODE_COMMENT === '1';
+            // config load ---------------------------------------------------------------------------------------------
+
+            const configFile = process.env.VTSEDITOR_CONFIG_FILE;
+            const projectRoot = process.env.VTSEDITOR_PROJECT_ROOT ?? process.cwd();
+
+            let schemaPath = path.resolve('schemas', 'schema.json');
+            let schemaPrefix = 'Schema';
+            let createTypes = false;
+            let createIndex = false;
+            let autoGenerate = false;
+            let destinationPath = path.resolve('schemas', 'src');
+            let codeComment = false;
+            let codeIndent = '    '
+
+            if (configFile) {
+                const config = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
+
+                const errors: SchemaErrors = [];
+
+                if (SchemaConfig.validate(config, errors)) {
+                    schemaPath = path.resolve(projectRoot, config.project.schemaPath);
+                    autoGenerate = config.project.autoGenerate ?? autoGenerate;
+
+                    if (config.project.destinationPath) {
+                        destinationPath = path.resolve(projectRoot, config.project.destinationPath);
+                    }
+
+                    if (config.project.code) {
+                        const pcode = config.project.code;
+
+                        schemaPrefix = pcode.schemaPrefix ?? schemaPrefix;
+                        createTypes = pcode.createTypes ?? createTypes;
+                        createIndex = pcode.createIndex ?? createIndex;
+                        codeComment = pcode.codeComment ?? codeComment;
+                        codeIndent = pcode.codeIndent ?? codeIndent;
+                    }
+
+                } else {
+                    console.log('Your config file has an incorrect structure, please check the!');
+                    console.log(errors);
+                    return;
+                }
+            }
 
             console.log('VTS Editor Options:');
             console.log(`\tSchema-Path: ${schemaPath}`);
@@ -43,7 +81,7 @@ function expressMiddleware(): Plugin {
                         createTypes: createTypes,
                         createIndex: createIndex,
                         destinationPath: destinationPath,
-                        code_indent: '    ',
+                        code_indent: codeIndent,
                         code_comment: codeComment
                     });
 

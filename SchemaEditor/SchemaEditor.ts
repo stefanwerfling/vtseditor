@@ -250,7 +250,7 @@ export class SchemaEditor {
     }
 
     /**
-     * Upfszr tree view
+     * Update tree view
      */
     public _updateTreeview(): void {
         const data = this.getData();

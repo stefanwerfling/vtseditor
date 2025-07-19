@@ -58,13 +58,21 @@ npm install --save-dev git+https://github.com/stefanwerfling/vtseditor.git
 2. create your config ```vtseditor.json``` and add your config:
 ```json
 {
-  "schemaPrefix": "Schema",
-  "schemaPath": "./schemas/schema.json",
-  "createTypes": true,
-  "createIndex": true,
-  "autoGenerate": true,
-  "destinationPath": "./schemas/src",
-  "codeComment": true
+  "project": {
+    "schemaPath": "./schemas/schema.json",
+    "code": {
+      "schemaPrefix": "Schema",
+      "createTypes": true,
+      "createIndex": true,
+      "codeComment": true,
+      "codeIndent": "    "
+    },
+    "autoGenerate": false,
+    "destinationPath": "./schemas/src"
+  },
+  "server": {
+    "port": 5173
+  }
 }
 ```
 3. start the vts editor

@@ -532,7 +532,7 @@ export class TreeviewEntry {
     }
 
     /**
-     * Set a active name
+     * Set an active name
      */
     public setActiveName(): void {
         if (this.getType() === SchemaJsonDataFSType.file) {

@@ -13,36 +13,54 @@ const configFile = path.resolve(projectRoot, 'vtseditor.json');
 
 if (!fs.existsSync(configFile)) {
     fs.writeFileSync(configFile, JSON.stringify({
-        schemaPrefix: 'Schema',
-        schemaPath: './schemas/schema.json',
-        createTypes: true,
-        createIndex: true,
-        autoGenerate: false,
-        destinationPath: './schemas/src',
-        codeComment: true
+        project: {
+            schemaPath: './schemas/schema.json',
+            code: {
+                schemaPrefix: 'Schema',
+                createTypes: true,
+                createIndex: false,
+                codeComment: true,
+                codeIndent: '    '
+            },
+            autoGenerate: false,
+            destinationPath: './schemas/src',
+        },
+        server: {
+            port: 5173
+        }
     }, null, 2));
     console.log('✅ vtseditor.json created');
 }
 
 const config = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
 
-process.env.VTSEDITOR_SCHEMA_PATH = path.resolve(projectRoot, config.schemaPath);
-process.env.VTSEDITOR_SCHEMA_PREFIX = config.schemaPrefix;
-process.env.VTSEDITOR_CREATE_TYPES = config.createTypes ? '1' : '0';
-process.env.VTSEDITOR_CREATE_INDEX = config.createIndex ? '1' : '0';
-process.env.VTSEDITOR_AUTO_GENERATE = config.autoGenerate ? '1' : '0';
-process.env.VTSEDITOR_DESTINATION_PATH = path.resolve(projectRoot, config.destinationPath);
-process.env.VTSEDITOR_CODE_COMMENT = config.codeComment ? '1' : '0';
+process.env.VTSEDITOR_PROJECT_ROOT = projectRoot;
+process.env.VTSEDITOR_CONFIG_FILE = configFile;
+
+let serverPort = 5173;
+
+if (config) {
+    if (config.server) {
+        if (config.server.port) {
+            serverPort = config.server.port;
+        }
+    }
+}
 
 // Vite run
 createServer({
     configFile: path.resolve(__dirname, '../vite.config.ts'),
     root: path.resolve(__dirname, '..'),
 }).then(server => {
-    return server.listen();
+    return server.listen(serverPort);
 }).then(() => {
-    console.log('🚀 VTS Editor running at http://localhost:5173');
+    console.log(`🚀 VTS Editor running at http://localhost:${serverPort}`);
 }).catch(err => {
-    console.error('❌ Failed to start VTS Editor:', err);
+    if (err.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${serverPort} already in use!`);
+    } else {
+        console.error('❌ Failed to start VTS Editor:', err);
+    }
+
     process.exit(1);
 });
