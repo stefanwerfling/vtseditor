@@ -138,12 +138,6 @@ export class TreeviewEntry {
 
         this._spanName.addEventListener('click', () => {
             if (this.getType() === SchemaJsonDataFSType.file) {
-                document.querySelectorAll('.treeview-file.active').forEach(el => {
-                    el.classList.remove('active');
-                });
-
-                this._spanName.classList.add('active');
-
                 Treeview.setActivEntry(this);
 
                 window.dispatchEvent(new CustomEvent('schemaeditor:updateview', {}));
@@ -507,6 +501,8 @@ export class TreeviewEntry {
             this._liElement.removeChild(entry.getElement());
         }
 
+        this._enums = [];
+        this._tables = [];
         this._list.clear();
     }
 
@@ -533,6 +529,39 @@ export class TreeviewEntry {
                 return a.getName().localeCompare(b.getName());
             })
         );
+    }
+
+    /**
+     * Set a active name
+     */
+    public setActiveName(): void {
+        if (this.getType() === SchemaJsonDataFSType.file) {
+            document.querySelectorAll('.treeview-file.active').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            this._spanName.classList.add('active');
+        }
+    }
+
+    /**
+     * Return the entry by id
+     * @param {string} id
+     */
+    public getEntryById(id: string): TreeviewEntry|null {
+        if (this._id === id) {
+            return this;
+        }
+
+        for (const [, enty] of this._list.entries()) {
+            const tentry = enty.getEntryById(id);
+
+            if (tentry !== null) {
+                return tentry;
+            }
+        }
+
+        return null;
     }
 
 }

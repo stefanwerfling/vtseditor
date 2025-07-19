@@ -173,7 +173,8 @@ export class SchemaTable {
             dialog.setSchemaName(this._name);
             dialog.setExtendOptions(SchemaExtends.getInstance().getExtends([this._id]));
             dialog.setSchemaExtend(this._extend);
-            dialog.setOnConfirm(dialog1 => {
+            dialog.setOnConfirm(tdialog => {
+                const dialog1 = tdialog as unknown as SchemaTableDialog;
                 const schemaName = dialog1.getSchemaName();
                 const tId = SchemaExtends.getInstance().getExtendIdByName(schemaName);
 
@@ -204,7 +205,8 @@ export class SchemaTable {
             const dialog = new SchemaTableFieldDialog();
             dialog.show();
             dialog.setTypeOptions(SchemaTypes.getInstance().getTypes([this._id]));
-            dialog.setOnConfirm(dialog1 => {
+            dialog.setOnConfirm(tdialog => {
+                const dialog1 = tdialog as unknown as SchemaTableFieldDialog;
                 const fieldName = dialog1.getFieldName();
                 const uid = crypto.randomUUID();
 
@@ -518,6 +520,7 @@ export class SchemaTable {
             this._fields.delete(id);
         }
 
+        this._fields.clear();
         this._table.remove();
     }
 

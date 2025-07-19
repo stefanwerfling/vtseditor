@@ -157,8 +157,19 @@ export class SchemaEditor {
             const rootEntry = this._treeview?.getRoot();
 
             if (rootEntry) {
+                const activeEntryId = Treeview.getActiveEntry()?.getId();
+
                 rootEntry.sortingEntrys();
                 this._updateTreeview();
+
+                if (activeEntryId) {
+                    const tentry = rootEntry.getEntryById(activeEntryId);
+
+                    if (tentry) {
+                        Treeview.setActivEntry(tentry);
+                    }
+                }
+
                 this._updateView();
             }
         });
@@ -196,6 +207,10 @@ export class SchemaEditor {
         this.loadData().then();
     }
 
+    /**
+     * Update view
+     * @protected
+     */
     protected _updateView(): void {
         if (this._jsPlumbInstance && this._container) {
             this._jsPlumbInstance.deleteEveryConnection();
@@ -229,9 +244,14 @@ export class SchemaEditor {
             for (const table of sTables) {
                 table.updateView();
             }
+
+            entry.setActiveName();
         }
     }
 
+    /**
+     * Upfszr tree view
+     */
     public _updateTreeview(): void {
         const data = this.getData();
         this._treeview?.getRoot().removeEntrys();
