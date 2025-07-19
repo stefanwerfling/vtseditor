@@ -52,15 +52,15 @@ This is especially useful for large projects, team collaboration, or when sharin
 
 1. install the vts editor
 
-for your project: 
-```shell
-npm install --save-dev git+https://github.com/stefanwerfling/vtseditor.git
-```
+    a) for your project: 
+    ```shell
+    npm install --save-dev git+https://github.com/stefanwerfling/vtseditor.git
+    ```
 
-for global:
-```shell
-npm install -g git+https://github.com/stefanwerfling/vtseditor.git
-```
+    b) or for global:
+    ```shell
+    npm install -g git+https://github.com/stefanwerfling/vtseditor.git
+    ```
 
 2. create your config ```vtseditor.json``` and add your config:
 ```json
