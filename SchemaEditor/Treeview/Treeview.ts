@@ -1,4 +1,4 @@
-import {SchemaJsonDataFS} from '../SchemaJsonData.js';
+import {JsonDataFS} from '../JsonData.js';
 import {TreeviewEntry} from './TreeviewEntry.js';
 
 /**
@@ -59,17 +59,17 @@ export class Treeview {
 
     /**
      * Return the data
-     * @return {SchemaJsonDataFS}
+     * @return {JsonDataFS}
      */
-    public getData(): SchemaJsonDataFS {
+    public getData(): JsonDataFS {
         return this._rootFolder.getData();
     }
 
     /**
      * Set the data
-     * @param {SchemaJsonDataFS} data
+     * @param {JsonDataFS} data
      */
-    public setData(data: SchemaJsonDataFS): void {
+    public setData(data: JsonDataFS): void {
         this._rootFolder.setData(data);
     }
 }

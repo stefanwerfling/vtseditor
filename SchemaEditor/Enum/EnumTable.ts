@@ -1,10 +1,10 @@
 import {Connection} from '@jsplumb/browser-ui';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {
-    SchemaJsonEnumDescription,
-    SchemaJsonEnumValueDescription,
-    SchemaJsonSchemaPositionDescription
-} from '../SchemaJsonData.js';
+    JsonEnumDescription,
+    JsonEnumValueDescription,
+    JsonSchemaPositionDescription
+} from '../JsonData.js';
 import {SchemaTypes} from '../SchemaTypes.js';
 import {EnumTableDialog} from './EnumTableDialog.js';
 import {EnumTableValue} from './EnumTableValue.js';
@@ -24,7 +24,7 @@ export class EnumTable {
      * Id
      * @protected
      */
-    protected _id: string = '';
+    protected _unid: string = '';
 
     /**
      * name
@@ -36,7 +36,7 @@ export class EnumTable {
      * Grid position
      * @protected
      */
-    protected _position: SchemaJsonSchemaPositionDescription = {
+    protected _position: JsonSchemaPositionDescription = {
         x: 0,
         y: 0
     };
@@ -77,11 +77,11 @@ export class EnumTable {
      * @param {string} name
      */
     public constructor(id: string, name: string) {
-        this._id = id;
+        this._unid = id;
         this._name = name;
 
         // update Schema Types
-        SchemaTypes.getInstance().setType(this._id, this._name);
+        SchemaTypes.getInstance().setType(this._unid, this._name);
 
         this._table = document.createElement('div');
         this._table.classList.add(...['table', 'vts-schema-table', 'vts-schema-element', 'vts-enum-table']);
@@ -103,7 +103,7 @@ export class EnumTable {
         elName.classList.add(...['vts-schema-element-name', 'vts-enum-element-name']);
 
         const targetpoint = document.createElement('div');
-        targetpoint.id = `targetpoint-${this._id}`;
+        targetpoint.id = `targetpoint-${this._unid}`;
         elName.appendChild(targetpoint);
 
         const elDelete = document.createElement('div');
@@ -137,7 +137,8 @@ export class EnumTable {
             dialog.show();
             dialog.setEnumName(this._name);
             dialog.setOnConfirm(dialog1 => {
-                const enumName = dialog1.getEnumName();
+                const tdialog = dialog1 as unknown as EnumTableDialog;
+                const enumName = tdialog.getEnumName();
 
                 this.setName(enumName);
                 this.updateView();
@@ -159,7 +160,8 @@ export class EnumTable {
             const dialog = new EnumTableValueDialog();
             dialog.show();
             dialog.setOnConfirm(dialog1 => {
-                const name = dialog1.getName();
+                const tdialog = dialog1 as unknown as EnumTableValueDialog;
+                const name = tdialog.getName();
                 const uid = crypto.randomUUID();
 
                 /*if (this.existFieldName(uid, fieldName)) {
@@ -168,9 +170,9 @@ export class EnumTable {
                 }*/
 
                 this.setValues([{
-                    uuid: uid,
+                    unid: uid,
                     name: name,
-                    value: dialog1.getValue()
+                    value: tdialog.getValue()
                 }]);
 
                 window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
@@ -210,17 +212,17 @@ export class EnumTable {
      * @return {string}
      */
     public getId(): string {
-        return this._id;
+        return this._unid;
     }
 
     /**
      * Set the values
-     * @param {SchemaJsonEnumValueDescription[]} values
+     * @param {JsonEnumValueDescription[]} values
      */
-    public setValues(values: SchemaJsonEnumValueDescription[]): void {
+    public setValues(values: JsonEnumValueDescription[]): void {
         for (const valueDesc of values) {
-            const uuid = valueDesc.uuid ?? crypto.randomUUID();
-            const value = new EnumTableValue(this._id, uuid, valueDesc.name, valueDesc.value);
+            const uuid = valueDesc.unid ?? crypto.randomUUID();
+            const value = new EnumTableValue(this._unid, uuid, valueDesc.name, valueDesc.value);
             value.setData(valueDesc);
             value.setOnSave((value1, dialog) => {
                 //const fieldName = dialog.getFieldName();
@@ -274,7 +276,7 @@ export class EnumTable {
         this._enumName.textContent = name;
 
         // update new name
-        SchemaTypes.getInstance().setType(this._id, this._name);
+        SchemaTypes.getInstance().setType(this._unid, this._name);
     }
 
     /**
@@ -307,17 +309,17 @@ export class EnumTable {
 
     /**
      * Return data
-     * @return {SchemaJsonEnumDescription}
+     * @return {JsonEnumDescription}
      */
-    public getData(): SchemaJsonEnumDescription {
-        const values: SchemaJsonEnumValueDescription[] = [];
+    public getData(): JsonEnumDescription {
+        const values: JsonEnumValueDescription[] = [];
 
         for (const [, value] of this._values.entries()) {
             values.push(value.getData());
         }
 
         return {
-            id: this._id,
+            unid: this._unid,
             name: this._name,
             pos: this._position,
             values: values,
@@ -325,8 +327,8 @@ export class EnumTable {
         };
     }
 
-    public setData(data: SchemaJsonEnumDescription): void {
-        this._id = data.id;
+    public setData(data: JsonEnumDescription): void {
+        this._unid = data.unid;
         this.setName(data.name);
         this._position = data.pos;
         this.setValues(data.values);

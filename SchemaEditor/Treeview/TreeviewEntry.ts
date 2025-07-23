@@ -1,11 +1,11 @@
 import {EnumTable} from '../Enum/EnumTable.js';
 import {SchemaTable} from '../Schema/SchemaTable.js';
 import {
-    SchemaJsonDataFS,
+    JsonDataFS,
     SchemaJsonDataFSType,
-    SchemaJsonEnumDescription,
-    SchemaJsonSchemaDescription
-} from '../SchemaJsonData.js';
+    JsonEnumDescription,
+    JsonSchemaDescription, SchemaJsonDataFS
+} from '../JsonData.js';
 import {Treeview} from './Treeview.js';
 import {TreeviewDialog} from './TreeviewDialog.js';
 
@@ -42,7 +42,7 @@ export class TreeviewEntry {
      * Id
      * @protected
      */
-    protected _id: string = '';
+    protected unid: string = '';
 
     /**
      * Name
@@ -81,7 +81,7 @@ export class TreeviewEntry {
      * @param {SchemaJsonDataFSType|string} type
      */
     public constructor(id: string = '', name: string = 'Root', type: SchemaJsonDataFSType|string = SchemaJsonDataFSType.root) {
-        this._id = id;
+        this.unid = id;
         this._ul = document.createElement('ul');
         this._liElement = document.createElement('li');
 
@@ -312,7 +312,7 @@ export class TreeviewEntry {
      * @return {string}
      */
     public getId(): string {
-        return this._id;
+        return this.unid;
     }
 
     /**
@@ -326,29 +326,29 @@ export class TreeviewEntry {
 
     /**
      * Get data
-     * @return {SchemaJsonDataFS}
+     * @return {JsonDataFS}
      */
-    public getData(): SchemaJsonDataFS {
-        const entrys: SchemaJsonDataFS[] = [];
+    public getData(): JsonDataFS {
+        const entrys: JsonDataFS[] = [];
 
         for (const [, entry] of this._list.entries()) {
             entrys.push(entry.getData());
         }
 
-        const enums: SchemaJsonEnumDescription[] = [];
+        const enums: JsonEnumDescription[] = [];
 
         for (const aenum of this._enums) {
             enums.push(aenum.getData());
         }
 
-        const schemas: SchemaJsonSchemaDescription[] = [];
+        const schemas: JsonSchemaDescription[] = [];
 
         for (const table of this._tables) {
             schemas.push(table.getData());
         }
 
         return {
-            id: this._id,
+            unid: this.unid,
             name: this._name,
             type: this._type,
             entrys: entrys,
@@ -359,29 +359,31 @@ export class TreeviewEntry {
 
     /**
      * Set data
-     * @param {SchemaJsonDataFS} data
+     * @param {JsonDataFS} data
      */
-    public setData(data: SchemaJsonDataFS): void {
-        this._id = data.id;
+    public setData(data: JsonDataFS): void {
+        this.unid = data.unid;
         this.setType(data.type);
         this.setName(data.name);
 
         for (const aEntry of data.entrys) {
-            const entry = new TreeviewEntry(aEntry.id, aEntry.name, aEntry.type);
-            this.addEntry(entry);
-            entry.setData(aEntry);
+            if (SchemaJsonDataFS.validate(aEntry, [])) {
+                const entry = new TreeviewEntry(aEntry.unid, aEntry.name, aEntry.type);
+                this.addEntry(entry);
+                entry.setData(aEntry);
+            }
         }
 
         if (data.enums) {
             for (const aEnum of data.enums) {
-                const tenum = new EnumTable(aEnum.id, aEnum.name);
+                const tenum = new EnumTable(aEnum.unid, aEnum.name);
                 tenum.setData(aEnum);
                 this.addEnumTable(tenum);
             }
         }
 
         for (const aSchema of data.schemas) {
-            const schema = new SchemaTable(aSchema.id, aSchema.name, aSchema.extend);
+            const schema = new SchemaTable(aSchema.unid, aSchema.name, aSchema.extend);
             schema.setData(aSchema);
             this.addSchemaTable(schema);
         }
@@ -549,7 +551,7 @@ export class TreeviewEntry {
      * @param {string} id
      */
     public getEntryById(id: string): TreeviewEntry|null {
-        if (this._id === id) {
+        if (this.unid === id) {
             return this;
         }
 

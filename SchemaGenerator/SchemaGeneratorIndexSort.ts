@@ -1,43 +1,43 @@
-import {SchemaJsonSchemaDescription} from '../SchemaEditor/SchemaJsonData.js';
+import {JsonSchemaDescription} from '../SchemaEditor/JsonData.js';
 
 export class SchemaGeneratorIndexSort {
 
-    public static sortSchemas(schemas: SchemaJsonSchemaDescription[]): SchemaJsonSchemaDescription[] {
-        const schemaMap = new Map<string, SchemaJsonSchemaDescription>();
+    public static sortSchemas(schemas: JsonSchemaDescription[]): JsonSchemaDescription[] {
+        const schemaMap = new Map<string, JsonSchemaDescription>();
         const idCounts = new Map<string, number>();
 
         // check dublicate uuids ---------------------------------------------------------------------------------------
 
         for (const schema of schemas) {
-            const count = idCounts.get(schema.id) ?? 0;
+            const count = idCounts.get(schema.unid) ?? 0;
 
-            idCounts.set(schema.id, count + 1);
+            idCounts.set(schema.unid, count + 1);
 
             if (count > 0) {
-                throw new Error(`Dublicate found: The UUID '${schema.id}' is dublicate.`);
+                throw new Error(`Dublicate found: The UUID '${schema.unid}' is dublicate.`);
             }
 
-            schemaMap.set(schema.id, schema);
+            schemaMap.set(schema.unid, schema);
         }
 
         // -------------------------------------------------------------------------------------------------------------
 
         const visited = new Set<string>();
         const visiting = new Set<string>();
-        const sorted: SchemaJsonSchemaDescription[] = [];
+        const sorted: JsonSchemaDescription[] = [];
 
         const isSchemaId = (id: string): boolean => schemaMap.has(id);
 
-        const visit = (schema: SchemaJsonSchemaDescription) => {
-            if (visited.has(schema.id)) {
+        const visit = (schema: JsonSchemaDescription) => {
+            if (visited.has(schema.unid)) {
                 return;
             }
 
-            if (visiting.has(schema.id)) {
-                throw new Error(`Circular dependency detected in schema '${schema.id}'`);
+            if (visiting.has(schema.unid)) {
+                throw new Error(`Circular dependency detected in schema '${schema.unid}'`);
             }
 
-            visiting.add(schema.id);
+            visiting.add(schema.unid);
 
             if (schema.extend && schema.extend !== "object" && isSchemaId(schema.extend)) {
                 visit(schemaMap.get(schema.extend)!);
@@ -57,8 +57,8 @@ export class SchemaGeneratorIndexSort {
                 }
             }
 
-            visiting.delete(schema.id);
-            visited.add(schema.id);
+            visiting.delete(schema.unid);
+            visited.add(schema.unid);
             sorted.push(schema);
         };
 

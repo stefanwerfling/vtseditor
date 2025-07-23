@@ -3,10 +3,10 @@ import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../SchemaExtends.js';
 import {
-    SchemaJsonSchemaDescription,
-    SchemaJsonSchemaFieldDescription,
-    SchemaJsonSchemaPositionDescription
-} from '../SchemaJsonData.js';
+    JsonSchemaDescription,
+    JsonSchemaFieldDescription,
+    JsonSchemaPositionDescription
+} from '../JsonData.js';
 import {SchemaTypes} from '../SchemaTypes.js';
 import {SchemaTableDialog} from './SchemaTableDialog.js';
 import {SchemaTableField} from './SchemaTableField.js';
@@ -36,7 +36,7 @@ export class SchemaTable {
      * Id
      * @protected
      */
-    protected _id: string = '';
+    protected _unid: string = '';
 
     /**
      * name
@@ -78,7 +78,7 @@ export class SchemaTable {
      * Grid position
      * @protected
      */
-    protected _position: SchemaJsonSchemaPositionDescription = {
+    protected _position: JsonSchemaPositionDescription = {
         x: 0,
         y: 0
     };
@@ -108,12 +108,12 @@ export class SchemaTable {
      * @param {string} extend
      */
     public constructor(id: string, name: string, extend: string = 'object') {
-        this._id = id;
+        this._unid = id;
         this._name = name;
         this._extend = extend;
 
         // update Schema Types
-        SchemaTypes.getInstance().setType(this._id, this._name);
+        SchemaTypes.getInstance().setType(this._unid, this._name);
 
         this._table = document.createElement('div');
         this._table.classList.add(...['table', 'vts-schema-table', 'vts-schema-element']);
@@ -135,7 +135,7 @@ export class SchemaTable {
         elName.classList.add(...['vts-schema-element-name']);
 
         const targetpoint = document.createElement('div');
-        targetpoint.id = `targetpoint-${this._id}`;
+        targetpoint.id = `targetpoint-${this._unid}`;
         elName.appendChild(targetpoint);
 
         const elDelete = document.createElement('div');
@@ -171,21 +171,21 @@ export class SchemaTable {
             const dialog = new SchemaTableDialog();
             dialog.show();
             dialog.setSchemaName(this._name);
-            dialog.setExtendOptions(SchemaExtends.getInstance().getExtends([this._id]));
+            dialog.setExtendOptions(SchemaExtends.getInstance().getExtends([this._unid]));
             dialog.setSchemaExtend(this._extend);
             dialog.setOnConfirm(tdialog => {
                 const dialog1 = tdialog as unknown as SchemaTableDialog;
                 const schemaName = dialog1.getSchemaName();
                 const tId = SchemaExtends.getInstance().getExtendIdByName(schemaName);
 
-                if (tId !== null && tId !== this._id) {
+                if (tId !== null && tId !== this._unid) {
                     alert('The Schemaname is already exist, please change your name!');
                     return false;
                 }
 
                 this.setName(schemaName);
                 this.setExtend(dialog1.getSchemaExtend());
-                SchemaExtends.getInstance().setExtend(this._id, this._name);
+                SchemaExtends.getInstance().setExtend(this._unid, this._name);
 
                 this.updateView();
                 window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
@@ -219,7 +219,7 @@ export class SchemaTable {
         elBtnAdd.addEventListener('click', () => {
             const dialog = new SchemaTableFieldDialog();
             dialog.show();
-            dialog.setTypeOptions(SchemaTypes.getInstance().getTypes([this._id]));
+            dialog.setTypeOptions(SchemaTypes.getInstance().getTypes([this._unid]));
             dialog.setOnConfirm(tdialog => {
                 const dialog1 = tdialog as unknown as SchemaTableFieldDialog;
                 const fieldName = dialog1.getFieldName();
@@ -236,7 +236,7 @@ export class SchemaTable {
                     name: fieldName,
                     optional: dialog1.getOptional(),
                     description: dialog1.getDescription(),
-                    uuid: uid
+                    unid: uid
                 }]);
 
                 window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
@@ -249,7 +249,7 @@ export class SchemaTable {
 
         // for connection
         const endpoint = document.createElement('div');
-        endpoint.id = `endpoint-${this._id}`;
+        endpoint.id = `endpoint-${this._unid}`;
         endpoint.classList.add('endpoint');
         elBtn.appendChild(endpoint);
 
@@ -281,9 +281,9 @@ export class SchemaTable {
 
     /**
      * Add the fields
-     * @param {SchemaJsonSchemaFieldDescription[]} fields
+     * @param {JsonSchemaFieldDescription[]} fields
      */
-    public addFields(fields: SchemaJsonSchemaFieldDescription[]): void {
+    public addFields(fields: JsonSchemaFieldDescription[]): void {
         for (const fieldDesc of fields) {
             this.addField(fieldDesc);
         }
@@ -291,11 +291,11 @@ export class SchemaTable {
 
     /**
      * Add a field
-     * @param {SchemaJsonSchemaFieldDescription[]} fieldDesc
+     * @param {JsonSchemaFieldDescription[]} fieldDesc
      */
-    public addField(fieldDesc: SchemaJsonSchemaFieldDescription): void {
-        const uuid = fieldDesc.uuid ?? crypto.randomUUID();
-        const field = new SchemaTableField(this._id, uuid, fieldDesc.name, fieldDesc.type);
+    public addField(fieldDesc: JsonSchemaFieldDescription): void {
+        const uuid = fieldDesc.unid ?? crypto.randomUUID();
+        const field = new SchemaTableField(this._unid, uuid, fieldDesc.name, fieldDesc.type);
         field.setData(fieldDesc);
         field.setOnSave((field1, dialog) => {
             const fieldName = dialog.getFieldName();
@@ -339,7 +339,7 @@ export class SchemaTable {
      * @return {string}
      */
     public getId(): string {
-        return this._id;
+        return this._unid;
     }
 
     /**
@@ -359,7 +359,7 @@ export class SchemaTable {
         this._schemaName.textContent = name;
 
         // update new name
-        SchemaTypes.getInstance().setType(this._id, this._name);
+        SchemaTypes.getInstance().setType(this._unid, this._name);
     }
 
     /**
@@ -410,10 +410,10 @@ export class SchemaTable {
         }
 
         if (SchemaExtends.getInstance().isExtendASchema(this._extend)) {
-            console.log(`Create connection for ${this._id}`);
+            console.log(`Create connection for ${this._unid}`);
 
             this._connection = jsPlumbInstance.connect({
-                source: document.getElementById(`endpoint-${this._id}`)!,
+                source: document.getElementById(`endpoint-${this._unid}`)!,
                 target: document.getElementById(`targetpoint-${this._extend}`)!,
                 anchors: ['Right', 'Left'],
                 connector: {
@@ -452,17 +452,17 @@ export class SchemaTable {
 
     /**
      * Return Data
-     * @return {SchemaJsonSchemaDescription}
+     * @return {JsonSchemaDescription}
      */
-    public getData(): SchemaJsonSchemaDescription {
-        const fields: SchemaJsonSchemaFieldDescription[] = [];
+    public getData(): JsonSchemaDescription {
+        const fields: JsonSchemaFieldDescription[] = [];
 
         for (const [, field] of this._fields.entries()) {
             fields.push(field.getData());
         }
 
         return {
-            id: this._id,
+            unid: this._unid,
             name: this._name,
             extend: this._extend,
             pos: this._position,
@@ -473,10 +473,10 @@ export class SchemaTable {
 
     /**
      * Set Data
-     * @param {SchemaJsonSchemaDescription} data
+     * @param {JsonSchemaDescription} data
      */
-    public setData(data: SchemaJsonSchemaDescription): void {
-        this._id = data.id;
+    public setData(data: JsonSchemaDescription): void {
+        this._unid = data.unid;
         this.setName(data.name);
         this.setExtend(data.extend);
         this.addFields(data.fields);

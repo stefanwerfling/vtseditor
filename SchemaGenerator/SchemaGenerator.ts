@@ -1,11 +1,12 @@
 import fs from 'fs';
 import path from 'path';
+import {SchemaErrors} from 'vts';
 import {
-    SchemaJsonDataFS,
+    JsonDataFS,
     SchemaJsonDataFSType,
-    SchemaJsonEnumDescription,
-    SchemaJsonSchemaDescription
-} from '../SchemaEditor/SchemaJsonData.js';
+    JsonEnumDescription,
+    JsonSchemaDescription, SchemaJsonDataFS
+} from '../SchemaEditor/JsonData.js';
 import {SchemaPathUtil} from '../SchemaUtil/SchemaPathUtil.js';
 import {SchemaGeneratorIndexSort} from './SchemaGeneratorIndexSort.js';
 
@@ -66,9 +67,9 @@ export class SchemaGenerator {
 
     /**
      * Generate
-     * @param {SchemaJsonDataFS} data
+     * @param {JsonDataFS} data
      */
-    public generate(data: SchemaJsonDataFS): void {
+    public generate(data: JsonDataFS): void {
         const destPath = this._options.destinationPath;
 
         if (!fs.existsSync(destPath)) {
@@ -100,24 +101,37 @@ export class SchemaGenerator {
         return `${this._options.schemaPrefix}${name.trim()}`;
     }
 
-    protected _createFileRegister(entrys: SchemaJsonDataFS[], aPath: string = './'): void {
+    /**
+     * create file register
+     * @param {unknown[]} entrys
+     * @param {string} aPath
+     * @protected
+     */
+    protected _createFileRegister(entrys: unknown[], aPath: string = './'): void {
         for (const entry of entrys) {
-            switch (entry.type) {
-                case SchemaJsonDataFSType.folder:
-                    const newPath = path.join(aPath, entry.name);
-                    this._createFileRegister(entry.entrys, newPath);
-                    break;
+            const errors: SchemaErrors = [];
 
-                case SchemaJsonDataFSType.file:
-                    const filePath = path.join(aPath, entry.name);
-                    this._createSchemaRegister(filePath, entry.schemas);
-                    this._createEnumRegister(filePath, entry.enums);
-                    break;
+            if (SchemaJsonDataFS.validate(entry, errors)) {
+                switch (entry.type) {
+                    case SchemaJsonDataFSType.folder:
+                        const newPath = path.join(aPath, entry.name);
+                        this._createFileRegister(entry.entrys, newPath);
+
+                        break;
+
+                    case SchemaJsonDataFSType.file:
+                        const filePath = path.join(aPath, entry.name);
+                        this._createSchemaRegister(filePath, entry.schemas);
+                        this._createEnumRegister(filePath, entry.enums);
+                        break;
+                }
+            } else {
+                console.log('_createFileRegister:SchemaJsonDataFS: wrong schema!');
             }
         }
     }
 
-    protected _createSchemaRegister(file: string, schemas: SchemaJsonSchemaDescription[]): void {
+    protected _createSchemaRegister(file: string, schemas: JsonSchemaDescription[]): void {
         const sortedSchemas = SchemaGeneratorIndexSort.sortSchemas(schemas);
 
         for (const schema of sortedSchemas) {
@@ -129,45 +143,51 @@ export class SchemaGenerator {
                 this._fileRegister.set(schema.name.trim(), file);
             }
 
-            this._idRegister.set(schema.id, schemaName);
+            this._idRegister.set(schema.unid, schemaName);
         }
     }
 
-    protected _createEnumRegister(file: string, enums: SchemaJsonEnumDescription[]): void {
+    protected _createEnumRegister(file: string, enums: JsonEnumDescription[]): void {
         for (const aenum of enums) {
             this._fileRegister.set(aenum.name, file);
-            this._idRegister.set(aenum.id, aenum.name);
-            this._enumRegister.push(aenum.id);
+            this._idRegister.set(aenum.unid, aenum.name);
+            this._enumRegister.push(aenum.unid);
         }
     }
 
     /**
      * Generate entrys to content
      * @param {string} fullPath
-     * @param {SchemaJsonDataFS[]} entrys
+     * @param {unknown[]} entrys
      * @param {string} relPath
      * @protected
      */
-    protected _generateEntrys(fullPath: string, entrys: SchemaJsonDataFS[], relPath: string = ''): void {
+    protected _generateEntrys(fullPath: string, entrys: unknown[], relPath: string = ''): void {
         for (const entry of entrys) {
-            const newFullPath = path.join(fullPath, entry.name);
-            const newRelPath = path.join(relPath, entry.name);
+            const errors: SchemaErrors = [];
 
-            switch (entry.type) {
-                case SchemaJsonDataFSType.folder:
-                    fs.mkdirSync(newFullPath, { recursive: true });
+            if (SchemaJsonDataFS.validate(entry, errors)) {
+                const newFullPath = path.join(fullPath, entry.name);
+                const newRelPath = path.join(relPath, entry.name);
 
-                    this._generateEntrys(newFullPath, entry.entrys, newRelPath);
-                    break;
+                switch (entry.type) {
+                    case SchemaJsonDataFSType.folder:
+                        fs.mkdirSync(newFullPath, { recursive: true });
+                        this._generateEntrys(newFullPath, entry.entrys, newRelPath);
 
-                case SchemaJsonDataFSType.file:
-                    this._generateFile(
-                        newFullPath,
-                        newRelPath,
-                        entry.schemas,
-                        entry.enums
-                    );
-                    break;
+                        break;
+
+                    case SchemaJsonDataFSType.file:
+                        this._generateFile(
+                            newFullPath,
+                            newRelPath,
+                            entry.schemas,
+                            entry.enums
+                        );
+                        break;
+                }
+            } else {
+                console.log('_generateEntrys:SchemaJsonDataFS: wrong schema!');
             }
         }
     }
@@ -176,15 +196,15 @@ export class SchemaGenerator {
      * Generate file
      * @param {string} fullPath
      * @param {string} relPath
-     * @param {SchemaJsonSchemaDescription[]} schemas
-     * @param {SchemaJsonEnumDescription[]} enums
+     * @param {JsonSchemaDescription[]} schemas
+     * @param {JsonEnumDescription[]} enums
      * @protected
      */
     protected _generateFile(
         fullPath: string,
         relPath: string,
-        schemas: SchemaJsonSchemaDescription[],
-        enums: SchemaJsonEnumDescription[]
+        schemas: JsonSchemaDescription[],
+        enums: JsonEnumDescription[]
     ): void {
         // reset used schemas
         this._fileUsedSchemas = [];
@@ -234,10 +254,10 @@ export class SchemaGenerator {
 
     /**
      * Write Enum content
-     * @param {SchemaJsonEnumDescription[]} enums
+     * @param {JsonEnumDescription[]} enums
      * @protected
      */
-    protected _writeEnumContent(enums: SchemaJsonEnumDescription[]): string {
+    protected _writeEnumContent(enums: JsonEnumDescription[]): string {
         let content = '';
 
         for (const aenum of enums) {
@@ -265,12 +285,12 @@ export class SchemaGenerator {
 
     /**
      * Write content
-     * @param {SchemaJsonSchemaDescription[]} schemas
+     * @param {JsonSchemaDescription[]} schemas
      * @param {string[]} writenSchemas
      * @return {string}
      * @protected
      */
-    protected _writeContent(schemas: SchemaJsonSchemaDescription[], writenSchemas: string[] = []): string {
+    protected _writeContent(schemas: JsonSchemaDescription[], writenSchemas: string[] = []): string {
         let content = '';
         const sortedSchemas = SchemaGeneratorIndexSort.sortSchemas(schemas);
 
@@ -292,11 +312,11 @@ export class SchemaGenerator {
     /**
      * Write Schema
      * @param {string} schemaName
-     * @param {SchemaJsonSchemaDescription} schema
+     * @param {JsonSchemaDescription} schema
      * @return {string}
      * @protected
      */
-    protected _writeSchema(schemaName: string, schema: SchemaJsonSchemaDescription): string {
+    protected _writeSchema(schemaName: string, schema: JsonSchemaDescription): string {
         let content = '';
 
         if (this._options.code_comment) {

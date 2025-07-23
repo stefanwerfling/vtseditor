@@ -1,6 +1,6 @@
 import {Connection} from '@jsplumb/browser-ui';
 import jsPlumbInstance from '../jsPlumbInstance.js';
-import {SchemaJsonSchemaFieldDescription} from '../SchemaJsonData.js';
+import {JsonSchemaFieldDescription} from '../JsonData.js';
 import {SchemaTypes} from './../SchemaTypes.js';
 import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';
 
@@ -156,8 +156,10 @@ export class SchemaTableField {
             dialog.show();
 
             dialog.setOnConfirm(dialog1 => {
+                const tdialog = dialog1 as unknown as SchemaTableFieldDialog;
+
                 if (this._onSave) {
-                    return this._onSave(this, dialog1);
+                    return this._onSave(this, tdialog);
                 }
 
                 // close dialog
@@ -356,11 +358,11 @@ export class SchemaTableField {
 
     /**
      * Return the date from field
-     * @return {SchemaJsonSchemaFieldDescription}
+     * @return {JsonSchemaFieldDescription}
      */
-    public getData(): SchemaJsonSchemaFieldDescription {
+    public getData(): JsonSchemaFieldDescription {
         return {
-            uuid: this._id,
+            unid: this._id,
             name: this._name,
             type: this._type,
             subtypes: this._subtypes,
@@ -371,10 +373,10 @@ export class SchemaTableField {
 
     /**
      * Set data for field
-     * @param {SchemaJsonSchemaFieldDescription} data
+     * @param {JsonSchemaFieldDescription} data
      */
-    public setData(data: SchemaJsonSchemaFieldDescription): void {
-        this._id = data.uuid ?? '';
+    public setData(data: JsonSchemaFieldDescription): void {
+        this._id = data.unid ?? '';
         this.setName(data.name);
 
         if (data.subtypes) {

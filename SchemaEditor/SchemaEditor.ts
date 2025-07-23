@@ -2,7 +2,7 @@ import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
 import {EnumTable} from './Enum/EnumTable.js';
 import jsPlumbInstance from './jsPlumbInstance.js';
 import {SchemaExtends} from './SchemaExtends.js';
-import {SchemaJsonData, SchemaJsonDataFS} from './SchemaJsonData.js';
+import {JsonData, JsonDataFS, SchemaJsonDataFS} from './JsonData.js';
 import {SchemaTypes} from './SchemaTypes.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
 import {Treeview} from './Treeview/Treeview.js';
@@ -260,9 +260,9 @@ export class SchemaEditor {
 
     /**
      * Return the data
-     * @return {SchemaJsonData}
+     * @return {JsonData}
      */
-    public getData(): SchemaJsonData {
+    public getData(): JsonData {
         return {
             fs: this._treeview?.getData()!,
             editor: {
@@ -273,25 +273,27 @@ export class SchemaEditor {
 
     /**
      * Update registers
-     * @param {SchemaJsonDataFS} data
+     * @param {JsonDataFS} data
      * @protected
      */
-    protected _updateRegisters(data: SchemaJsonDataFS): void {
+    protected _updateRegisters(data: JsonDataFS): void {
         for (const schema of data.schemas) {
-            SchemaExtends.getInstance().setExtend(schema.id, schema.name);
-            SchemaTypes.getInstance().setType(schema.id, schema.name);
+            SchemaExtends.getInstance().setExtend(schema.unid, schema.name);
+            SchemaTypes.getInstance().setType(schema.unid, schema.name);
         }
 
         for (const entry of data.entrys) {
-            this._updateRegisters(entry);
+            if (SchemaJsonDataFS.validate(entry, [])) {
+                this._updateRegisters(entry);
+            }
         }
     }
 
     /**
      * Set data
-     * @param {SchemaJsonData} data
+     * @param {JsonData} data
      */
-    public setData(data: SchemaJsonData): void {
+    public setData(data: JsonData): void {
         this._updateRegisters(data.fs);
         this._treeview?.setData(data.fs);
 
@@ -321,7 +323,7 @@ export class SchemaEditor {
             throw new Error(`Can not load: ${response.statusText}`);
         }
 
-        const data = await response.json() as SchemaJsonData;
+        const data = await response.json() as JsonData;
 
         this.setData(data);
     }

@@ -1,5 +1,5 @@
 import {SchemaNameUtil} from '../../SchemaUtil/SchemaNameUtil.js';
-import {SchemaJsonEnumValueDescription} from '../SchemaJsonData.js';
+import {JsonEnumValueDescription} from '../JsonData.js';
 import {EnumTableValueDialog} from './EnumTableValueDialog.js';
 
 /**
@@ -121,8 +121,10 @@ export class EnumTableValue {
             dialog.show();
 
             dialog.setOnConfirm(dialog1 => {
+                const tdialog = dialog1 as unknown as EnumTableValueDialog;
+
                 if (this._onSave) {
-                    return this._onSave(this, dialog1);
+                    return this._onSave(this, tdialog);
                 }
 
                 // close dialog
@@ -216,18 +218,18 @@ export class EnumTableValue {
 
     /**
      * Return the data
-     * @return {SchemaJsonEnumValueDescription}
+     * @return {JsonEnumValueDescription}
      */
-    public getData(): SchemaJsonEnumValueDescription {
+    public getData(): JsonEnumValueDescription {
         return {
-            uuid: this._id,
+            unid: this._id,
             name: this._name,
             value: this._value
         };
     }
 
-    public setData(data: SchemaJsonEnumValueDescription): void {
-        this._id = data.uuid;
+    public setData(data: JsonEnumValueDescription): void {
+        this._id = data.unid;
         this.setName(data.name);
         this.setValue(data.value);
     }

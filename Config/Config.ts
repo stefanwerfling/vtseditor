@@ -1,5 +1,8 @@
 import {ExtractSchemaResultType, Vts} from 'vts';
 
+/**
+ * Schema config project code
+ */
 export const SchemaConfigProjectCode = Vts.object({
     schemaPrefix: Vts.optional(Vts.string()),
     createTypes: Vts.optional(Vts.boolean()),
@@ -8,6 +11,9 @@ export const SchemaConfigProjectCode = Vts.object({
     codeIndent: Vts.optional(Vts.string())
 });
 
+/**
+ * Schema config project
+ */
 export const SchemaConfigProject = Vts.object({
     schemaPath: Vts.string(),
     code: Vts.optional(SchemaConfigProjectCode),
@@ -16,6 +22,9 @@ export const SchemaConfigProject = Vts.object({
 
 });
 
+/**
+ * Schema of config server
+ */
 export const SchemaConfigServer = Vts.object({
     port: Vts.number()
 });

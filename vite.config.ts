@@ -5,7 +5,8 @@ import fs from 'fs';
 import path from 'path';
 import {SchemaErrors} from 'vts';
 import {SchemaConfig} from './Config/Config.js';
-import {SchemaJsonData} from './SchemaEditor/SchemaJsonData.js';
+import {JsonData} from './SchemaEditor/JsonData.js';
+import {SchemaExternLoader} from './SchemaExtern/SchemaExternLoader.js';
 import {SchemaGenerator} from './SchemaGenerator/SchemaGenerator.js';
 
 function expressMiddleware(): Plugin {
@@ -59,6 +60,11 @@ function expressMiddleware(): Plugin {
                 }
             }
 
+            const loader = new SchemaExternLoader(projectRoot);
+            loader.scan();
+
+            // ---------------------------------------------------------------------------------------------------------
+
             console.log('VTS Editor Options:');
             console.log(`\tSchema-Path: ${schemaPath}`);
             console.log(`\tSchema-Prefix: ${schemaPrefix}`);
@@ -70,7 +76,7 @@ function expressMiddleware(): Plugin {
             console.log(' ');
 
             app.post('/api/save-schema', (req, res) => {
-                const schema = req.body as SchemaJsonData;
+                const schema = req.body as JsonData;
 
                 fs.mkdirSync(path.dirname(schemaPath), { recursive: true });
                 fs.writeFileSync(schemaPath, JSON.stringify(schema, null, 2), 'utf-8');
@@ -102,6 +108,10 @@ function expressMiddleware(): Plugin {
 
                 const content = fs.readFileSync(schemaPath, 'utf-8');
                 res.status(200).json(JSON.parse(content));
+            });
+
+            app.get('/api/load-types', (req, res) => {
+
             });
 
             server.middlewares.use(app);
