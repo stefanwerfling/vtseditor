@@ -488,6 +488,12 @@ dialog::backdrop {
   padding: 2px 4px;
 }
 
+.treeview-file.active2 {
+  background-color: #d8f5dc;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
 .folder-line button {
   display: none;
   background: none;

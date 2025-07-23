@@ -118,7 +118,14 @@ export class TreeviewEntry {
 
         const clickSetActiv = () => {
             if (this.getType() === SchemaJsonDataFSType.file) {
+                Treeview.setActivEntryTable(null);
                 Treeview.setActivEntry(this);
+
+                window.dispatchEvent(new CustomEvent('schemaeditor:updateview', {}));
+            }
+
+            if (this.getType() === SchemaJsonDataFSType.enum || this.getType() === SchemaJsonDataFSType.schema) {
+                Treeview.setActivEntryTable(this);
 
                 window.dispatchEvent(new CustomEvent('schemaeditor:updateview', {}));
             }
@@ -265,7 +272,9 @@ export class TreeviewEntry {
 
         // set draggable -----------------------------------------------------------------------------------------------
 
-        if (type === SchemaJsonDataFSType.file || type === SchemaJsonDataFSType.folder) {
+        if (type === SchemaJsonDataFSType.file || type === SchemaJsonDataFSType.folder ||
+            type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum)
+        {
             folderLine.draggable = true;
             folderLine.addEventListener('dragstart', e => {
                 e.dataTransfer?.setData('type', this.getType());
@@ -328,8 +337,16 @@ export class TreeviewEntry {
 
         this.setType(type);
         this.setName(name);
-        this.setToggle(false);
-        this.setIcon(icon);
+
+        if (type === SchemaJsonDataFSType.root || type === SchemaJsonDataFSType.folder) {
+            this.setToggle(false);
+        }
+
+        if (icon !== '') {
+            this.setIcon(icon);
+        } else {
+            this.setIcon(type);
+        }
     }
 
     /**
@@ -398,7 +415,7 @@ export class TreeviewEntry {
         this._spanName.classList.remove('treeview-file');
         this._spanToggle.style.display = 'block';
 
-        if (type === SchemaJsonDataFSType.file) {
+        if (type === SchemaJsonDataFSType.file || type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum) {
             this._spanName.classList.add('treeview-file');
             this._spanToggle.style.display = 'none';
         }
@@ -532,6 +549,10 @@ export class TreeviewEntry {
         const entrys: JsonDataFS[] = [];
 
         for (const [, entry] of this._list.entries()) {
+            if (entry.getType() === SchemaJsonDataFSType.schema || entry.getType() === SchemaJsonDataFSType.enum) {
+                continue;
+            }
+
             entrys.push(entry.getData());
         }
 
@@ -601,6 +622,9 @@ export class TreeviewEntry {
     public addSchemaTable(table: SchemaTable): void {
         this._tables.push(table);
 
+        const entry = new TreeviewEntry(table.getId(), table.getName(), SchemaJsonDataFSType.schema);
+        this.addEntry(entry);
+
         table.setOnDelete(table1 => {
             window.dispatchEvent(new CustomEvent('schemaeditor:deleteschematable', {
                 detail: {
@@ -616,6 +640,9 @@ export class TreeviewEntry {
      */
     public addEnumTable(table: EnumTable): void {
         this._enums.push(table);
+
+        const entry = new TreeviewEntry(table.getId(), table.getName(), SchemaJsonDataFSType.enum);
+        this.addEntry(entry);
 
         table.setOnDelete(table1 => {
             window.dispatchEvent(new CustomEvent('schemaeditor:deleteenumtable', {
@@ -743,11 +770,11 @@ export class TreeviewEntry {
      */
     public setActiveName(): void {
         if (this.getType() === SchemaJsonDataFSType.file) {
-            document.querySelectorAll('.treeview-file.active').forEach(el => {
-                el.classList.remove('active');
-            });
-
             this._spanName.classList.add('active');
+        }
+
+        if (this.getType() === SchemaJsonDataFSType.enum || this.getType() === SchemaJsonDataFSType.schema) {
+            this._spanName.classList.add('active2');
         }
     }
 
@@ -776,13 +803,36 @@ export class TreeviewEntry {
      * @param {boolean} recursive
      */
     public updateView(recursive: boolean): void {
-        this.setToggle(this.isToggle());
+        if (this._type === SchemaJsonDataFSType.root || this._type === SchemaJsonDataFSType.folder) {
+            this.setToggle(this.isToggle());
+        }
 
         if (recursive) {
             for (const [, entry] of this._list.entries()) {
                 entry.updateView(recursive);
             }
         }
+    }
+
+    /**
+     * Find parent
+     * @param {string} id
+     * @return {TreeviewEntry|null}
+     */
+    public findParent(id: string): TreeviewEntry|null {
+        for (const [, entry] of this._list.entries()) {
+            if (entry.getId() === id) {
+                return this;
+            }
+
+            const found = entry.findParent(id);
+
+            if (found !== null) {
+                return found;
+            }
+        }
+
+        return null;
     }
 
 }

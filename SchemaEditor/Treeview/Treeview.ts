@@ -7,10 +7,16 @@ import {TreeviewEntry} from './TreeviewEntry.js';
 export class Treeview {
 
     /**
-     * Activ entry
+     * Activ entry (file)
      * @protected
      */
     protected static _activEntry: TreeviewEntry|null = null;
+
+    /**
+     * Activ entry table (table/enum)
+     * @protected
+     */
+    protected static _activeEntryTable: TreeviewEntry|null = null;
 
     /**
      * Set the activ entry
@@ -26,6 +32,22 @@ export class Treeview {
      */
     public static getActiveEntry(): TreeviewEntry|null {
         return this._activEntry;
+    }
+
+    /**
+     * Set the activ entry table
+     * @param entry
+     */
+    public static setActivEntryTable(entry: TreeviewEntry|null): void {
+        this._activeEntryTable = entry;
+    }
+
+    /**
+     * Get the active entry table
+     * @return {TreeviewEntry|null}
+     */
+    public static getActivEntryTable(): TreeviewEntry|null {
+        return this._activeEntryTable;
     }
 
     /**
@@ -71,5 +93,18 @@ export class Treeview {
      */
     public setData(data: JsonDataFS): void {
         this._rootFolder.setData(data);
+    }
+
+    /**
+     * Remove all active name
+     */
+    public removeAllActiveName(): void {
+        document.querySelectorAll('.treeview-file.active').forEach(el => {
+            el.classList.remove('active');
+        });
+
+        document.querySelectorAll('.treeview-file.active2').forEach(el => {
+            el.classList.remove('active2');
+        });
     }
 }

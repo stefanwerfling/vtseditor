@@ -157,16 +157,25 @@ export class SchemaEditor {
             const rootEntry = this._treeview?.getRoot();
 
             if (rootEntry) {
+                const activeEntryTableId = Treeview.getActivEntryTable()?.getId();
                 const activeEntryId = Treeview.getActiveEntry()?.getId();
 
                 rootEntry.sortingEntrys();
                 this._updateTreeview();
 
-                if (activeEntryId) {
-                    const tentry = rootEntry.getEntryById(activeEntryId);
+                if (activeEntryTableId) {
+                    const tentry = rootEntry.getEntryById(activeEntryTableId);
 
                     if (tentry) {
-                        Treeview.setActivEntry(tentry);
+                        Treeview.setActivEntryTable(tentry);
+                    }
+                } else {
+                    if (activeEntryId) {
+                        const tentry = rootEntry.getEntryById(activeEntryId);
+
+                        if (tentry) {
+                            Treeview.setActivEntry(tentry);
+                        }
                     }
                 }
 
@@ -217,7 +226,22 @@ export class SchemaEditor {
             this._container.innerHTML = '';
         }
 
-        const entry = Treeview.getActiveEntry();
+        this._treeview?.removeAllActiveName();
+
+        const entryTable = Treeview.getActivEntryTable();
+        let entry = Treeview.getActiveEntry();
+
+        if (entryTable !== null) {
+            const rootEntry = this._treeview?.getRoot();
+
+            if (rootEntry) {
+                entry = rootEntry.findParent(entryTable.getId());
+
+                if (entry) {
+                    Treeview.setActivEntry(entry);
+                }
+            }
+        }
 
         if (entry) {
             // Schemas ---------------------------------------------------------------------------------------------
@@ -246,6 +270,10 @@ export class SchemaEditor {
             }
 
             entry.setActiveName();
+        }
+
+        if (entryTable) {
+            entryTable.setActiveName();
         }
     }
 
