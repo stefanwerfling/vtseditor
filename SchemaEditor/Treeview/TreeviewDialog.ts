@@ -1,21 +1,9 @@
+import {BaseDialog} from '../Base/BaseDialog.js';
 
 /**
- * Treeview dialog on close
+ * Treeview dialog
  */
-export type TreeviewDialogOnClose = () => void;
-
-/**
- * Treeview dialog on confirm
- */
-export type TreeviewDialogOnConfirm = (dialog: TreeviewDialog) => void;
-
-export class TreeviewDialog {
-
-    /**
-     * Dialog element
-     * @protected
-     */
-    protected _dialog: HTMLDialogElement;
+export class TreeviewDialog extends BaseDialog {
 
     /**
      * Input name
@@ -30,116 +18,80 @@ export class TreeviewDialog {
     protected _selectType: HTMLSelectElement;
 
     /**
-     * on close
+     * Row div icon
      * @protected
      */
-    protected _onClose: TreeviewDialogOnClose|null = null;
+    protected _rowDivIcon: HTMLDivElement;
 
     /**
-     * on confirm
+     * Select icon
      * @protected
      */
-    protected _onConfirm: TreeviewDialogOnConfirm|null = null;
+    protected _selectIcon: HTMLSelectElement;
 
     /**
      * Constructor
      */
     public constructor() {
-        this._dialog = document.createElement('dialog');
+        super();
+        this.setDialogTitle('Add/Edit Folder/File');
 
-        const title = document.createElement('div');
-        title.classList.add('dialog-title');
-        title.textContent = 'Add/Edit Folder/File';
+        // name --------------------------------------------------------------------------------------------------------
 
-        this._dialog.appendChild(title);
+        const labelName = document.createElement('div');
+        labelName.classList.add('dialog-label');
+        labelName.textContent = 'Name';
+        this._divBody.appendChild(labelName);
 
         this._inputName = document.createElement('input');
         this._inputName.type = 'text';
         this._inputName.classList.add('dialog-input');
         this._inputName.placeholder = 'Folder/File-name';
 
-        this._dialog.appendChild(this._inputName);
+        this._divBody.appendChild(this._inputName);
+
+        // type --------------------------------------------------------------------------------------------------------
+
+        const labelType = document.createElement('div');
+        labelType.classList.add('dialog-label');
+        labelType.textContent = 'Type';
+        this._divBody.appendChild(labelType);
 
         this._selectType = document.createElement('select');
         this._selectType.classList.add('dialog-select');
 
-        this._dialog.appendChild(this._selectType);
+        this._divBody.appendChild(this._selectType);
 
-        // buttons -----------------------------------------------------------------------------------------------------
+        // icons -------------------------------------------------------------------------------------------------------
 
-        const btns = document.createElement('div');
-        btns.classList.add('dialog-buttons');
+        this._rowDivIcon = document.createElement('div');
+        this._rowDivIcon.classList.add('dialog-row');
+        this._divBody.appendChild(this._rowDivIcon);
+        this._rowDivIcon.style.display = 'none';
 
-        const btnCancel = document.createElement('button');
-        btnCancel.textContent = 'Cancel';
-        btnCancel.classList.add('dialog-button');
-        btnCancel.addEventListener('click', () => {
-            if (this._onClose) {
-                this._onClose();
-            }
+        const labelIcon = document.createElement('div');
+        labelIcon.classList.add('dialog-label');
+        labelIcon.textContent = 'Icon';
+        this._rowDivIcon.appendChild(labelIcon);
 
-            this._close();
-        });
+        this._selectIcon = document.createElement('select');
+        this._selectIcon.classList.add('dialog-select');
 
-        btns.appendChild(btnCancel);
-
-        const btnConfirm = document.createElement('button');
-        btnConfirm.textContent = 'Ok';
-        btnConfirm.classList.add('dialog-button');
-        btnConfirm.addEventListener('click', () => {
-            if (this._onConfirm) {
-                this._onConfirm(this);
-            }
-
-            this._close();
-        });
-
-
-        btns.appendChild(btnConfirm);
-
-        this._dialog.appendChild(btns);
-
-        // -------------------------------------------------------------------------------------------------------------
-
-        document.body.appendChild(this._dialog);
+        this._rowDivIcon.appendChild(this._selectIcon);
     }
 
     /**
-     * close
-     * @protected
+     * Return the name
+     * @return {string}
      */
-    protected _close(): void {
-        this._dialog.close();
-        this._dialog.remove();
-    }
-
-    /**
-     * Show the dialog
-     */
-    public show(): void {
-        this._dialog.showModal();
-    }
-
-    /**
-     * Set on close
-     * @param {TreeviewDialogOnClose} event
-     */
-    public setOnClose(event: TreeviewDialogOnClose): void {
-        this._onClose = event;
-    }
-
-    /**
-     * Set on confirm
-     * @param {TreeviewDialogOnConfirm} event
-     */
-    public setOnConfirm(event: TreeviewDialogOnConfirm): void {
-        this._onConfirm = event;
-    }
-
     public getName(): string {
         return this._inputName.value;
     }
 
+    /**
+     * Set the name
+     * @param {string} name
+     */
     public setName(name: string): void {
         this._inputName.value = name;
     }
@@ -168,7 +120,44 @@ export class TreeviewDialog {
         return this._selectType.value;
     }
 
+    /**
+     * Set type
+     * @param {string} type
+     */
     public setType(type: string): void {
         this._selectType.value = type;
+    }
+
+    /**
+     * Set icon options
+     * @param {Map<string, string>} options
+     */
+    public setIconOptions(options: Map<string, string>): void {
+        this._rowDivIcon.style.display = '';
+        this._selectIcon.innerHTML = '';
+
+        for (const [typeName, typeValue] of options.entries()) {
+            const option = document.createElement('option');
+            option.value = typeName;
+            option.textContent = typeValue;
+
+            this._selectIcon.appendChild(option);
+        }
+    }
+
+    /**
+     * Return the icon
+     * @return {string}
+     */
+    public getIcon(): string {
+        return this._selectIcon.value;
+    }
+
+    /**
+     * Set icon
+     * @param {string} icon
+     */
+    public setIcon(icon: string): void {
+        this._selectIcon.value = icon;
     }
 }

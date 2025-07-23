@@ -300,6 +300,8 @@ export class SchemaEditor {
         if (data.editor) {
             this._controls!.style.width = `${data.editor.controls_width}px`;
         }
+
+        this._treeview?.getRoot().updateView(true);
     }
 
     /**

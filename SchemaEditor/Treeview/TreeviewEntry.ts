@@ -1,11 +1,13 @@
 import {EnumTable} from '../Enum/EnumTable.js';
-import {SchemaTable} from '../Schema/SchemaTable.js';
 import {
     JsonDataFS,
-    SchemaJsonDataFSType,
     JsonEnumDescription,
-    JsonSchemaDescription, SchemaJsonDataFS
+    JsonSchemaDescription,
+    SchemaJsonDataFS,
+    SchemaJsonDataFSIcon,
+    SchemaJsonDataFSType
 } from '../JsonData.js';
+import {SchemaTable} from '../Schema/SchemaTable.js';
 import {Treeview} from './Treeview.js';
 import {TreeviewDialog} from './TreeviewDialog.js';
 
@@ -33,6 +35,12 @@ export class TreeviewEntry {
     protected _spanToggle: HTMLSpanElement;
 
     /**
+     * span icon
+     * @protected
+     */
+    protected _spanIcon: HTMLSpanElement;
+
+    /**
      * Span Name
      * @protected
      */
@@ -57,6 +65,12 @@ export class TreeviewEntry {
     protected _type: SchemaJsonDataFSType|string = '';
 
     /**
+     * icon
+     * @protected
+     */
+    protected _icon: SchemaJsonDataFSIcon|string = '';
+
+    /**
      * List
      * @protected
      */
@@ -79,8 +93,9 @@ export class TreeviewEntry {
      * @param {string} id
      * @param {string} name
      * @param {SchemaJsonDataFSType|string} type
+     * @param {string} icon
      */
-    public constructor(id: string = '', name: string = 'Root', type: SchemaJsonDataFSType|string = SchemaJsonDataFSType.root) {
+    public constructor(id: string = '', name: string = 'Root', type: SchemaJsonDataFSType|string = SchemaJsonDataFSType.root, icon: string = '') {
         this.unid = id;
         this._ul = document.createElement('ul');
         this._liElement = document.createElement('li');
@@ -94,56 +109,58 @@ export class TreeviewEntry {
         this._spanToggle.classList.add('toggle-icon');
         this._spanToggle.textContent = '▼';
         this._spanToggle.addEventListener("click", () => {
-            const line = this._spanToggle.parentElement;
-
-            if (!line) {
-                return;
-            }
-
-            const parentLi = line.closest('li');
-
-            if (!parentLi) {
-                return;
-            }
-
-            const uls = Array.from(parentLi.children).filter(
-                el => el.tagName === 'UL'
-            ) as HTMLUListElement[];
-
-            const isOpen = line.classList.toggle('open');
-
-            for (const ul of uls) {
-                ul.style.display = isOpen ? 'block' : 'none';
-            }
-
-            this._spanToggle.textContent = isOpen ? '▼' : '▶';
+            this.setToggle(!this.isToggle());
         });
 
         folderLine.appendChild(this._spanToggle);
-        this._spanToggle.parentElement?.classList.add('open');
-        const parentLi = this._spanToggle.closest('li');
-
-        if (parentLi) {
-            parentLi.querySelectorAll('ul').forEach(ul => {
-                ul.style.display = 'block';
-            });
-        }
 
         // set span name -----------------------------------------------------------------------------------------------
 
-        this._spanName = document.createElement('span');
-        this._spanName.classList.add('folder');
-
-        folderLine.appendChild(this._spanName);
-
-        this._spanName.addEventListener('click', () => {
+        const clickSetActiv = () => {
             if (this.getType() === SchemaJsonDataFSType.file) {
                 Treeview.setActivEntry(this);
 
                 window.dispatchEvent(new CustomEvent('schemaeditor:updateview', {}));
             }
-        });
+        };
 
+        this._spanIcon = document.createElement('span');
+        this._spanIcon.classList.add('folder');
+        folderLine.appendChild(this._spanIcon);
+
+        this._spanIcon.addEventListener('click', clickSetActiv);
+
+        this._spanName = document.createElement('span');
+        this._spanName.classList.add('folder');
+        folderLine.appendChild(this._spanName);
+
+        this._spanName.addEventListener('click', clickSetActiv);
+
+        // helper function ---------------------------------------------------------------------------------------------
+
+        const getDialogTypes = (): Map<string, string> =>  {
+            const types = new Map<string, string>();
+
+            if (this._tables.length === 0) {
+                types.set('folder', '📁 Folder');
+            }
+
+            types.set('file', '📄 File');
+
+            return types;
+        };
+
+        const getDialogIcons = (): Map<string, string> => {
+            const icons = new Map<string, string>();
+
+            icons.set('', 'None');
+            icons.set(SchemaJsonDataFSIcon.package, '📦 Package');
+            icons.set(SchemaJsonDataFSIcon.libary, '🧱 Libary');
+            icons.set(SchemaJsonDataFSIcon.registry, '🗂️ Registry');
+            icons.set(SchemaJsonDataFSIcon.archiv, '🗃️ Archiv');
+
+            return icons;
+        };
 
         // add folder/file ---------------------------------------------------------------------------------------------
 
@@ -152,24 +169,37 @@ export class TreeviewEntry {
             btnAdd.textContent = '➕';
             btnAdd.classList.add('add-folder');
             btnAdd.addEventListener('click', () => {
+                folderLine.classList.add('folder-line-hover');
+
                 const dialog = new TreeviewDialog();
                 dialog.show();
 
-                const types = new Map<string, string>();
+                dialog.setTypeOptions(getDialogTypes());
 
-                if (this._tables.length === 0) {
-                    types.set('folder', '📁 Folder');
+                if (type === SchemaJsonDataFSType.folder) {
+                    dialog.setIconOptions(getDialogIcons());
                 }
 
-                types.set('file', '📄 File');
-
-                dialog.setTypeOptions(types);
                 dialog.setOnConfirm(dialog1 => {
-                    const entry = new TreeviewEntry(crypto.randomUUID(), dialog1.getName(), dialog1.getType());
+                    const tdialog = dialog1 as unknown as TreeviewDialog;
+
+                    const entry = new TreeviewEntry(
+                        crypto.randomUUID(),
+                        tdialog.getName(),
+                        tdialog.getType(),
+                        tdialog.getIcon()
+                    );
+
                     this._list.set(entry.getId(), entry);
                     this._liElement.appendChild(entry.getElement());
 
                     window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+
+                    return true;
+                });
+
+                dialog.setOnClose(() => {
+                    folderLine.classList.remove('folder-line-hover');
                 });
             });
 
@@ -195,26 +225,29 @@ export class TreeviewEntry {
             btnEdit.textContent = '📝';
             btnEdit.classList.add('add-folder');
             btnEdit.addEventListener('click', () => {
+                folderLine.classList.add('folder-line-hover');
+
                 const dialog = new TreeviewDialog();
                 dialog.setName(this.getName());
+                dialog.setTypeOptions(getDialogTypes());
                 dialog.setType(this.getType());
+                dialog.setIconOptions(getDialogIcons());
+                dialog.setIcon(this.getIcon());
                 dialog.show();
 
-                const types = new Map<string, string>();
-
-                if (this._tables.length === 0) {
-                    types.set('folder', '📁 Folder');
-                }
-
-                types.set('file', '📄 File');
-
-                dialog.setTypeOptions(types);
                 dialog.setOnConfirm(dialog1 => {
-                    this.setName(dialog1.getName());
-                    this.setType(dialog1.getType());
-
+                    const tdialog = dialog1 as unknown as TreeviewDialog;
+                    this.setName(tdialog.getName());
+                    this.setType(tdialog.getType());
+                    this.setIcon(tdialog.getIcon());
                     window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+
+                    return true;
                 });
+
+                dialog.setOnClose(() => {
+                    folderLine.classList.remove('folder-line-hover');
+                })
             });
 
             folderLine.appendChild(btnEdit);
@@ -230,19 +263,129 @@ export class TreeviewEntry {
             folderLine.appendChild(btnDelete);
         }
 
+        // set draggable -----------------------------------------------------------------------------------------------
+
+        if (type === SchemaJsonDataFSType.file || type === SchemaJsonDataFSType.folder) {
+            folderLine.draggable = true;
+            folderLine.addEventListener('dragstart', e => {
+                e.dataTransfer?.setData('type', this.getType());
+                e.dataTransfer?.setData('id', this.getId());
+                folderLine.classList.add('dragging');
+            });
+        }
+
+        folderLine.addEventListener('dragover', e => {
+            const type = e.dataTransfer?.getData('type');
+
+            switch (this.getType()) {
+                case SchemaJsonDataFSType.folder:
+                    if (type === SchemaJsonDataFSType.file || type === SchemaJsonDataFSType.folder) {
+                        e.preventDefault();
+                        folderLine.classList.add('drag-over');
+                    }
+                    break;
+
+                case SchemaJsonDataFSType.file:
+                    if (type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum) {
+                        e.preventDefault();
+                        folderLine.classList.add('drag-over');
+                    }
+                    break;
+            }
+        });
+
+        folderLine.addEventListener('dragleave', () => {
+            folderLine.classList.remove('drag-over');
+        });
+
+        folderLine.addEventListener('dragend', e => {
+            folderLine.classList.remove('dragging');
+        });
+
+        folderLine.addEventListener('drop', e => {
+            const type = e.dataTransfer?.getData('type');
+
+            switch (this.getType()) {
+                case SchemaJsonDataFSType.folder:
+                    if (type === SchemaJsonDataFSType.file || type === SchemaJsonDataFSType.folder) {
+
+                    }
+                    break;
+
+                case SchemaJsonDataFSType.file:
+                    if (type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum) {
+
+                    }
+                    break;
+            }
+
+            folderLine.classList.remove('drag-over');
+        });
+
         // -------------------------------------------------------------------------------------------------------------
 
         this._ul.appendChild(this._liElement);
 
         this.setType(type);
         this.setName(name);
+        this.setToggle(false);
+        this.setIcon(icon);
     }
 
     /**
      * Return an element
+     * @return {HTMLUListElement}
      */
     public getElement(): HTMLUListElement {
         return this._ul;
+    }
+
+    /**
+     * Is entry toggle
+     * @return {boolean}
+     */
+    public isToggle(): boolean {
+        const line = this._spanToggle.parentElement;
+
+        if (!line) {
+            return false;
+        }
+
+        return line.classList.contains('open');
+    }
+
+    /**
+     * Set toogle
+     * @param {boolean} open
+     */
+    public setToggle(open: boolean): void {
+        const line = this._spanToggle.parentElement;
+
+        if (!line) return;
+
+        const parentLi = this._spanToggle.closest('li');
+
+        if (!parentLi) return;
+
+        const uls = Array.from(parentLi.children).filter(el => el.tagName === 'UL') as HTMLUListElement[];
+
+        if (open) {
+            line.classList.add('open');
+            this._spanToggle.textContent = '▼';
+        } else {
+            line.classList.remove('open');
+            this._spanToggle.textContent = '▶';
+        }
+
+        if (this._icon !== '') {
+            this._setIcon(this._icon);
+        } else {
+            this._setIcon(this.getType());
+        }
+
+        for (const ul of uls) {
+            ul.style.display = open ? 'block' : 'none';
+        }
     }
 
     /**
@@ -259,6 +402,12 @@ export class TreeviewEntry {
             this._spanName.classList.add('treeview-file');
             this._spanToggle.style.display = 'none';
         }
+
+        if (this._icon !== '') {
+            this._setIcon(this._icon);
+        } else {
+            this._setIcon(type);
+        }
     }
 
     /**
@@ -270,33 +419,67 @@ export class TreeviewEntry {
     }
 
     /**
+     * Set icon
+     * @param icon
+     */
+    protected _setIcon(icon: SchemaJsonDataFSType|SchemaJsonDataFSIcon|string): void {
+        let iconText = '❓';
+
+        switch (icon) {
+            case SchemaJsonDataFSType.root:
+                iconText = '🌳';
+                break;
+
+            case SchemaJsonDataFSType.folder:
+                iconText = '📁';
+
+                if (this.isToggle()) {
+                    iconText = '📂';
+                }
+
+                break;
+
+            case SchemaJsonDataFSType.file:
+                iconText = '📄';
+                break;
+
+            case SchemaJsonDataFSType.schema:
+                iconText = '🧩';
+                break;
+
+            case SchemaJsonDataFSType.enum:
+                iconText = '🔢';
+                break;
+
+            case SchemaJsonDataFSIcon.package:
+                iconText = '📦';
+                break;
+
+            case SchemaJsonDataFSIcon.libary:
+                iconText = '🧱';
+                break;
+
+            case SchemaJsonDataFSIcon.registry:
+                iconText = '🗂️';
+                break;
+
+            case SchemaJsonDataFSIcon.archiv:
+                iconText = '🗃️';
+                break;
+        }
+
+        if (this._spanIcon) {
+            this._spanIcon.textContent = iconText;
+        }
+    }
+
+    /**
      * Set name
      * @param {name} name
      */
     public setName(name: string): void {
         this._name = name;
-
-        let typeIcon = '';
-
-        switch (this._type) {
-            case SchemaJsonDataFSType.root:
-                typeIcon = '🌳';
-                break;
-
-            case SchemaJsonDataFSType.folder:
-                typeIcon = '📁';
-                break;
-
-            case SchemaJsonDataFSType.file:
-                typeIcon = '📄';
-                break;
-
-            case SchemaJsonDataFSType.schema:
-                typeIcon = '🧩';
-                break;
-        }
-
-        this._spanName.textContent = `${typeIcon} ${name}`;
+        this._spanName.textContent = name;
     }
 
     /**
@@ -305,6 +488,23 @@ export class TreeviewEntry {
      */
     public getName(): string {
         return this._name;
+    }
+
+    /**
+     * Return the icon
+     * @return {string}
+     */
+    public getIcon(): string {
+        return this._icon;
+    }
+
+    /**
+     * Set the icon
+     * @param {string} icon
+     */
+    public setIcon(icon: SchemaJsonDataFSIcon|string): void {
+        this._icon = icon;
+        this._setIcon(icon);
     }
 
     /**
@@ -351,6 +551,7 @@ export class TreeviewEntry {
             unid: this.unid,
             name: this._name,
             type: this._type,
+            icon: this._icon === '' ? undefined : this._icon,
             entrys: entrys,
             schemas: schemas,
             enums: enums,
@@ -365,6 +566,10 @@ export class TreeviewEntry {
         this.unid = data.unid;
         this.setType(data.type);
         this.setName(data.name);
+
+        if (data.icon) {
+            this.setIcon(data.icon);
+        }
 
         for (const aEntry of data.entrys) {
             if (SchemaJsonDataFS.validate(aEntry, [])) {
@@ -407,7 +612,7 @@ export class TreeviewEntry {
 
     /**
      * Add enum table
-     * @param table
+     * @param {EnumTable} table
      */
     public addEnumTable(table: EnumTable): void {
         this._enums.push(table);
@@ -564,6 +769,20 @@ export class TreeviewEntry {
         }
 
         return null;
+    }
+
+    /**
+     * Update view
+     * @param {boolean} recursive
+     */
+    public updateView(recursive: boolean): void {
+        this.setToggle(this.isToggle());
+
+        if (recursive) {
+            for (const [, entry] of this._list.entries()) {
+                entry.updateView(recursive);
+            }
+        }
     }
 
 }

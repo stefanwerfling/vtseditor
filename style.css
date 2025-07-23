@@ -344,6 +344,12 @@ dialog::backdrop {
   gap: 12px;
 }
 
+.dialog-row {
+  display: flex; !important;
+  flex-direction: column;
+  width: 100%;
+}
+
 .dialog-input {
   padding: 6px 10px;
   border: 1px solid #ccc;
@@ -461,6 +467,10 @@ dialog::backdrop {
   background-color: #f0f4f8;
 }
 
+.folder-line-hover {
+  background-color: #a9c9e8;
+}
+
 .treeview .folder {
   cursor: pointer;
   user-select: none;
@@ -479,6 +489,7 @@ dialog::backdrop {
 }
 
 .folder-line button {
+  display: none;
   background: none;
   border: none;
   cursor: pointer;
@@ -486,6 +497,10 @@ dialog::backdrop {
   padding: 2px 4px;
   border-radius: 4px;
   transition: background 0.2s ease;
+}
+
+.folder-line:hover button {
+  display: unset;
 }
 
 .folder-line button:hover {
@@ -508,8 +523,21 @@ button.add-folder {
   transition: transform 0.3s ease;
 }
 
+.folder-line.dragging button {
+  display: none;
+}
+
+.toggle-icon.dragging {
+  display: none;
+}
+
 .folder-line.open > .toggle-icon {
-  transform: rotate(90deg);
+  /*transform: rotate(90deg);*/
+}
+
+.drag-over {
+  background-color: #f0f0f0;
+  outline: 1px dashed #888;
 }
 
 /**

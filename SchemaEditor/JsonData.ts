@@ -5,11 +5,23 @@ import {ExtractSchemaResultType, Vts} from 'vts';
  */
 export enum SchemaJsonDataFSType {
     root = 'root',
+    extern = 'extern',
     folder = 'folder',
     file = 'file',
     schema = 'schema',
     enum = 'enum'
 }
+
+/**
+ * Treeveiw entry icon
+ */
+export enum SchemaJsonDataFSIcon {
+    package = 'package',
+    registry = 'registry',
+    libary = 'libary',
+    archiv = 'archiv'
+}
+
 
 export const SchemaJsonSchemaFieldDescription = Vts.object({
     unid: Vts.or([Vts.string(), Vts.null()]),
@@ -65,6 +77,7 @@ export const SchemaJsonDataFS = Vts.object({
     unid: Vts.string(),
     name: Vts.string(),
     type: Vts.or([Vts.enum(SchemaJsonDataFSType), Vts.string()]),
+    icon: Vts.optional(Vts.or([Vts.enum(SchemaJsonDataFSIcon), Vts.string()])),
     entrys: Vts.array(Vts.unknown()),
     schemas: Vts.array(SchemaJsonSchemaDescription),
     enums: Vts.array(SchemaJsonEnumDescription)
