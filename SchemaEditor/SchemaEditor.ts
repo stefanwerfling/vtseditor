@@ -2,10 +2,17 @@ import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
 import {EnumTable} from './Enum/EnumTable.js';
 import jsPlumbInstance from './jsPlumbInstance.js';
 import {SchemaExtends} from './SchemaExtends.js';
-import {JsonData, JsonDataFS, SchemaJsonDataFS} from './JsonData.js';
+import {JsonData, JsonDataFS, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js';
 import {SchemaTypes} from './SchemaTypes.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
 import {Treeview} from './Treeview/Treeview.js';
+
+type SchemaEditorMoveEventDetail = {
+    sourceType: string;
+    destinationType: string;
+    sourceId: string;
+    detionationId: string;
+};
 
 /**
  * Schema Editor
@@ -180,6 +187,28 @@ export class SchemaEditor {
                 }
 
                 this._updateView();
+            }
+        });
+
+        window.addEventListener('schemaeditor:moveto', (event: Event) => {
+            const customEvent = event as CustomEvent<SchemaEditorMoveEventDetail>;
+            const treeview = this._treeview;
+
+            if (treeview) {
+                switch (customEvent.detail.sourceType) {
+                    case SchemaJsonDataFSType.folder:
+                    case SchemaJsonDataFSType.file:
+                        treeview.moveToEntry(customEvent.detail.sourceId, customEvent.detail.detionationId);
+                        break;
+
+                    case SchemaJsonDataFSType.schema:
+                        treeview.moveTableToEntry(customEvent.detail.sourceId, customEvent.detail.detionationId);
+                        break;
+
+                    case SchemaJsonDataFSType.enum:
+                        treeview.moveEnumToEntry(customEvent.detail.sourceId, customEvent.detail.detionationId);
+                        break;
+                }
             }
         });
 

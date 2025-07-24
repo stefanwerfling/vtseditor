@@ -341,13 +341,27 @@ export class TreeviewEntry {
             switch (this.getType()) {
                 case SchemaJsonDataFSType.folder:
                     if (type === SchemaJsonDataFSType.file || type === SchemaJsonDataFSType.folder) {
-
+                        window.dispatchEvent(new CustomEvent('schemaeditor:moveto', {
+                            detail: {
+                                sourceType: type,
+                                destinationType: this.getType(),
+                                sourceId: e.dataTransfer?.getData('id'),
+                                detionationId: this.getId()
+                            }
+                        }));
                     }
                     break;
 
                 case SchemaJsonDataFSType.file:
                     if (type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum) {
-
+                        window.dispatchEvent(new CustomEvent('schemaeditor:moveto', {
+                            detail: {
+                                sourceType: type,
+                                destinationType: this.getType(),
+                                sourceId: e.dataTransfer?.getData('id'),
+                                detionationId: this.getId()
+                            }
+                        }));
                     }
                     break;
             }
@@ -597,6 +611,7 @@ export class TreeviewEntry {
             name: this._name,
             type: this._type,
             icon: this._icon === '' ? undefined : this._icon,
+            istoggle: this.isToggle(),
             entrys: entrys,
             schemas: schemas,
             enums: enums,
@@ -614,6 +629,10 @@ export class TreeviewEntry {
 
         if (data.icon) {
             this.setIcon(data.icon);
+        }
+
+        if (data.istoggle) {
+            this.setToggle(data.istoggle);
         }
 
         for (const aEntry of data.entrys) {
@@ -822,6 +841,16 @@ export class TreeviewEntry {
         return null;
     }
 
+    public hasEntryWith(name: string, eType: string): boolean {
+        for (const [, entry] of this._list.entries()) {
+            if (entry.getName() === name && entry.getType() === eType) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Update view
      * @param {boolean} recursive
@@ -859,4 +888,103 @@ export class TreeviewEntry {
         return null;
     }
 
+    /**
+     * splice a entry
+     * @param {string} id
+     * @return {TreeviewEntry|null}
+     */
+    public spliceEntry(id: string): TreeviewEntry|null {
+        if (this._list.has(id)) {
+            const entry = this._list.get(id);
+
+            if (entry) {
+                this._list.delete(id);
+
+                return entry;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get table by id
+     * @param {string} tableId
+     * @return {SchemaTable|null}
+     */
+    public getTableById(tableId: string): SchemaTable|null {
+        for (const table of this._tables) {
+            if (table.getId() === tableId) {
+                return table;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Splice a table
+     * @param {string} id
+     * @return SchemaTable|null
+     */
+    public spliceTable(id: string): SchemaTable|null {
+        const index = this._tables.findIndex(table => table.getId() === id);
+
+        if (index !== -1) {
+            return this._tables.splice(index, 1)[0];
+        }
+
+        return null;
+    }
+
+    /**
+     * has table or enum name in this entry
+     * @param {string} name
+     * @return boolean
+     */
+    public hasTableOrEnumName(name: string): boolean {
+        for (const table of this._tables) {
+            if (table.getName() === name) {
+                return true;
+            }
+        }
+
+        for (const aenum of this._enums) {
+            if (aenum.getName() === name) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get enum by id
+     * @param {string} enumId
+     * @return {EnumTable|null}
+     */
+    public getEnumById(enumId: string): EnumTable|null {
+        for (const aenum of this._enums) {
+            if (aenum.getId() === enumId) {
+                return aenum;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Splice a enum
+     * @param {string} id
+     * @return {EnumTable|null}
+     */
+    public spliceEnum(id: string): EnumTable|null {
+        const index = this._enums.findIndex(table => table.getId() === id);
+
+        if (index !== -1) {
+            return this._enums.splice(index, 1)[0];
+        }
+
+        return null;
+    }
 }

@@ -79,6 +79,7 @@ export const SchemaJsonDataFS = Vts.object({
     name: Vts.string(),
     type: Vts.or([Vts.enum(SchemaJsonDataFSType), Vts.string()]),
     icon: Vts.optional(Vts.or([Vts.enum(SchemaJsonDataFSIcon), Vts.string()])),
+    istoggle: Vts.optional(Vts.boolean()),
     entrys: Vts.array(Vts.unknown()),
     schemas: Vts.array(SchemaJsonSchemaDescription),
     enums: Vts.array(SchemaJsonEnumDescription)

@@ -107,4 +107,87 @@ export class Treeview {
             el.classList.remove('active2');
         });
     }
+
+    public moveToEntry(sourceId: string, destinationId: string): void {
+        const parentEntry = this._rootFolder.findParent(sourceId);
+        const destinationEntry = this._rootFolder.getEntryById(destinationId);
+
+        if (parentEntry && destinationEntry) {
+            const entryInfo = parentEntry.getEntryById(sourceId);
+
+            if (entryInfo) {
+                if (destinationEntry.hasEntryWith(entryInfo.getName(), entryInfo.getType())) {
+                    alert('The destination have also a File/Folder with the same name!');
+                    return;
+                }
+
+                const entry = parentEntry.spliceEntry(sourceId);
+
+                if (entry) {
+                    destinationEntry.addEntry(entry);
+                    window.dispatchEvent(new CustomEvent('schemaeditor:sortingentrys', {}));
+                }
+            }
+        }
+    }
+
+    public moveTableToEntry(sourceTableId: string, destinationId: string): void {
+        const parentEntry = this._rootFolder.findParent(sourceTableId);
+        const destinationEntry = this._rootFolder.getEntryById(destinationId);
+
+        if (parentEntry && destinationEntry) {
+            const tableInfo = parentEntry.getTableById(sourceTableId);
+
+            if (tableInfo) {
+                if (destinationEntry.hasTableOrEnumName(tableInfo.getName())) {
+                    alert('The destination have also a Schema/Enum with the same name!');
+                    return;
+                }
+
+                const table = parentEntry.spliceTable(sourceTableId);
+
+                if (table) {
+                    destinationEntry.addSchemaTable(table);
+
+                    const entry = parentEntry.spliceEntry(sourceTableId);
+
+                    if (entry) {
+                        destinationEntry.addEntry(entry);
+                    }
+
+                    window.dispatchEvent(new CustomEvent('schemaeditor:sortingentrys', {}));
+                }
+            }
+        }
+    }
+
+    public moveEnumToEntry(sourceEnumId: string, destinationId: string): void {
+        const parentEntry = this._rootFolder.findParent(sourceEnumId);
+        const destinationEntry = this._rootFolder.getEntryById(destinationId);
+
+        if (parentEntry && destinationEntry) {
+            const enumInfo = parentEntry.getEnumById(sourceEnumId);
+
+            if (enumInfo) {
+                if (destinationEntry.hasTableOrEnumName(enumInfo.getName())) {
+                    alert('The destination have also a Schema/Enum with the same name!');
+                    return;
+                }
+
+                const aenum = parentEntry.spliceEnum(sourceEnumId);
+
+                if (aenum) {
+                    destinationEntry.addEnumTable(aenum);
+
+                    const entry = parentEntry.spliceEntry(sourceEnumId);
+
+                    if (entry) {
+                        destinationEntry.addEntry(entry);
+                    }
+
+                    window.dispatchEvent(new CustomEvent('schemaeditor:sortingentrys', {}));
+                }
+            }
+        }
+    }
 }
