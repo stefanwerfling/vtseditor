@@ -280,6 +280,20 @@ export class TreeviewEntry {
                 e.dataTransfer?.setData('type', this.getType());
                 e.dataTransfer?.setData('id', this.getId());
                 folderLine.classList.add('dragging');
+
+                if (this.getType() === SchemaJsonDataFSType.schema || this.getType() === SchemaJsonDataFSType.enum) {
+                    const activeEntry = Treeview.getActiveEntry();
+
+                    if (activeEntry) {
+                        const tables = activeEntry.getSchemaTables();
+
+                        for (const table of tables) {
+                            if (this.getId() !== table.getId()) {
+                                table.showDropArea(true);
+                            }
+                        }
+                    }
+                }
             });
         }
 
@@ -309,6 +323,16 @@ export class TreeviewEntry {
 
         folderLine.addEventListener('dragend', e => {
             folderLine.classList.remove('dragging');
+
+            const activeEntry = Treeview.getActiveEntry();
+
+            if (activeEntry) {
+                const tables = activeEntry.getSchemaTables();
+
+                for (const table of tables) {
+                    table.showDropArea(false);
+                }
+            }
         });
 
         folderLine.addEventListener('drop', e => {
@@ -461,11 +485,11 @@ export class TreeviewEntry {
                 break;
 
             case SchemaJsonDataFSType.schema:
-                iconText = '🧩';
+                iconText = '🧬';
                 break;
 
             case SchemaJsonDataFSType.enum:
-                iconText = '🔢';
+                iconText = '🧩';
                 break;
 
             case SchemaJsonDataFSIcon.package:

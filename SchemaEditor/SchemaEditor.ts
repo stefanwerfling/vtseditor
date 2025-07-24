@@ -263,10 +263,28 @@ export class SchemaEditor {
             // updates view ----------------------------------------------------------------------------------------
             for (const tenum of sEnums) {
                 tenum.updateView();
+
+                if (entryTable) {
+                    if (tenum.getId() === entryTable.getId()) {
+                        tenum.setActivView(true);
+                    } else {
+                        tenum.setActivView(false);
+                    }
+                }
             }
 
             for (const table of sTables) {
+                table.showDropArea(false);
                 table.updateView();
+
+                if (entryTable) {
+                    if (table.getId() === entryTable.getId()) {
+                        table.setActivView(true);
+                    } else {
+                        table.setActivView(false);
+                    }
+                }
+
             }
 
             entry.setActiveName();

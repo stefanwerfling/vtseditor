@@ -50,6 +50,12 @@ export class SchemaTableField {
     protected _optional: boolean = false;
 
     /**
+     * is field array
+     * @protected
+     */
+    protected _array: boolean = false;
+
+    /**
      * Description
      * @protected
      */
@@ -152,6 +158,7 @@ export class SchemaTableField {
             dialog.setFieldType(this._type);
             dialog.setFieldSubTypes(this._subtypes);
             dialog.setOptional(this._optional);
+            dialog.setArray(this._array);
             dialog.setDescription(this._description);
             dialog.show();
 
@@ -211,19 +218,32 @@ export class SchemaTableField {
      */
     public setType(type: string): void {
         this._type = type;
-        const typename = SchemaTypes.getInstance().getTypeNameBy(type) ?? 'unknown';
-        this._contentType.textContent = `${typename}`;
+        this._contentType.innerHTML = '';
 
-        this._contentType.classList.remove(...['vts-badge-wh-1', 'vts-badge-wh-2']);
+        let contentElement = this._contentType;
 
-        if (SchemaTypes.getInstance().isTypeASchema(this._type)) {
-            this._contentType.classList.add(...['vts-badge-wh-2']);
-        } else {
-            this._contentType.classList.add(...['vts-badge-wh-1']);
+        if (this._array) {
+            const spanArray = document.createElement('span');
+            spanArray.textContent = 'Array';
+            spanArray.classList.add(...['vts-badge-wh-5']);
+            contentElement.appendChild(spanArray);
+            contentElement = spanArray;
         }
 
+        const typename = SchemaTypes.getInstance().getTypeNameBy(type) ?? 'unknown';
+        const spanType = document.createElement('span');
+        spanType.textContent = `${typename}`;
+
+        if (SchemaTypes.getInstance().isTypeASchema(this._type)) {
+            spanType.classList.add(...['vts-badge-wh-2']);
+        } else {
+            spanType.classList.add(...['vts-badge-wh-1']);
+        }
+
+        contentElement.appendChild(spanType);
+        contentElement = spanType;
+
         switch (type) {
-            case 'array':
             case 'or':
                 for (const subtype of this._subtypes) {
                     const span = document.createElement('span');
@@ -237,7 +257,7 @@ export class SchemaTableField {
                         span.classList.add(...['vts-badge-wh-3']);
                     }
 
-                    this._contentType.appendChild(span);
+                    contentElement.appendChild(span);
                 }
                 break;
         }
@@ -283,6 +303,14 @@ export class SchemaTableField {
         } else {
             this._column.style.backgroundColor = '#ffffff';
         }
+    }
+
+    /**
+     * Set is array
+     * @param {boolean} array
+     */
+    public setArray(array: boolean): void {
+        this._array = array;
     }
 
     /**
@@ -367,6 +395,7 @@ export class SchemaTableField {
             type: this._type,
             subtypes: this._subtypes,
             optional: this._optional,
+            array: this._array,
             description: this._description
         };
     }
@@ -383,8 +412,9 @@ export class SchemaTableField {
             this.setSubTypes(data.subtypes);
         }
 
-        this.setType(data.type);
+        this.setArray(data.array ?? false);
         this.setOptional(data.optional);
+        this.setType(data.type);
         this.setDescription(data.description);
     }
 

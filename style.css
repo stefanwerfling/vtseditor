@@ -110,7 +110,15 @@ body {
 }
 
 .vts-schema-table:hover {
-  border: 1px solid #ff8000;
+  box-shadow: 0 0 4px rgba(255, 128, 0, 0.5);
+  border: 1px solid #aaa;
+  background-color: #4a8eae;
+}
+
+.vts-schema-table.selected {
+  box-shadow: 0 0 0 2px #ff8000;
+  background-color: #ffe0b2;
+  border: 2px dashed #ff8000;
 }
 
 .vts-enum-table {
@@ -345,8 +353,10 @@ dialog::backdrop {
 }
 
 .dialog-row {
-  display: flex; !important;
-  flex-direction: column;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
   width: 100%;
 }
 
@@ -610,7 +620,49 @@ button.add-folder {
   border: 1px solid #000;
 }
 
+.vts-badge-wh-5 {
+  margin-left: 4px !important;
+  display: inline-block;
+  min-width: 10px;
+  padding: 3px 7px;
+  font-size: 11px;
+  color: #000;
+  background-color: yellow;
+  line-height: 1;
+  vertical-align: middle;
+  white-space: nowrap;
+  text-align: center;
+  border-radius: 10px;
+  border: 1px solid #000;
+}
+
 .jtk-connector.hovered-connection path {
   stroke: #ff6600 !important;
   stroke-width: 2px !important;
+}
+
+.drop-area {
+  background-color: #ffe0b2;
+  border: 2px dashed #ff8000;
+  color: #ff6600;
+  font-weight: 16;
+  padding: 10px;
+  margin-top: 10px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.drop-area.hidden {
+  display: none;
+}
+
+.drop-area.hover {
+  background-color: #ff8000;
+  color: #000000;
+}
+
+.dialog-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #3e7e9c;
 }

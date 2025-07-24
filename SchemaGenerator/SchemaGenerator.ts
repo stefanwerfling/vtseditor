@@ -350,7 +350,15 @@ export class SchemaGenerator {
                 content += 'Vts.optional(';
             }
 
+            if (field.array) {
+                content += 'Vts.array(';
+            }
+
             content += this._writeType(field.type, field.subtypes, field.description);
+
+            if (field.array) {
+                content += ')';
+            }
 
             if (field.optional) {
                 content += ')';
@@ -405,16 +413,6 @@ export class SchemaGenerator {
 
             case 'boolean':
                 content += `Vts.boolean(${tdescription})`;
-                break;
-
-            case 'array':
-                let subType = 'Vts.null()';
-
-                if (subtypes.length > 0) {
-                    subType = this._writeType(subtypes[0], [], description);
-                }
-
-                content += `Vts.array(${subType})`;
                 break;
 
             case 'or':

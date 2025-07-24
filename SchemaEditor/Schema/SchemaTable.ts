@@ -5,7 +5,7 @@ import {SchemaExtends} from '../SchemaExtends.js';
 import {
     JsonSchemaDescription,
     JsonSchemaFieldDescription,
-    JsonSchemaPositionDescription
+    JsonSchemaPositionDescription, SchemaJsonDataFSType
 } from '../JsonData.js';
 import {SchemaTypes} from '../SchemaTypes.js';
 import {SchemaTableDialog} from './SchemaTableDialog.js';
@@ -94,6 +94,12 @@ export class SchemaTable {
      * @protected
      */
     protected _connection: Connection|null = null;
+
+    /**
+     * Drop area
+     * @protected
+     */
+    protected _dropArea: HTMLDivElement;
 
     /**
      * on delete
@@ -217,32 +223,7 @@ export class SchemaTable {
         elBtnAdd.classList.add(...['vts-schema-new-column', 'vts-schema-add']);
         elBtnAdd.title = 'Add Field';
         elBtnAdd.addEventListener('click', () => {
-            const dialog = new SchemaTableFieldDialog();
-            dialog.show();
-            dialog.setTypeOptions(SchemaTypes.getInstance().getTypes([this._unid]));
-            dialog.setOnConfirm(tdialog => {
-                const dialog1 = tdialog as unknown as SchemaTableFieldDialog;
-                const fieldName = dialog1.getFieldName();
-                const uid = crypto.randomUUID();
-
-                if (this.existFieldName(uid, fieldName)) {
-                    alert('Please change your Fieldname, it already exist!');
-                    return false;
-                }
-
-                this.addFields([{
-                    subtypes: dialog1.getFieldSubTypes(),
-                    type: dialog1.getFieldType(),
-                    name: fieldName,
-                    optional: dialog1.getOptional(),
-                    description: dialog1.getDescription(),
-                    unid: uid
-                }]);
-
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
-
-                return true;
-            });
+            this._openNewColumnDialog();
         });
 
         elBtn.appendChild(elBtnAdd);
@@ -266,6 +247,15 @@ export class SchemaTable {
 
         this.setExtend(extend);
 
+        // drop area ---------------------------------------------------------------------------------------------------
+
+        this._dropArea = document.createElement('div');
+        this._dropArea.classList.add(...['drop-area', 'hidden']);
+        this._dropArea.textContent = '+ Drop your column';
+        this._table.appendChild(this._dropArea);
+
+        // set jsPlumb -------------------------------------------------------------------------------------------------
+
         jsPlumbInstance.manage(this._table);
         jsPlumbInstance.setDraggable(this._table, true);
 
@@ -276,6 +266,80 @@ export class SchemaTable {
 
                 window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
             }
+        });
+
+        // set drag and drop -------------------------------------------------------------------------------------------
+
+        this._table.addEventListener('dragover', e => {
+            e.preventDefault();
+
+            const type = e.dataTransfer?.getData('type');
+
+            if (type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum) {
+                this._dropArea.classList.add('hover');
+            }
+        });
+
+        this._table.addEventListener('dragleave', () => {
+            this._dropArea.classList.remove('hover');
+        });
+
+        this._table.addEventListener('drop', e => {
+            this._dropArea.classList.remove('hover');
+            e.preventDefault();
+
+            const type = e.dataTransfer?.getData('type');
+
+            if (type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum) {
+                const id = e.dataTransfer?.getData('id');
+
+                if (id) {
+                    this._openNewColumnDialog(id);
+                }
+            }
+        });
+    }
+
+    public showDropArea(show: boolean): void {
+        if (show) {
+            this._dropArea.classList.remove('hidden');
+        } else {
+            this._dropArea.classList.add('hidden');
+        }
+    }
+
+    protected _openNewColumnDialog(type: string|null = null): void {
+        const dialog = new SchemaTableFieldDialog();
+        dialog.show();
+        dialog.setTypeOptions(SchemaTypes.getInstance().getTypes([this._unid]));
+
+        if (type !== null) {
+            dialog.setFieldType(type);
+        }
+
+        dialog.setOnConfirm(tdialog => {
+            const dialog1 = tdialog as unknown as SchemaTableFieldDialog;
+            const fieldName = dialog1.getFieldName();
+            const uid = crypto.randomUUID();
+
+            if (this.existFieldName(uid, fieldName)) {
+                alert('Please change your Fieldname, it already exist!');
+                return false;
+            }
+
+            this.addFields([{
+                subtypes: dialog1.getFieldSubTypes(),
+                type: dialog1.getFieldType(),
+                name: fieldName,
+                optional: dialog1.getOptional(),
+                array: dialog1.getArray(),
+                description: dialog1.getDescription(),
+                unid: uid
+            }]);
+
+            window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+
+            return true;
         });
     }
 
@@ -307,8 +371,9 @@ export class SchemaTable {
 
             field1.setName(dialog.getFieldName());
             field1.setSubTypes(dialog.getFieldSubTypes());
-            field1.setType(dialog.getFieldType());
             field1.setOptional(dialog.getOptional());
+            field1.setArray(dialog.getArray());
+            field1.setType(dialog.getFieldType());
             field1.setDescription(dialog.getDescription());
             field1.updateView();
 
@@ -567,6 +632,9 @@ export class SchemaTable {
         });
     }
 
+    /**
+     * Sorting fields
+     */
     public sortingFields(): void {
         const sortedFields = Array.from(this._fields.values()).sort((a, b) =>
             a.getName().localeCompare(b.getName())
@@ -581,6 +649,18 @@ export class SchemaTable {
         this._fields = new Map(
             sortedFields.map(field => [field.getName(), field])
         );
+    }
+
+    /**
+     * Set activ view
+     * @param {boolean} active
+     */
+    public setActivView(active: boolean): void {
+        if (active) {
+            this._table.classList.add('selected');
+        } else {
+            this._table.classList.remove('selected');
+        }
     }
 
 }

@@ -374,4 +374,12 @@ export class EnumTable {
         this._table.remove();
     }
 
+    public setActivView(active: boolean): void {
+        if (active) {
+            this._table.classList.add('selected');
+        } else {
+            this._table.classList.remove('selected');
+        }
+    }
+
 }

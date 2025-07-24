@@ -25,10 +25,16 @@ export class SchemaTableFieldDialog extends BaseDialog {
     protected _selectSubTypes: HTMLSelectElement[] = [];
 
     /**
-     * Select optional
+     * checkbox optional
      * @protected
      */
-    protected _selectOptional: HTMLSelectElement;
+    protected _checkboxOptional: HTMLInputElement;
+
+    /**
+     * checkbox array
+     * @protected
+     */
+    protected _checkboxArray: HTMLInputElement;
 
     /**
      * textarea description
@@ -124,26 +130,42 @@ export class SchemaTableFieldDialog extends BaseDialog {
         this._subtypesDiv.appendChild(btnAddSubtype);
 
         // optional ----------------------------------------------------------------------------------------------------
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('dialog-row');
+        wrapper.style.display = 'flex';
+        wrapper.style.gap = '24px';
 
-        const labelOptional = document.createElement('div');
+        // --- Optional Checkbox ---
+        const labelOptional = document.createElement('label');
         labelOptional.classList.add('dialog-label');
         labelOptional.textContent = 'Optional';
-        this._divBody.appendChild(labelOptional);
+        labelOptional.style.display = 'flex';
+        labelOptional.style.alignItems = 'center';
+        labelOptional.style.gap = '6px';
 
-        this._selectOptional = document.createElement('select');
-        this._selectOptional.classList.add('dialog-select');
+        this._checkboxOptional = document.createElement('input');
+        this._checkboxOptional.type = 'checkbox';
+        this._checkboxOptional.classList.add('dialog-checkbox');
 
-        const optionInc = document.createElement('option');
-        optionInc.value = '0';
-        optionInc.textContent = 'Field must be included';
-        this._selectOptional.appendChild(optionInc);
+        labelOptional.prepend(this._checkboxOptional);
+        wrapper.appendChild(labelOptional);
 
-        const optionOptional = document.createElement('option');
-        optionOptional.value = '1';
-        optionOptional.textContent = 'Field is optional';
-        this._selectOptional.appendChild(optionOptional);
+        // --- Array Checkbox ---
+        const labelArray = document.createElement('label');
+        labelArray.classList.add('dialog-label');
+        labelArray.textContent = 'Array';
+        labelArray.style.display = 'flex';
+        labelArray.style.alignItems = 'center';
+        labelArray.style.gap = '6px';
 
-        this._divBody.appendChild(this._selectOptional);
+        this._checkboxArray = document.createElement('input');
+        this._checkboxArray.type = 'checkbox';
+        this._checkboxArray.classList.add('dialog-checkbox');
+
+        labelArray.prepend(this._checkboxArray);
+        wrapper.appendChild(labelArray);
+
+        this._divBody.appendChild(wrapper);
 
         // description -------------------------------------------------------------------------------------------------
 
@@ -318,7 +340,7 @@ export class SchemaTableFieldDialog extends BaseDialog {
      * @return {string}
      */
     public getOptional(): boolean {
-        return this._selectOptional.value === '1';
+        return this._checkboxOptional.checked;
     }
 
     /**
@@ -326,7 +348,23 @@ export class SchemaTableFieldDialog extends BaseDialog {
      * @param {string} optional
      */
     public setOptional(optional: boolean): void {
-        this._selectOptional.value = optional ? '1' : '0';
+        this._checkboxOptional.checked = optional;
+    }
+
+    /**
+     * Get array
+     * @return {boolean}
+     */
+    public getArray(): boolean {
+        return this._checkboxArray.checked;
+    }
+
+    /**
+     * Set array
+     * @param {boolean} isArray
+     */
+    public setArray(isArray: boolean): void {
+        this._checkboxArray.checked = isArray;
     }
 
     /**

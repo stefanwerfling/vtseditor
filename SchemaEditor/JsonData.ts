@@ -29,6 +29,7 @@ export const SchemaJsonSchemaFieldDescription = Vts.object({
     type: Vts.string(),
     subtypes: Vts.array(Vts.string()),
     optional: Vts.boolean(),
+    array: Vts.optional(Vts.boolean()),
     description: Vts.string()
 });
 
