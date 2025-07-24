@@ -80,6 +80,18 @@ export class SchemaTableField {
     protected _contentType: HTMLSpanElement;
 
     /**
+     * info icon wrapper
+     * @protected
+     */
+    protected _infoIconWrapper: HTMLDivElement;
+
+    /**
+     * info content div
+     * @protected
+     */
+    protected _infoContentDiv: HTMLDivElement;
+
+    /**
      * Endpoint
      * @protected
      */
@@ -140,6 +152,31 @@ export class SchemaTableField {
 
         this._contentType = document.createElement('span');
         content.appendChild(this._contentType);
+
+        this._infoIconWrapper = document.createElement('div');
+        this._infoIconWrapper.style.display = 'none';
+        this._infoIconWrapper.classList.add(...['info-icon-wrapper']);
+        content.appendChild(this._infoIconWrapper);
+
+        const iconInfo = document.createElement('span');
+        iconInfo.classList.add('info-icon');
+        iconInfo.textContent = 'ℹ️';
+        this._infoIconWrapper.appendChild(iconInfo);
+
+        this._infoContentDiv = document.createElement('div');
+        this._infoContentDiv.classList.add('info-tooltip');
+        this._infoIconWrapper.appendChild(this._infoContentDiv);
+
+        this._infoIconWrapper.addEventListener('mouseenter', (e) => {
+            const rect = this._infoIconWrapper.getBoundingClientRect();
+            this._infoContentDiv.style.display = 'block';
+            this._infoContentDiv.style.left = `${rect.left + rect.width / 2}px`;
+            this._infoContentDiv.style.top = `${rect.bottom + 8}px`;
+        });
+
+        this._infoIconWrapper.addEventListener('mouseleave', () => {
+            this._infoContentDiv.style.display = 'none';
+        });
 
         // Buttons -----------------------------------------------------------------------------------------------------
 
@@ -318,6 +355,13 @@ export class SchemaTableField {
      * @param {string} description
      */
     public setDescription(description: string): void {
+        if (description === '') {
+            this._infoIconWrapper.style.display = 'none';
+        } else {
+            this._infoIconWrapper.style.display = '';
+            this._infoContentDiv.textContent = description;
+        }
+
         this._description = description;
     }
 
