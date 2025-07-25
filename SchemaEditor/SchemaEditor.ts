@@ -214,6 +214,8 @@ export class SchemaEditor {
                         treeview.moveEnumToEntry(customEvent.detail.sourceId, customEvent.detail.detionationId);
                         break;
                 }
+
+                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
             }
         });
 

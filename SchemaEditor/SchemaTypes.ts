@@ -1,8 +1,18 @@
-
+/**
+ * Schema types
+ */
 export class SchemaTypes {
 
+    /**
+     * Instance
+     * @protected
+     */
     protected static _instance: SchemaTypes|null = null;
 
+    /**
+     * Return an instance of SchemaTypes
+     * @return {SchemaTypes}
+     */
     public static getInstance(): SchemaTypes {
         if (this._instance === null) {
             this._instance = new SchemaTypes();
@@ -11,14 +21,45 @@ export class SchemaTypes {
         return this._instance;
     }
 
+    /**
+     * Map types
+     * @protected
+     */
     protected _mapTypes: Map<string, string> = new Map<string, string>();
 
+    /**
+     * Map schema types
+     * @protected
+     */
+    protected _mapSchemaTypes: Map<string, string> = new Map<string, string>();
+
+    /**
+     * Construcotr
+     */
     public constructor() {
         this._mapTypes.set('string', 'String');
         this._mapTypes.set('number', 'Number');
         this._mapTypes.set('boolean', 'Boolean');
         this._mapTypes.set('or', 'Or');
         this._mapTypes.set('null', 'Null');
+        this._mapTypes.set('unknown', 'Unknown');
+        this._mapTypes.set('undefined', 'Undefined');
+        this._mapTypes.set('true', 'True');
+        this._mapTypes.set('false', 'False');
+        this._mapTypes.set('date', 'Date');
+        this._mapTypes.set('datestring', 'DateString');
+    }
+
+    /**
+     * Return a map with all types
+     * @return {Map<string, string>}
+     * @protected
+     */
+    protected _getAllTypes(): Map<string, string> {
+        return new Map<string, string>([
+            ...this._mapTypes,
+            ...this._mapSchemaTypes
+        ]);
     }
 
     /**
@@ -26,13 +67,15 @@ export class SchemaTypes {
      * @param {string} excludeKey
      */
     public getTypes(excludeKey: string[]|null = null): Map<string, string> {
+        const allTypes = this._getAllTypes();
+
         if (excludeKey) {
             return new Map(
-                Array.from(this._mapTypes.entries()).filter(([key]) => excludeKey.indexOf(key) === -1)
+                Array.from(allTypes.entries()).filter(([key]) => excludeKey.indexOf(key) === -1)
             );
         }
 
-        return this._mapTypes;
+        return allTypes;
     }
 
     /**
@@ -41,19 +84,27 @@ export class SchemaTypes {
      * @param {string} name
      */
     public setType(uuid: string, name: string): void {
-        this._mapTypes.set(uuid, name);
+        this._mapSchemaTypes.set(uuid, name);
     }
 
+    /**
+     * Is type a schema
+     * @param {string} type
+     * @return {boolean}
+     */
     public isTypeASchema(type: string): boolean {
-        return type.length > 8;
+        return this._mapSchemaTypes.has(type);
     }
 
     /**
      * Return the name
-     * @param type
+     * @param {string} type
+     * @return {string|null}
      */
     public getTypeNameBy(type: string): string|null {
-        return this._mapTypes.get(type) ?? null;
+        const allTypes = this._getAllTypes();
+
+        return allTypes.get(type) ?? null;
     }
 
 }

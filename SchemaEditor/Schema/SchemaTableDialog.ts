@@ -19,6 +19,18 @@ export class SchemaTableDialog extends BaseDialog {
     protected _selectExtend: HTMLSelectElement;
 
     /**
+     * Row div values schema
+     * @protected
+     */
+    protected _rowDivValuesSchema: HTMLDivElement;
+
+    /**
+     * Select values schema
+     * @protected
+     */
+    protected _selectValuesSchema: HTMLSelectElement;
+
+    /**
      * constructor
      */
     public constructor() {
@@ -48,8 +60,44 @@ export class SchemaTableDialog extends BaseDialog {
 
         this._selectExtend = document.createElement('select');
         this._selectExtend.classList.add('dialog-select');
+        this._selectExtend.addEventListener('change', (event) => {
+            const target = event.target as HTMLSelectElement;
+
+            this._visableValuesSchema(target.value === 'object2');
+        });
 
         this._divBody.appendChild(this._selectExtend);
+
+        // values schema -----------------------------------------------------------------------------------------------
+
+        this._rowDivValuesSchema = document.createElement('div');
+        this._rowDivValuesSchema.classList.add('.dialog-column');
+        this._divBody.appendChild(this._rowDivValuesSchema);
+        this._rowDivValuesSchema.style.display = 'none';
+        this._divBody.appendChild(this._rowDivValuesSchema);
+
+        const labelValuesSchema = document.createElement('div');
+        labelValuesSchema.classList.add('dialog-label');
+        labelValuesSchema.textContent = 'Values Schema';
+        this._rowDivValuesSchema.appendChild(labelValuesSchema);
+
+        this._selectValuesSchema = document.createElement('select');
+        this._selectValuesSchema.classList.add('dialog-select');
+        this._rowDivValuesSchema.appendChild(this._selectValuesSchema);
+
+    }
+
+    /**
+     * Visable values schema setting
+     * @param {boolean} visable
+     * @protected
+     */
+    protected _visableValuesSchema(visable: boolean): void {
+        if (visable) {
+            this._rowDivValuesSchema.style.display = '';
+        } else {
+            this._rowDivValuesSchema.style.display = 'none';
+        }
     }
 
     /**
@@ -65,6 +113,22 @@ export class SchemaTableDialog extends BaseDialog {
             option.textContent = typeValue;
 
             this._selectExtend.appendChild(option);
+        }
+    }
+
+    /**
+     * Set schemas
+     * @param {Map<string, string>} options
+     */
+    public setValuesSchemaOptions(options: Map<string, string>): void {
+        this._selectValuesSchema.innerHTML = '';
+
+        for (const [typeName, typeValue] of options.entries()) {
+            const option = document.createElement('option');
+            option.value = typeName;
+            option.textContent = typeValue;
+
+            this._selectValuesSchema.appendChild(option);
         }
     }
 
@@ -97,7 +161,27 @@ export class SchemaTableDialog extends BaseDialog {
      * @param {string} extend
      */
     public setSchemaExtend(extend: string): void {
+        if (extend === 'object2') {
+            this._visableValuesSchema(true);
+        }
+
         this._selectExtend.value = extend;
+    }
+
+    /**
+     * Return the values schema
+     * @return {string}
+     */
+    public getSchemaValuesSchema(): string {
+        return this._selectValuesSchema.value;
+    }
+
+    /**
+     * Set the values schema
+     * @param {string} valuesSchema
+     */
+    public setSchemaValuesSchema(valuesSchema: string): void {
+        this._selectValuesSchema.value = valuesSchema;
     }
 
 }

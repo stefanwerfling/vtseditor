@@ -46,6 +46,7 @@ export const SchemaJsonSchemaDescription = Vts.object({
     unid: Vts.string(),
     name: Vts.string(),
     extend: Vts.string(),
+    values_schema: Vts.optional(Vts.string()),
     pos: SchemaJsonSchemaPositionDescription,
     fields: Vts.array(SchemaJsonSchemaFieldDescription),
     description: Vts.string()

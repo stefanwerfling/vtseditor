@@ -43,6 +43,10 @@ export class SchemaGeneratorIndexSort {
                 visit(schemaMap.get(schema.extend)!);
             }
 
+            if (schema.values_schema && schema.values_schema !== "" && isSchemaId(schema.values_schema)) {
+                visit(schemaMap.get(schema.values_schema)!);
+            }
+
             for (const field of schema.fields) {
                 const typeId = field.type;
 

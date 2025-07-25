@@ -65,7 +65,7 @@ export class TreeviewDialog extends BaseDialog {
         // icons -------------------------------------------------------------------------------------------------------
 
         this._rowDivIcon = document.createElement('div');
-        this._rowDivIcon.classList.add('dialog-row');
+        this._rowDivIcon.classList.add('.dialog-column');
         this._divBody.appendChild(this._rowDivIcon);
         this._rowDivIcon.style.display = 'none';
 

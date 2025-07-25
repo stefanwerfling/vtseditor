@@ -327,47 +327,55 @@ export class SchemaGenerator {
 
         content += `export const ${schemaName}  = `;
 
-        if (schema.extend === 'object') {
-            content += 'Vts.object({\r\n';
+        if (schema.extend === 'object2') {
+            content += 'Vts.object2(';
+            content += this._writeType('string');
+            content += `, ${this._writeType(schema.values_schema ?? 'unknown')}`;
+            content += ');';
         } else {
-            const extendSchemaName = this._idRegister.get(schema.extend);
+            if (schema.extend === 'object') {
+                content += 'Vts.object({\r\n';
+            } else {
+                const extendSchemaName = this._idRegister.get(schema.extend);
 
-            if (extendSchemaName) {
-                if (this._fileUsedSchemas.indexOf(extendSchemaName) === -1) {
-                    this._fileUsedSchemas.push(extendSchemaName);
+                if (extendSchemaName) {
+                    if (this._fileUsedSchemas.indexOf(extendSchemaName) === -1) {
+                        this._fileUsedSchemas.push(extendSchemaName);
+                    }
+
+                    content += `${extendSchemaName}.extend({\r\n`;
+                } else {
+                    content += 'Vts.object({\r\n';
+                }
+            }
+
+            for (const field of schema.fields) {
+                content += `${this._options.code_indent}${field.name}: `;
+
+                if (field.optional) {
+                    content += 'Vts.optional(';
                 }
 
-                content += `${extendSchemaName}.extend({\r\n`;
-            } else {
-                content += 'Vts.object({\r\n';
+                if (field.array) {
+                    content += 'Vts.array(';
+                }
+
+                content += this._writeType(field.type, field.subtypes, field.description);
+
+                if (field.array) {
+                    content += ')';
+                }
+
+                if (field.optional) {
+                    content += ')';
+                }
+
+                content += ',\r\n';
             }
+
+            content += '}';
+            content += ');';
         }
-
-        for (const field of schema.fields) {
-            content += `${this._options.code_indent}${field.name}: `;
-
-            if (field.optional) {
-                content += 'Vts.optional(';
-            }
-
-            if (field.array) {
-                content += 'Vts.array(';
-            }
-
-            content += this._writeType(field.type, field.subtypes, field.description);
-
-            if (field.array) {
-                content += ')';
-            }
-
-            if (field.optional) {
-                content += ')';
-            }
-
-            content += ',\r\n';
-        }
-
-        content += '});';
 
         if (this._options.createTypes) {
 
@@ -413,6 +421,30 @@ export class SchemaGenerator {
 
             case 'boolean':
                 content += `Vts.boolean(${tdescription})`;
+                break;
+
+            case 'unknown':
+                content += `Vts.unknown()`;
+                break;
+
+            case 'undefined':
+                content += `Vts.undefined()`;
+                break;
+
+            case 'true':
+                content += `Vts.true(${tdescription})`;
+                break;
+
+            case 'false':
+                content += `Vts.false(${tdescription})`;
+                break;
+
+            case 'date':
+                content += `Vts.date(${tdescription})`;
+                break;
+
+            case 'datestring':
+                content += `Vts.dateString(${tdescription})`;
                 break;
 
             case 'or':

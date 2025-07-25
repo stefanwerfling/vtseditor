@@ -51,10 +51,28 @@ export class SchemaTable {
     protected _extend: string = '';
 
     /**
+     * values schema
+     * @protected
+     */
+    protected _valuesSchema: string = '';
+
+    /**
      * table
      * @protected
      */
     protected _table: HTMLDivElement;
+
+    /**
+     * Button sort
+     * @protected
+     */
+    protected _btnSort: HTMLDivElement;
+
+    /**
+     * Button add
+     * @protected
+     */
+    protected _btnAdd: HTMLDivElement;
 
     /**
      * fields
@@ -178,7 +196,9 @@ export class SchemaTable {
             dialog.show();
             dialog.setSchemaName(this._name);
             dialog.setExtendOptions(SchemaExtends.getInstance().getExtends([this._unid]));
+            dialog.setValuesSchemaOptions(SchemaExtends.getInstance().getExtends([this._unid], true));
             dialog.setSchemaExtend(this._extend);
+            dialog.setSchemaValuesSchema(this._valuesSchema);
             dialog.setOnConfirm(tdialog => {
                 const dialog1 = tdialog as unknown as SchemaTableDialog;
                 const schemaName = dialog1.getSchemaName();
@@ -191,6 +211,7 @@ export class SchemaTable {
 
                 this.setName(schemaName);
                 this.setExtend(dialog1.getSchemaExtend());
+                this.setValuesSchema(dialog1.getSchemaValuesSchema());
                 SchemaExtends.getInstance().setExtend(this._unid, this._name);
 
                 this.updateView();
@@ -212,10 +233,10 @@ export class SchemaTable {
 
         // Button sorting ----------------------------------------------------------------------------------------------
 
-        const elBtnSort = document.createElement('div');
-        elBtnSort.classList.add(...['vts-schema-sort-name']);
-        elBtnSort.title = 'Sortieren';
-        elBtnSort.addEventListener('click', () => {
+        this._btnSort = document.createElement('div');
+        this._btnSort.classList.add(...['vts-schema-sort-name']);
+        this._btnSort.title = 'Sortieren';
+        this._btnSort.addEventListener('click', () => {
             if (confirm('Do you want to sort the fields by name?')) {
                 this.sortingFields();
                 this.updateView();
@@ -223,18 +244,18 @@ export class SchemaTable {
             }
         });
 
-        elBtn.appendChild(elBtnSort);
+        elBtn.appendChild(this._btnSort);
 
         // Button add --------------------------------------------------------------------------------------------------
 
-        const elBtnAdd = document.createElement('div');
-        elBtnAdd.classList.add(...['vts-schema-new-column', 'vts-schema-add']);
-        elBtnAdd.title = 'Add Field';
-        elBtnAdd.addEventListener('click', () => {
+        this._btnAdd = document.createElement('div');
+        this._btnAdd.classList.add(...['vts-schema-new-column', 'vts-schema-add']);
+        this._btnAdd.title = 'Add Field';
+        this._btnAdd.addEventListener('click', () => {
             this._openNewColumnDialog();
         });
 
-        elBtn.appendChild(elBtnAdd);
+        elBtn.appendChild(this._btnAdd);
 
         // for connection
         const endpoint = document.createElement('div');
@@ -308,6 +329,10 @@ export class SchemaTable {
         });
     }
 
+    /**
+     * Show the drop area
+     * @param {boolean} show
+     */
     public showDropArea(show: boolean): void {
         if (show) {
             this._dropArea.classList.remove('hidden');
@@ -316,6 +341,11 @@ export class SchemaTable {
         }
     }
 
+    /**
+     * Open new column dialog
+     * @param {string|null} type
+     * @protected
+     */
     protected _openNewColumnDialog(type: string|null = null): void {
         const dialog = new SchemaTableFieldDialog();
         dialog.show();
@@ -449,6 +479,33 @@ export class SchemaTable {
         } else {
             this._schemaExtend.classList.add(...['vts-badge-wh-1']);
         }
+
+        if (this._extend === 'object2') {
+            this._btnSort.style.display = 'none';
+            this._btnAdd.style.display = 'none';
+            this._columns.style.display = 'none';
+        } else {
+            this._btnSort.style.display = '';
+            this._btnAdd.style.display = '';
+            this._columns.style.display = '';
+        }
+    }
+
+    /**
+     * Set values schema
+     * @param {string} valuesSchema
+     */
+    public setValuesSchema(valuesSchema: string): void {
+        const valuesSchemaName = SchemaExtends.getInstance().getExtendNameBy(valuesSchema);
+        this._valuesSchema = valuesSchema;
+
+        if (this._extend === 'object2') {
+            const span = document.createElement('span');
+            span.classList.add(...['vts-badge-wh-6']);
+            span.textContent = `${valuesSchemaName}`;
+
+            this._schemaExtend.appendChild(span);
+        }
     }
 
     /**
@@ -482,12 +539,22 @@ export class SchemaTable {
             jsPlumbInstance.deleteConnection(this._connection);
         }
 
-        if (SchemaExtends.getInstance().isExtendASchema(this._extend)) {
+        let connectId = '';
+
+        if (this._extend === 'object2') {
+            if (SchemaExtends.getInstance().isExtendASchema(this._valuesSchema)) {
+                connectId = this._valuesSchema;
+            }
+        } else if (SchemaExtends.getInstance().isExtendASchema(this._extend)) {
+            connectId = this._extend;
+        }
+
+        if (connectId !== '') {
             console.log(`Create connection for ${this._unid}`);
 
             this._connection = jsPlumbInstance.connect({
                 source: document.getElementById(`endpoint-${this._unid}`)!,
-                target: document.getElementById(`targetpoint-${this._extend}`)!,
+                target: document.getElementById(`targetpoint-${connectId}`)!,
                 anchors: ['Right', 'Left'],
                 connector: {
                     type: 'Flowchart',
@@ -538,6 +605,7 @@ export class SchemaTable {
             unid: this._unid,
             name: this._name,
             extend: this._extend,
+            values_schema: this._valuesSchema,
             pos: this._position,
             fields: fields,
             description: ''
@@ -552,6 +620,11 @@ export class SchemaTable {
         this._unid = data.unid;
         this.setName(data.name);
         this.setExtend(data.extend);
+
+        if (data.values_schema) {
+            this.setValuesSchema(data.values_schema);
+        }
+
         this.addFields(data.fields);
         this.setPosition(data.pos.x, data.pos.y);
     }

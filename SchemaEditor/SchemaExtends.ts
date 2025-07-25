@@ -28,6 +28,12 @@ export class SchemaExtends {
     protected _mapExtends: Map<string, string> = new Map<string, string>();
 
     /**
+     * Map of schema extends
+     * @protected
+     */
+    protected _mapSchemaExtends: Map<string, string> = new Map<string, string>();
+
+    /**
      * Constructor
      */
     public constructor() {
@@ -36,26 +42,46 @@ export class SchemaExtends {
     }
 
     /**
+     * Return a map with all types
+     * @return {Map<string, string>}
+     * @protected
+     */
+    protected _getAllExtends(): Map<string, string> {
+        return new Map<string, string>([
+            ...this._mapExtends,
+            ...this._mapSchemaExtends
+        ]);
+    }
+
+    /**
      * Set extend (new/overwrite)
      * @param {string} uuid
      * @param {string} name
      */
     public setExtend(uuid: string, name: string): void {
-        this._mapExtends.set(uuid, name);
+        this._mapSchemaExtends.set(uuid, name);
     }
 
     /**
      * Return all extends
      * @param {string[]|null} excludeKey
+     * @param {boolean} onlySchemas
+     * @return {Map<string, string>}
      */
-    public getExtends(excludeKey: string[]|null = null): Map<string, string> {
+    public getExtends(excludeKey: string[]|null = null, onlySchemas: boolean = false): Map<string, string> {
+        let allExtends = this._getAllExtends();
+
+        if (onlySchemas) {
+            allExtends = this._mapSchemaExtends;
+        }
+
         if (excludeKey) {
             return new Map(
-                Array.from(this._mapExtends.entries()).filter(([key]) => excludeKey.indexOf(key) === -1)
+                Array.from(allExtends.entries()).filter(([key]) => excludeKey.indexOf(key) === -1)
             );
         }
 
-        return this._mapExtends;
+        return allExtends;
     }
 
     /**
@@ -64,16 +90,17 @@ export class SchemaExtends {
      * @return {string|null}
      */
     public getExtendNameBy(extend: string): string|null {
-        return this._mapExtends.get(extend) ?? null;
+        const allExtends = this._getAllExtends();
+        return allExtends.get(extend) ?? null;
     }
 
     /**
      * Is extend a Schema
-     * @param {string} extend
+     * @param {string} unid
      * @return {boolean}
      */
-    public isExtendASchema(extend: string): boolean {
-        return extend.length > 8;
+    public isExtendASchema(unid: string): boolean {
+        return this._mapSchemaExtends.has(unid);
     }
 
     /**
@@ -82,7 +109,9 @@ export class SchemaExtends {
      * @return {string|null}
      */
     public getExtendIdByName(name: string): string|null {
-        for (const [id, tname] of this._mapExtends.entries()) {
+        const allExtends = this._getAllExtends();
+
+        for (const [id, tname] of allExtends.entries()) {
             if (name === tname) {
                 return id;
             }
