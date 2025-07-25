@@ -325,7 +325,7 @@ export class SchemaGenerator {
             content += ' */\r\n'
         }
 
-        content += `export const ${schemaName}  = `;
+        content += `export const ${schemaName} = `;
 
         if (schema.extend === 'object2') {
             content += 'Vts.object2(';
@@ -374,6 +374,9 @@ export class SchemaGenerator {
             }
 
             content += '}';
+            content += ', {\r\n';
+
+            content += `${this._options.code_indent}description: '${schema.description}',\r\n`;
 
             if (schema.options) {
                 const contentOption: string[] = [];
@@ -383,15 +386,15 @@ export class SchemaGenerator {
                 }
 
                 if (contentOption.length > 0) {
-                    content += ', {\r\n';
                     content += `${this._options.code_indent}objectSchema: {\r\n`;
                     content += contentOption.join(',\r\n');
                     content += '\r\n';
                     content += `${this._options.code_indent}}\r\n`;
-                    content += '}';
+
                 }
             }
 
+            content += '}';
             content += ');';
         }
 

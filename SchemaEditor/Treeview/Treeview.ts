@@ -219,7 +219,7 @@ export class Treeview {
         const parentEntry = this._rootFolder.findParent(id);
 
         if (parentEntry) {
-            const aenum = parentEntry.getEntryById(id);
+            const aenum = parentEntry.getEnumById(id);
 
             if (aenum) {
                 const entry = parentEntry.getEntryById(id);
