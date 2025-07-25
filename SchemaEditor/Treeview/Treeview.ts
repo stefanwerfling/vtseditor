@@ -190,4 +190,45 @@ export class Treeview {
             }
         }
     }
+
+    /**
+     * Update entry name by table name
+     * @param {string} id
+     */
+    public updateEntryNameTable(id: string): void {
+        const parentEntry = this._rootFolder.findParent(id);
+
+        if (parentEntry) {
+            const table = parentEntry.getTableById(id);
+
+            if (table) {
+                const entry = parentEntry.getEntryById(id);
+
+                if (entry) {
+                    entry.setName(table.getName());
+                }
+            }
+        }
+    }
+
+    /**
+     * Update entry name by enum name
+     * @param {string} id
+     */
+    public updateEntryNameEnum(id: string): void {
+        const parentEntry = this._rootFolder.findParent(id);
+
+        if (parentEntry) {
+            const aenum = parentEntry.getEntryById(id);
+
+            if (aenum) {
+                const entry = parentEntry.getEntryById(id);
+
+                if (entry) {
+                    entry.setName(aenum.getName());
+                }
+            }
+        }
+    }
+
 }

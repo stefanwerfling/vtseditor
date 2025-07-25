@@ -194,6 +194,14 @@ export class SchemaTable {
                 SchemaExtends.getInstance().setExtend(this._unid, this._name);
 
                 this.updateView();
+
+                window.dispatchEvent(new CustomEvent('schemaeditor:updatename', {
+                    detail: {
+                        sourceType: SchemaJsonDataFSType.schema,
+                        sourceId: this.getId()
+                    }
+                }));
+
                 window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
 
                 return true;

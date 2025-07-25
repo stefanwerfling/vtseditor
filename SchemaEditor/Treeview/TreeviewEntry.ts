@@ -200,6 +200,8 @@ export class TreeviewEntry {
                     this._list.set(entry.getId(), entry);
                     this._liElement.appendChild(entry.getElement());
 
+                    folderLine.classList.remove('folder-line-hover');
+
                     window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
 
                     return true;
@@ -247,6 +249,9 @@ export class TreeviewEntry {
                     this.setName(tdialog.getName());
                     this.setType(tdialog.getType());
                     this.setIcon(tdialog.getIcon());
+
+                    folderLine.classList.remove('folder-line-hover');
+
                     window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
 
                     return true;

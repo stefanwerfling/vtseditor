@@ -14,6 +14,11 @@ type SchemaEditorMoveEventDetail = {
     detionationId: string;
 };
 
+type SchemaEditorUpdatenameEventDetail = {
+    sourceId: string;
+    sourceType: string;
+};
+
 /**
  * Schema Editor
  */
@@ -207,6 +212,23 @@ export class SchemaEditor {
 
                     case SchemaJsonDataFSType.enum:
                         treeview.moveEnumToEntry(customEvent.detail.sourceId, customEvent.detail.detionationId);
+                        break;
+                }
+            }
+        });
+
+        window.addEventListener('schemaeditor:updatename', (event: Event) => {
+            const customEvent = event as CustomEvent<SchemaEditorUpdatenameEventDetail>;
+            const treeview = this._treeview;
+
+            if (treeview) {
+                switch (customEvent.detail.sourceType) {
+                    case SchemaJsonDataFSType.schema:
+                        treeview.updateEntryNameTable(customEvent.detail.sourceId);
+                        break;
+
+                    case SchemaJsonDataFSType.enum:
+                        treeview.updateEntryNameEnum(customEvent.detail.sourceId);
                         break;
                 }
             }

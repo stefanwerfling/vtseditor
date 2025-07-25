@@ -3,7 +3,7 @@ import jsPlumbInstance from '../jsPlumbInstance.js';
 import {
     JsonEnumDescription,
     JsonEnumValueDescription,
-    JsonSchemaPositionDescription
+    JsonSchemaPositionDescription, SchemaJsonDataFSType
 } from '../JsonData.js';
 import {SchemaTypes} from '../SchemaTypes.js';
 import {EnumTableDialog} from './EnumTableDialog.js';
@@ -142,6 +142,13 @@ export class EnumTable {
 
                 this.setName(enumName);
                 this.updateView();
+
+                window.dispatchEvent(new CustomEvent('schemaeditor:updatename', {
+                    detail: {
+                        sourceType: SchemaJsonDataFSType.enum,
+                        sourceId: this.getId()
+                    }
+                }));
 
                 window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
 

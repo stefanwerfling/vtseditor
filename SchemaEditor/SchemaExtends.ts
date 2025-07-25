@@ -32,6 +32,7 @@ export class SchemaExtends {
      */
     public constructor() {
         this._mapExtends.set('object', 'Vts.object');
+        this._mapExtends.set('object2', 'Vts.object2');
     }
 
     /**
