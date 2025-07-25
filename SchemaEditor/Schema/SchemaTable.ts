@@ -3,7 +3,7 @@ import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../SchemaExtends.js';
 import {
-    JsonSchemaDescription,
+    JsonSchemaDescription, JsonSchemaDescriptionOption,
     JsonSchemaFieldDescription,
     JsonSchemaPositionDescription, SchemaJsonDataFSType
 } from '../JsonData.js';
@@ -57,6 +57,12 @@ export class SchemaTable {
     protected _valuesSchema: string = '';
 
     /**
+     * Description
+     * @protected
+     */
+    protected _description: string = '';
+
+    /**
      * table
      * @protected
      */
@@ -100,6 +106,12 @@ export class SchemaTable {
         x: 0,
         y: 0
     };
+
+    /**
+     * Options
+     * @protected
+     */
+    protected _options: JsonSchemaDescriptionOption = {};
 
     /**
      * columns
@@ -199,6 +211,8 @@ export class SchemaTable {
             dialog.setValuesSchemaOptions(SchemaExtends.getInstance().getExtends([this._unid], true));
             dialog.setSchemaExtend(this._extend);
             dialog.setSchemaValuesSchema(this._valuesSchema);
+            dialog.setOptions(this._options);
+            dialog.setDescription(this._description);
             dialog.setOnConfirm(tdialog => {
                 const dialog1 = tdialog as unknown as SchemaTableDialog;
                 const schemaName = dialog1.getSchemaName();
@@ -212,6 +226,9 @@ export class SchemaTable {
                 this.setName(schemaName);
                 this.setExtend(dialog1.getSchemaExtend());
                 this.setValuesSchema(dialog1.getSchemaValuesSchema());
+                this._description = dialog1.getDescription();
+                this._options = dialog1.getOptions();
+
                 SchemaExtends.getInstance().setExtend(this._unid, this._name);
 
                 this.updateView();
@@ -606,9 +623,10 @@ export class SchemaTable {
             name: this._name,
             extend: this._extend,
             values_schema: this._valuesSchema,
+            options: this._options,
             pos: this._position,
             fields: fields,
-            description: ''
+            description: this._description
         };
     }
 
@@ -627,6 +645,8 @@ export class SchemaTable {
 
         this.addFields(data.fields);
         this.setPosition(data.pos.x, data.pos.y);
+        this._options = data.options ?? {};
+        this._description = data.description;
     }
 
     /**

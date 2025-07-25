@@ -22,7 +22,11 @@ export enum SchemaJsonDataFSIcon {
     archiv = 'archiv'
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Schema json schema field description
+ */
 export const SchemaJsonSchemaFieldDescription = Vts.object({
     unid: Vts.or([Vts.string(), Vts.null()]),
     name: Vts.string(),
@@ -33,35 +37,82 @@ export const SchemaJsonSchemaFieldDescription = Vts.object({
     description: Vts.string()
 });
 
+/**
+ * Type json schema field description
+ */
 export type JsonSchemaFieldDescription = ExtractSchemaResultType<typeof SchemaJsonSchemaFieldDescription>;
 
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Schema json schema position description
+ */
 export const SchemaJsonSchemaPositionDescription = Vts.object({
     x: Vts.number(),
     y: Vts.number()
 })
 
+/**
+ * Type of schema position description
+ */
 export type JsonSchemaPositionDescription = ExtractSchemaResultType<typeof SchemaJsonSchemaPositionDescription>;
 
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Schema json schema description option
+ */
+export const SchemaJsonSchemaDescriptionOption = Vts.object({
+    ignore_additional_items: Vts.optional(Vts.boolean())
+});
+
+/**
+ * Type of schema json schema description option
+ */
+export type JsonSchemaDescriptionOption = ExtractSchemaResultType<typeof SchemaJsonSchemaDescriptionOption>;
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Schema json schema description
+ */
 export const SchemaJsonSchemaDescription = Vts.object({
     unid: Vts.string(),
     name: Vts.string(),
     extend: Vts.string(),
     values_schema: Vts.optional(Vts.string()),
+    options: Vts.optional(SchemaJsonSchemaDescriptionOption),
     pos: SchemaJsonSchemaPositionDescription,
     fields: Vts.array(SchemaJsonSchemaFieldDescription),
     description: Vts.string()
 });
 
+/**
+ * Type of schema json schema description
+ */
 export type JsonSchemaDescription = ExtractSchemaResultType<typeof SchemaJsonSchemaDescription>;
 
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Schema json enum value description
+ */
 export const SchemaJsonEnumValueDescription = Vts.object({
     unid: Vts.string(),
     name: Vts.string(),
     value: Vts.string()
 });
 
+/**
+ * Type of json enum value description
+ */
 export type JsonEnumValueDescription = ExtractSchemaResultType<typeof SchemaJsonEnumValueDescription>;
 
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Schema json enum description
+ */
 export const SchemaJsonEnumDescription = Vts.object({
     unid: Vts.string(),
     name: Vts.string(),
@@ -70,7 +121,12 @@ export const SchemaJsonEnumDescription = Vts.object({
     description: Vts.string()
 }) ;
 
+/**
+ * Type schema json enum description
+ */
 export type JsonEnumDescription = ExtractSchemaResultType<typeof SchemaJsonEnumDescription>;
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 /**
  * Schema json data FS
@@ -91,6 +147,8 @@ export const SchemaJsonDataFS = Vts.object({
  */
 export type JsonDataFS = ExtractSchemaResultType<typeof SchemaJsonDataFS>;
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 /**
  * Schema json editor settings
  */
@@ -102,6 +160,8 @@ export const SchemaJsonEditorSettings = Vts.object({
  * Type json editor setting
  */
 export type JsonEditorSettings = ExtractSchemaResultType<typeof SchemaJsonEditorSettings>;
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 /**
  * Schema json data

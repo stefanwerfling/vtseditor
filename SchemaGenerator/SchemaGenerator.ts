@@ -374,6 +374,24 @@ export class SchemaGenerator {
             }
 
             content += '}';
+
+            if (schema.options) {
+                const contentOption: string[] = [];
+
+                if (schema.options.ignore_additional_items) {
+                    contentOption.push(`${this._options.code_indent}${this._options.code_indent}ignoreAdditionalItems: true`);
+                }
+
+                if (contentOption.length > 0) {
+                    content += ', {\r\n';
+                    content += `${this._options.code_indent}objectSchema: {\r\n`;
+                    content += contentOption.join(',\r\n');
+                    content += '\r\n';
+                    content += `${this._options.code_indent}}\r\n`;
+                    content += '}';
+                }
+            }
+
             content += ');';
         }
 

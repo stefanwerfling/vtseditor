@@ -1,5 +1,6 @@
 import {SchemaNameUtil} from '../../SchemaUtil/SchemaNameUtil.js';
 import {BaseDialog} from '../Base/BaseDialog.js';
+import {JsonSchemaDescriptionOption} from '../JsonData.js';
 
 /**
  * Schema table dialog
@@ -29,6 +30,18 @@ export class SchemaTableDialog extends BaseDialog {
      * @protected
      */
     protected _selectValuesSchema: HTMLSelectElement;
+
+    /**
+     * Checkbox Ignore additional items
+     * @protected
+     */
+    protected _checkboxIai: HTMLInputElement;
+
+    /**
+     * textarea description
+     * @protected
+     */
+    protected _textareaDescription: HTMLTextAreaElement;
 
     /**
      * constructor
@@ -85,6 +98,45 @@ export class SchemaTableDialog extends BaseDialog {
         this._selectValuesSchema.classList.add('dialog-select');
         this._rowDivValuesSchema.appendChild(this._selectValuesSchema);
 
+        // optional ----------------------------------------------------------------------------------------------------
+
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('dialog-row');
+        wrapper.style.display = 'flex';
+        wrapper.style.gap = '24px';
+
+        // ignore additional items -------------------------------------------------------------------------------------
+
+        // --- ignore additional items Checkbox ---
+        const labelIai = document.createElement('label');
+        labelIai.classList.add('dialog-label');
+        labelIai.textContent = 'Ignore additional items';
+        labelIai.style.display = 'flex';
+        labelIai.style.alignItems = 'center';
+        labelIai.style.gap = '6px';
+
+        this._checkboxIai = document.createElement('input');
+        this._checkboxIai.type = 'checkbox';
+        this._checkboxIai.classList.add('dialog-checkbox');
+
+        labelIai.prepend(this._checkboxIai);
+        wrapper.appendChild(labelIai);
+
+
+        this._divBody.appendChild(wrapper);
+
+        // description -------------------------------------------------------------------------------------------------
+
+        const labelDescription = document.createElement('div');
+        labelDescription.classList.add('dialog-label');
+        labelDescription.textContent = 'Description';
+        this._divBody.appendChild(labelDescription);
+
+        this._textareaDescription = document.createElement('textarea');
+        this._textareaDescription.placeholder = 'Your description ...';
+        this._textareaDescription.rows = 8;
+
+        this._divBody.appendChild(this._textareaDescription);
     }
 
     /**
@@ -182,6 +234,40 @@ export class SchemaTableDialog extends BaseDialog {
      */
     public setSchemaValuesSchema(valuesSchema: string): void {
         this._selectValuesSchema.value = valuesSchema;
+    }
+
+    /**
+     * Set description
+     * @param {string} description
+     */
+    public setDescription(description: string): void {
+        this._textareaDescription.value = description;
+    }
+
+    /**
+     * Get description
+     * @return
+     */
+    public getDescription(): string {
+        return this._textareaDescription.value;
+    }
+
+    /**
+     * Set options
+     * @param {JsonSchemaDescriptionOption} option
+     */
+    public setOptions(option: JsonSchemaDescriptionOption): void {
+        this._checkboxIai.checked = option.ignore_additional_items ?? false;
+    }
+
+    /**
+     * Return the options
+     * @return {JsonSchemaDescriptionOption}
+     */
+    public getOptions(): JsonSchemaDescriptionOption {
+        return {
+            ignore_additional_items: this._checkboxIai.checked
+        };
     }
 
 }
