@@ -7,6 +7,7 @@ import {
     JsonEnumDescription,
     JsonSchemaDescription, SchemaJsonDataFS
 } from '../SchemaEditor/JsonData.js';
+import {SchemaDescriptionUtil} from '../SchemaUtil/SchemaDescriptionUtil.js';
 import {SchemaPathUtil} from '../SchemaUtil/SchemaPathUtil.js';
 import {SchemaGeneratorIndexSort} from './SchemaGeneratorIndexSort.js';
 
@@ -322,6 +323,15 @@ export class SchemaGenerator {
         if (this._options.code_comment) {
             content += '/**\r\n';
             content += ` * Schema of ${schema.name}\r\n`;
+
+            if (schema.description !== '') {
+                const descLines = schema.description.split('\n');
+
+                for (const descLine of descLines) {
+                    content += ` * ${descLine.trim()}\r\n`;
+                }
+            }
+
             content += ' */\r\n'
         }
 
@@ -360,7 +370,7 @@ export class SchemaGenerator {
                     content += 'Vts.array(';
                 }
 
-                content += this._writeType(field.type, field.subtypes, field.description);
+                content += this._writeType(field.type, field.subtypes, SchemaDescriptionUtil.validateDescription(field.description));
 
                 if (field.array) {
                     content += ')';
@@ -376,7 +386,7 @@ export class SchemaGenerator {
             content += '}';
             content += ', {\r\n';
 
-            content += `${this._options.code_indent}description: '${schema.description}',\r\n`;
+            content += `${this._options.code_indent}description: '${SchemaDescriptionUtil.validateDescription(schema.description)}',\r\n`;
 
             if (schema.options) {
                 const contentOption: string[] = [];
