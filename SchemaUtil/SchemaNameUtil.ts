@@ -6,9 +6,10 @@ export class SchemaNameUtil {
     /**
      * Validate name
      * @param {string} name
+     * @param {boolean} allowBeginNum
      * @return {string}
      */
-    public static validateName(name: string): string {
+    public static validateName(name: string, allowBeginNum: boolean = false): string {
         let nName = name.trim();
         nName = nName.replace(/[^a-zA-Z0-9]+/g, '_');
 
@@ -16,8 +17,10 @@ export class SchemaNameUtil {
             nName = 'EmptyName'
         }
 
-        if (!/^[a-zA-Z]/.test(nName)) {
-            nName = 'A' + nName;
+        if (!allowBeginNum) {
+            if (!/^[a-zA-Z]/.test(nName)) {
+                nName = 'A' + nName;
+            }
         }
 
         return nName;
@@ -29,6 +32,12 @@ export class SchemaNameUtil {
      * @return {string}
      */
     public static validateEnumName(name: string): string {
-        return this.validateName(name);
+        let tname =  this.validateName(name, true);
+
+        if (/^\d+$/.test(tname)) {
+            tname += 'A';
+        }
+
+        return tname;
     }
 }

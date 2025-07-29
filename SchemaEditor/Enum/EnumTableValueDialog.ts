@@ -60,7 +60,7 @@ export class EnumTableValueDialog extends BaseDialog {
      * @return {string}
      */
     public getName(): string {
-        return SchemaNameUtil.validateName(this._inputName.value);
+        return SchemaNameUtil.validateEnumName(this._inputName.value);
     }
 
     /**

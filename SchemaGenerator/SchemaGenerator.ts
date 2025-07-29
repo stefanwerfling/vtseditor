@@ -275,7 +275,7 @@ export class SchemaGenerator {
             content += `export enum ${aenum.name} {\r\n`;
 
             for (const tvalue of aenum.values) {
-                content += `${this._options.code_indent}${tvalue.name} = '${tvalue.value}',\r\n`
+                content += `${this._options.code_indent}'${tvalue.name}' = '${tvalue.value}',\r\n`
             }
 
             content += '}';
