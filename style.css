@@ -517,7 +517,6 @@ dialog::backdrop {
   border: none;
   cursor: pointer;
   font-size: 12px;
-  padding: 2px 4px;
   border-radius: 4px;
   transition: background 0.2s ease;
 }
