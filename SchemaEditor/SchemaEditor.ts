@@ -376,6 +376,10 @@ export class SchemaEditor {
      * @protected
      */
     protected _updateRegisters(data: JsonDataFS): void {
+        for (const aenum of data.enums) {
+            SchemaTypes.getInstance().setType(aenum.unid, aenum.name);
+        }
+
         for (const schema of data.schemas) {
             SchemaExtends.getInstance().setExtend(schema.unid, schema.name);
             SchemaTypes.getInstance().setType(schema.unid, schema.name);
