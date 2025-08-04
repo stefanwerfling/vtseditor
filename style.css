@@ -13,7 +13,7 @@ body {
   z-index: 10;
   position: relative;
   flex-shrink: 0;
-  gap: 0px;
+  gap: 0;
 }
 
 .buttonbar {

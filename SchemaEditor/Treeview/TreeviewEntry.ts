@@ -326,7 +326,7 @@ export class TreeviewEntry {
             folderLine.classList.remove('drag-over');
         });
 
-        folderLine.addEventListener('dragend', e => {
+        folderLine.addEventListener('dragend', () => {
             folderLine.classList.remove('dragging');
 
             const activeEntry = Treeview.getActiveEntry();

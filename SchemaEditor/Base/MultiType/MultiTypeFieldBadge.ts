@@ -1,4 +1,4 @@
-import {JsonSchemaFieldType, SchemaJsonDataFSType, SchemaJsonSchemaFieldTypeArray} from '../../JsonData.js';
+import {JsonSchemaFieldType, SchemaJsonSchemaFieldTypeArray} from '../../JsonData.js';
 import {SchemaTypes} from '../../SchemaTypes.js';
 
 /**
