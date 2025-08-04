@@ -19,6 +19,10 @@ type SchemaEditorUpdatenameEventDetail = {
     sourceType: string;
 };
 
+type SchemaEditorWiggleEventDetail = {
+    schemaId: string;
+};
+
 /**
  * Schema Editor
  */
@@ -106,7 +110,7 @@ export class SchemaEditor {
         // add schema button -------------------------------------------------------------------------------------------
 
         this._btnAddSchema = document.getElementById('addSchemaBtn');
-
+        this._btnAddSchema!.style.display = 'none';
         this._btnAddSchema!.addEventListener('click', () => {
             if (Treeview.getActiveEntry() !== null) {
                 this._addSchema();
@@ -118,7 +122,7 @@ export class SchemaEditor {
         // add enum button ---------------------------------------------------------------------------------------------
 
         this._btnAddEnum = document.getElementById('addEnumBtn');
-
+        this._btnAddEnum!.style.display = 'none';
         this._btnAddEnum!.addEventListener('click', () => {
             if (Treeview.getActiveEntry() !== null) {
                 this._addEnum();
@@ -236,14 +240,50 @@ export class SchemaEditor {
             }
         });
 
+        window.addEventListener('schemaeditor:showschema', (event: Event) => {
+            const customEvent = event as CustomEvent<SchemaEditorWiggleEventDetail>;
+            const treeview = this._treeview;
+
+            if (treeview) {
+                const entry = treeview.getRoot().findParent(customEvent.detail.schemaId);
+                const activeEntryId = Treeview.getActiveEntry()?.getId();
+
+                if (entry && activeEntryId) {
+                    if (entry.getId() === activeEntryId) {
+                        const table = entry.getTableById(customEvent.detail.schemaId);
+
+                        if (table !== null) {
+                            table.runWiggle();
+                            return;
+                        }
+
+                        const aenum =  entry.getEnumById(customEvent.detail.schemaId);
+
+                        if (aenum !== null) {
+                            aenum.runWiggle();
+                            return;
+                        }
+                    } else {
+                        alert('Not found');
+                    }
+                }
+            }
+        });
+
         // resizer -----------------------------------------------------------------------------------------------------
 
         const resizer = document.getElementById('resizer')!;
+        const resizerTop = document.getElementById('resizer-topbar')!;
         const controls = document.getElementById('controls')!;
+        const topbarheader = document.getElementById('topbarheader')!;
         this._controls = controls;
 
-
         let isResizing = false;
+
+        resizerTop.addEventListener('mousedown', () => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+        });
 
         resizer.addEventListener('mousedown', () => {
             isResizing = true;
@@ -251,11 +291,15 @@ export class SchemaEditor {
         });
 
         document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
+            if (!isResizing) {
+                return;
+            }
+
             const newWidth = e.clientX;
 
             if (newWidth > 150 && newWidth < window.innerWidth - 100) {
                 controls.style.width = `${newWidth}px`;
+                topbarheader.style.width = `${newWidth}px`;
             }
         });
 
@@ -297,6 +341,9 @@ export class SchemaEditor {
         }
 
         if (entry) {
+            this._btnAddSchema!.style.display = '';
+            this._btnAddEnum!.style.display = '';
+
             // Schemas ---------------------------------------------------------------------------------------------
             const sTables = entry.getSchemaTables();
 
@@ -402,6 +449,9 @@ export class SchemaEditor {
 
         if (data.editor) {
             this._controls!.style.width = `${data.editor.controls_width}px`;
+
+            const topbarheader = document.getElementById('topbarheader')!;
+            topbarheader!.style.width = `${data.editor.controls_width}px`;
         }
 
         this._treeview?.getRoot().updateView(true);

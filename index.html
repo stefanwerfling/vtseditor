@@ -1,22 +1,28 @@
 <!DOCTYPE html>
 <html lang="de">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VTS - Schema Builder</title>
-</head>
-<body>
-<div id="controls">
-  <h2>VTS - Schema Builder</h2>
-  <div class="button-row">
-    <button id="addSchemaBtn">➕ Add Schema</button>
-    <button id="addEnumBtn">➕ Add Enum</button>
-  </div>
-  <div class="treeview" id="treeview"></div>
-</div>
-<div id="resizer"></div>
-<div id="schemagrid"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VTS - Schema Builder</title>
+  </head>
+  <body>
+    <div class="topbar">
+      <span class="topbar-header" id="topbarheader">VTS - Schema Builder</span>
+      <div id="resizer-topbar" class="resizer"></div>
+      <div class="buttonbar">
+        <button id="addSchemaBtn" class="btn-grey">➕ Add Schema</button>
+        <button id="addEnumBtn" class="btn-grey">🧩 Add Enum</button>
+      </div>
+    </div>
 
-<script type="module" src="main.ts"></script>
-</body>
+    <div id="main">
+      <div id="controls">
+        <div class="treeview" id="treeview"></div>
+      </div>
+      <div id="resizer" class="resizer"></div>
+      <div id="schemagrid"></div>
+    </div>
+
+    <script type="module" src="main.ts"></script>
+  </body>
 </html>

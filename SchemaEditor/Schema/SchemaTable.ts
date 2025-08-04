@@ -786,4 +786,11 @@ export class SchemaTable {
         }
     }
 
+    public runWiggle(): void {
+        this._table.classList.add('table-wiggle');
+        setTimeout(() => {
+            this._table.classList.remove('table-wiggle');
+        }, 300);
+    }
+
 }

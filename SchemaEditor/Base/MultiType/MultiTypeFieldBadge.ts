@@ -1,4 +1,4 @@
-import {JsonSchemaFieldType, SchemaJsonSchemaFieldTypeArray} from '../../JsonData.js';
+import {JsonSchemaFieldType, SchemaJsonDataFSType, SchemaJsonSchemaFieldTypeArray} from '../../JsonData.js';
 import {SchemaTypes} from '../../SchemaTypes.js';
 
 /**
@@ -35,6 +35,13 @@ export class MultiTypeFieldBadge {
 
         if (SchemaTypes.getInstance().isTypeASchema(data.type)) {
             spanType.classList.add(...['vts-badge-wh-2']);
+            spanType.addEventListener('click', () => {
+                window.dispatchEvent(new CustomEvent('schemaeditor:showschema', {
+                    detail: {
+                        schemaId: data.type
+                    }
+                }));
+            });
         } else {
             if (isAlternating) {
                 spanType.classList.add(...['vts-badge-wh-3']);
