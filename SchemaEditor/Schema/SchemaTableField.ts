@@ -155,7 +155,7 @@ export class SchemaTableField {
         this._infoContentDiv.classList.add('info-tooltip');
         this._infoIconWrapper.appendChild(this._infoContentDiv);
 
-        this._infoIconWrapper.addEventListener('mouseenter', (e) => {
+        this._infoIconWrapper.addEventListener('mouseenter', () => {
             const rect = this._infoIconWrapper.getBoundingClientRect();
             this._infoContentDiv.style.display = 'block';
             this._infoContentDiv.style.left = `${rect.left + rect.width / 2}px`;
@@ -346,7 +346,11 @@ export class SchemaTableField {
                                 }
                             }
                         }
-                    ]
+                    ],
+                    parameters: {
+                        fieldId: this.getId(),
+                        connectionType: 'field'
+                    }
                 });
             }
         }

@@ -358,10 +358,26 @@ export class EnumTable {
             }
 
             if (this._table.contains(conn.source) || this._table.contains(conn.target)) {
+                let parent = conn.source.parentElement;
+                let grandParent = undefined;
+
+                if (conn.parameters.connectionType === 'field') {
+                    parent = conn.source.parentElement;
+                    grandParent = parent?.parentElement;
+                }
+
                 if (hover) {
                     conn.addClass('hovered-connection');
+
+                    if (grandParent) {
+                        grandParent.classList.add('hovered');
+                    }
                 } else {
                     conn.removeClass('hovered-connection');
+
+                    if (grandParent) {
+                        grandParent.classList.remove('hovered');
+                    }
                 }
 
                 jsPlumbInstance.repaintEverything();

@@ -73,7 +73,7 @@ export class MultiTypeGroup {
         this._buttonAdd.classList.add(...['multitype-btn', 'multitype-btn-xs', 'multitype-btn-success']);
         this._buttonAdd.append('➕ Add Type');
 
-        this._buttonAdd.addEventListener('click', (ev) => {
+        this._buttonAdd.addEventListener('click', () => {
             this.addField();
         });
 

@@ -271,6 +271,10 @@ body {
   background-color: #ffe6cc !important;
 }
 
+.vts-schema-table-column.hovered {
+  background-color: #ffe6cc !important;
+}
+
 .vts-schema-table-column.optional {
   border: 1px dashed #aaa;
 }
