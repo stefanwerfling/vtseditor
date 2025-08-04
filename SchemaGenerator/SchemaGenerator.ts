@@ -5,7 +5,11 @@ import {
     JsonDataFS,
     SchemaJsonDataFSType,
     JsonEnumDescription,
-    JsonSchemaDescription, SchemaJsonDataFS
+    JsonSchemaDescription,
+    SchemaJsonDataFS,
+    JsonSchemaFieldType,
+    SchemaJsonSchemaFieldTypeArray,
+    SchemaJsonSchemaFieldType
 } from '../SchemaEditor/JsonData.js';
 import {SchemaDescriptionUtil} from '../SchemaUtil/SchemaDescriptionUtil.js';
 import {SchemaPathUtil} from '../SchemaUtil/SchemaPathUtil.js';
@@ -339,8 +343,19 @@ export class SchemaGenerator {
 
         if (schema.extend === 'object2') {
             content += 'Vts.object2(';
-            content += this._writeType('string');
-            content += `, ${this._writeType(schema.values_schema ?? 'unknown')}`;
+            content += this._writeType({
+                type: 'string',
+                optional: false,
+                array: false,
+                types: []
+            });
+            content += `, ${this._writeType({
+                type: schema.values_schema ?? 'unknown',
+                optional: false,
+                array: false,
+                types: []
+            })}`;
+
             content += ');';
         } else {
             if (schema.extend === 'object') {
@@ -360,27 +375,16 @@ export class SchemaGenerator {
             }
 
             for (const field of schema.fields) {
-                content += `${this._options.code_indent}${field.name}: `;
+                if (SchemaJsonSchemaFieldType.validate(field.type, [])) {
+                    content += `${this._options.code_indent}${field.name}: `;
 
-                if (field.optional) {
-                    content += 'Vts.optional(';
+                    content += this._writeType(
+                        field.type,
+                        SchemaDescriptionUtil.validateDescription(field.description)
+                    );
+
+                    content += ',\r\n';
                 }
-
-                if (field.array) {
-                    content += 'Vts.array(';
-                }
-
-                content += this._writeType(field.type, field.subtypes, SchemaDescriptionUtil.validateDescription(field.description));
-
-                if (field.array) {
-                    content += ')';
-                }
-
-                if (field.optional) {
-                    content += ')';
-                }
-
-                content += ',\r\n';
             }
 
             content += '}';
@@ -426,14 +430,23 @@ export class SchemaGenerator {
 
     /**
      * Write Type
-     * @param {string} type
-     * @param {string[]} subtypes
+     * @param {JsonSchemaFieldType} type
      * @param {string} description
      * @return {string}
      * @protected
      */
-    protected _writeType(type: string, subtypes: string[] = [], description: string = ''): string {
+    protected _writeType(type: JsonSchemaFieldType, description: string = ''): string {
         let content = '';
+
+        if (type.optional) {
+            content += 'Vts.optional(';
+        }
+
+        if (type.array) {
+            content += 'Vts.array(';
+        }
+
+        // -------------------------------------------------------------------------------------------------------------
 
         let tdescription = '';
 
@@ -441,7 +454,7 @@ export class SchemaGenerator {
             tdescription = `{description: '${description}'}`;
         }
 
-        switch (type) {
+        switch (type.type) {
             case 'string':
                 content += `Vts.string(${tdescription})`;
                 break;
@@ -481,16 +494,18 @@ export class SchemaGenerator {
             case 'or':
                 const tSubtypes: string[] = [];
 
-                for (const aSubtype of subtypes) {
-                    tSubtypes.push(this._writeType(aSubtype));
+                if (SchemaJsonSchemaFieldTypeArray.validate(type.types, [])) {
+                    for (const aType of type.types) {
+                        tSubtypes.push(this._writeType(aType));
+                    }
                 }
 
                 content += `Vts.or([${tSubtypes.join(', ')}])`;
                 break;
 
             default:
-                const isEnum = this._enumRegister.indexOf(type) !== -1;
-                const tschemaName = this._idRegister.get(type);
+                const isEnum = this._enumRegister.indexOf(type.type) !== -1;
+                const tschemaName = this._idRegister.get(type.type);
 
                 if (tschemaName) {
                     if (this._fileUsedSchemas.indexOf(tschemaName) === -1) {
@@ -505,6 +520,14 @@ export class SchemaGenerator {
                 } else {
                     content += 'Vts.null()';
                 }
+        }
+
+        if (type.array) {
+            content += ')';
+        }
+
+        if (type.optional) {
+            content += ')';
         }
 
         return content;

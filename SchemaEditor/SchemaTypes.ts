@@ -34,6 +34,12 @@ export class SchemaTypes {
     protected _mapSchemaTypes: Map<string, string> = new Map<string, string>();
 
     /**
+     * Map enum types
+     * @protected
+     */
+    protected _mapEnumTypes: Map<string, string> = new Map<string, string>();
+
+    /**
      * Construcotr
      */
     public constructor() {
@@ -58,8 +64,33 @@ export class SchemaTypes {
     protected _getAllTypes(): Map<string, string> {
         return new Map<string, string>([
             ...this._mapTypes,
-            ...this._mapSchemaTypes
+            ...this._mapSchemaTypes,
+            ...this._mapEnumTypes
         ]);
+    }
+
+    /**
+     * Return the Vts Types
+     * @return {Map<string, string>}
+     */
+    public getVtsTypes(): Map<string, string> {
+        return this._mapTypes;
+    }
+
+    /**
+     * Return the schema types
+     * @return {Map<string, string>}
+     */
+    public getSchemaTypes(): Map<string, string> {
+        return this._mapSchemaTypes;
+    }
+
+    /**
+     * Return the enum types
+     * @return {Map<string, string>}
+     */
+    public getEnumTypes(): Map<string, string> {
+        return this._mapEnumTypes;
     }
 
     /**
@@ -88,12 +119,25 @@ export class SchemaTypes {
     }
 
     /**
+     * Set a enum
+     * @param {string} uuid
+     * @param {string} name
+     */
+    public setEnumType(uuid: string, name: string): void {
+        this._mapEnumTypes.set(uuid, name);
+    }
+
+    /**
      * Is type a schema
      * @param {string} type
      * @return {boolean}
      */
     public isTypeASchema(type: string): boolean {
-        return this._mapSchemaTypes.has(type);
+        if (this._mapSchemaTypes.has(type) ) {
+            return true;
+        }
+
+        return this._mapEnumTypes.has(type);
     }
 
     /**

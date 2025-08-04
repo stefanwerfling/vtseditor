@@ -9,6 +9,9 @@ import {JsonData} from './SchemaEditor/JsonData.js';
 import {SchemaExternLoader} from './SchemaExtern/SchemaExternLoader.js';
 import {SchemaGenerator} from './SchemaGenerator/SchemaGenerator.js';
 
+/**
+ * Express middleware
+ */
 function expressMiddleware(): Plugin {
     return {
         name: 'vite-express-middleware',

@@ -1,11 +1,12 @@
 import {Connection} from '@jsplumb/browser-ui';
 import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
+import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../SchemaExtends.js';
 import {
     JsonSchemaDescription, JsonSchemaDescriptionOption,
-    JsonSchemaFieldDescription,
-    JsonSchemaPositionDescription, SchemaJsonDataFSType
+    JsonSchemaFieldDescription, JsonSchemaFieldType,
+    JsonSchemaPositionDescription, SchemaJsonDataFSType, SchemaJsonSchemaFieldType
 } from '../JsonData.js';
 import {SchemaTypes} from '../SchemaTypes.js';
 import {SchemaTableDialog} from './SchemaTableDialog.js';
@@ -366,10 +367,14 @@ export class SchemaTable {
     protected _openNewColumnDialog(type: string|null = null): void {
         const dialog = new SchemaTableFieldDialog();
         dialog.show();
-        dialog.setTypeOptions(SchemaTypes.getInstance().getTypes([this._unid]));
 
         if (type !== null) {
-            dialog.setFieldType(type);
+            dialog.setFieldType({
+                type: type,
+                array: false,
+                optional: false,
+                types: []
+            });
         }
 
         dialog.setOnConfirm(tdialog => {
@@ -383,11 +388,8 @@ export class SchemaTable {
             }
 
             this.addFields([{
-                subtypes: dialog1.getFieldSubTypes(),
                 type: dialog1.getFieldType(),
                 name: fieldName,
-                optional: dialog1.getOptional(),
-                array: dialog1.getArray(),
                 description: dialog1.getDescription(),
                 unid: uid
             }]);
@@ -414,7 +416,14 @@ export class SchemaTable {
      */
     public addField(fieldDesc: JsonSchemaFieldDescription): void {
         const uuid = fieldDesc.unid ?? crypto.randomUUID();
-        const field = new SchemaTableField(this._unid, uuid, fieldDesc.name, fieldDesc.type);
+
+        let aType: JsonSchemaFieldType|null = null;
+
+        if (SchemaJsonSchemaFieldType.validate(fieldDesc.type, [])) {
+            aType = fieldDesc.type;
+        }
+
+        const field = new SchemaTableField(this._unid, uuid, fieldDesc.name, aType);
         field.setData(fieldDesc);
         field.setOnSave((field1, dialog) => {
             const fieldName = dialog.getFieldName();
@@ -425,9 +434,6 @@ export class SchemaTable {
             }
 
             field1.setName(dialog.getFieldName());
-            field1.setSubTypes(dialog.getFieldSubTypes());
-            field1.setOptional(dialog.getOptional());
-            field1.setArray(dialog.getArray());
             field1.setType(dialog.getFieldType());
             field1.setDescription(dialog.getDescription());
             field1.updateView();
@@ -686,13 +692,9 @@ export class SchemaTable {
         }
 
         for (const [, field] of this._fields.entries()) {
-            if (field.getType() === id) {
-                return true;
-            }
+            const idTypeList = SchemaJsonDataUtil.getTypeArray(field.getType());
 
-            const subtypes = field.getSubTypes();
-
-            if (subtypes.indexOf(id) > -1) {
+            if (idTypeList.indexOf(id) > -1) {
                 return true;
             }
         }

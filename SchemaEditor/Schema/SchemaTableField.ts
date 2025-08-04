@@ -1,6 +1,8 @@
 import {Connection} from '@jsplumb/browser-ui';
+import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
+import {MultiTypeFieldBadge} from '../Base/MultiType/MultiTypeFieldBadge.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
-import {JsonSchemaFieldDescription} from '../JsonData.js';
+import {JsonSchemaFieldDescription, JsonSchemaFieldType, SchemaJsonSchemaFieldType} from '../JsonData.js';
 import {SchemaTypes} from './../SchemaTypes.js';
 import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';
 
@@ -23,7 +25,7 @@ export class SchemaTableField {
      * Id
      * @protected
      */
-    protected _id: string;
+    protected _unid: string;
 
     /**
      * name
@@ -35,25 +37,12 @@ export class SchemaTableField {
      * type
      * @protected
      */
-    protected _type: string = '';
-
-    /**
-     * subtypes
-     * @protected
-     */
-    protected _subtypes: string[] = [];
-
-    /**
-     * is field optional
-     * @protected
-     */
-    protected _optional: boolean = false;
-
-    /**
-     * is field array
-     * @protected
-     */
-    protected _array: boolean = false;
+    protected _type: JsonSchemaFieldType = {
+        type: '',
+        array: false,
+        optional: false,
+        types: []
+    };
 
     /**
      * Description
@@ -118,13 +107,12 @@ export class SchemaTableField {
     /**
      * Constructor
      * @param {string} tableId
-     * @param {string} id
+     * @param {string} unid
      * @param {string} name
-     * @param {string} type
-     * @param {string[]} subtypes
+     * @param {JsonSchemaFieldType|null} type
      */
-    public constructor(tableId: string, id: string, name: string, type: string, subtypes: string[] = []) {
-        this._id = id;
+    public constructor(tableId: string, unid: string, name: string, type: JsonSchemaFieldType|null = null) {
+        this._unid = unid;
 
         this._column = document.createElement('div');
         this._column.classList.add('vts-schema-table-column');
@@ -190,12 +178,8 @@ export class SchemaTableField {
         btnEdit.classList.add(...['vts-schema-table-column-edit', 'vts-schema-edit']);
         btnEdit.addEventListener('click', () => {
             const dialog = new SchemaTableFieldDialog();
-            dialog.setTypeOptions(SchemaTypes.getInstance().getTypes([tableId]));
             dialog.setFieldName(this._name);
             dialog.setFieldType(this._type);
-            dialog.setFieldSubTypes(this._subtypes);
-            dialog.setOptional(this._optional);
-            dialog.setArray(this._array);
             dialog.setDescription(this._description);
             dialog.show();
 
@@ -215,13 +199,22 @@ export class SchemaTableField {
 
         // for connection
         this._endpoint = document.createElement('div');
-        this._endpoint.id = `endpoint-column-${this._id}`;
+        this._endpoint.id = `endpoint-column-${this._unid}`;
         this._endpoint.classList.add('endpoint');
         elBtn.appendChild(this._endpoint);
 
         this.setName(name);
-        this.setSubTypes(subtypes);
-        this.setType(type);
+
+        if (type === null) {
+            this.setType({
+                type: '',
+                array: false,
+                optional: false,
+                types: []
+            });
+        } else {
+            this.setType(type);
+        }
     }
 
     /**
@@ -229,7 +222,7 @@ export class SchemaTableField {
      * @return {string}
      */
     public getId(): string {
-        return this._id;
+        return this._unid;
     }
 
     /**
@@ -251,103 +244,34 @@ export class SchemaTableField {
 
     /**
      * Set field Type
-     * @param {string} type
+     * @param {JsonSchemaFieldType|string} type
      */
-    public setType(type: string): void {
-        this._type = type;
-        this._contentType.innerHTML = '';
+    public setType(type: JsonSchemaFieldType|string): void {
+        this._contentType.innerHTML = 'unknown';
 
-        let contentElement = this._contentType;
+        if (SchemaJsonSchemaFieldType.validate(type, [])) {
+            this._type = type;
 
-        if (this._array) {
-            const spanArray = document.createElement('span');
-            spanArray.textContent = 'Array';
-            spanArray.classList.add(...['vts-badge-wh-5']);
-            contentElement.appendChild(spanArray);
-            contentElement = spanArray;
-        }
+            if (this._type.optional) {
+                this._column.style.backgroundColor = '#cbeae1';
+                this._column.classList.add('optional');
+            } else {
+                this._column.style.backgroundColor = '#ffffff';
+                this._column.classList.remove('optional');
+            }
 
-        const typename = SchemaTypes.getInstance().getTypeNameBy(type) ?? 'unknown';
-        const spanType = document.createElement('span');
-        spanType.textContent = `${typename}`;
-
-        if (SchemaTypes.getInstance().isTypeASchema(this._type)) {
-            spanType.classList.add(...['vts-badge-wh-2']);
-        } else {
-            spanType.classList.add(...['vts-badge-wh-1']);
-        }
-
-        contentElement.appendChild(spanType);
-        contentElement = spanType;
-
-        switch (type) {
-            case 'or':
-                for (const subtype of this._subtypes) {
-                    const span = document.createElement('span');
-                    const subtypename = SchemaTypes.getInstance().getTypeNameBy(subtype) ?? 'unknown';
-
-                    span.textContent = `${subtypename}`;
-
-                    if (SchemaTypes.getInstance().isTypeASchema(subtype)) {
-                        span.classList.add(...['vts-badge-wh-2']);
-                    } else {
-                        span.classList.add(...['vts-badge-wh-3']);
-                    }
-
-                    contentElement.appendChild(span);
-                }
-                break;
+            const badge = new MultiTypeFieldBadge(this._type);
+            this._contentType.innerHTML = '';
+            this._contentType.appendChild(badge.getElement());
         }
     }
 
     /**
      * Return type
-     * @return {string}
+     * @return {JsonSchemaFieldType}
      */
-    public getType(): string {
+    public getType(): JsonSchemaFieldType {
         return this._type;
-    }
-
-    /**
-     * Return subtypes
-     * @return {string[]}
-     */
-    public getSubTypes(): string[] {
-        return this._subtypes;
-    }
-
-    /**
-     * Set subtypes
-     * @param {string[]} subtypes
-     */
-    public setSubTypes(subtypes: string[]): void {
-        this._subtypes = subtypes;
-    }
-
-    /**
-     * Set optional
-     * @param {boolean} optional
-     */
-    public setOptional(optional: boolean): void {
-        this._optional = optional;
-
-        this._column.classList.remove('optional');
-
-        if (this._optional) {
-            this._column.style.backgroundColor = '#cbeae1';
-            this._column.classList.add('optional');
-
-        } else {
-            this._column.style.backgroundColor = '#ffffff';
-        }
-    }
-
-    /**
-     * Set is array
-     * @param {boolean} array
-     */
-    public setArray(array: boolean): void {
-        this._array = array;
     }
 
     /**
@@ -381,12 +305,12 @@ export class SchemaTableField {
             jsPlumbInstance.deleteConnection(this._connection);
         }
 
-        const types: string[] = [this._type, ...this._subtypes];
+        const types: string[] = SchemaJsonDataUtil.getTypeArray(this._type);
 
         for (const atype of types) {
             if (SchemaTypes.getInstance().isTypeASchema(atype)) {
                 this._connection = jsPlumbInstance.connect({
-                    source: document.getElementById(`endpoint-column-${this._id}`)!,
+                    source: document.getElementById(`endpoint-column-${this._unid}`)!,
                     target: document.getElementById(`targetpoint-${atype}`)!,
                     anchors: ['Right', 'Left'],
                     connector: {
@@ -434,12 +358,9 @@ export class SchemaTableField {
      */
     public getData(): JsonSchemaFieldDescription {
         return {
-            unid: this._id,
+            unid: this._unid,
             name: this._name,
             type: this._type,
-            subtypes: this._subtypes,
-            optional: this._optional,
-            array: this._array,
             description: this._description
         };
     }
@@ -449,15 +370,8 @@ export class SchemaTableField {
      * @param {JsonSchemaFieldDescription} data
      */
     public setData(data: JsonSchemaFieldDescription): void {
-        this._id = data.unid ?? '';
+        this._unid = data.unid ?? '';
         this.setName(data.name);
-
-        if (data.subtypes) {
-            this.setSubTypes(data.subtypes);
-        }
-
-        this.setArray(data.array ?? false);
-        this.setOptional(data.optional);
         this.setType(data.type);
         this.setDescription(data.description);
     }

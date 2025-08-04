@@ -81,7 +81,7 @@ export class EnumTable {
         this._name = name;
 
         // update Schema Types
-        SchemaTypes.getInstance().setType(this._unid, this._name);
+        SchemaTypes.getInstance().setEnumType(this._unid, this._name);
 
         this._table = document.createElement('div');
         this._table.classList.add(...['table', 'vts-schema-table', 'vts-schema-element', 'vts-enum-table']);
@@ -283,7 +283,7 @@ export class EnumTable {
         this._enumName.textContent = name;
 
         // update new name
-        SchemaTypes.getInstance().setType(this._unid, this._name);
+        SchemaTypes.getInstance().setEnumType(this._unid, this._name);
     }
 
     /**

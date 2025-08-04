@@ -1,7 +1,15 @@
-import {JsonSchemaDescription} from '../SchemaEditor/JsonData.js';
+import {JsonSchemaDescription, SchemaJsonSchemaFieldTypeArray} from '../SchemaEditor/JsonData.js';
 
+/**
+ * Schema generator index sort
+ */
 export class SchemaGeneratorIndexSort {
 
+    /**
+     * Sort schemas
+     * @param {JsonSchemaDescription[]} schemas
+     * @return {JsonSchemaDescription[]}
+     */
     public static sortSchemas(schemas: JsonSchemaDescription[]): JsonSchemaDescription[] {
         const schemaMap = new Map<string, JsonSchemaDescription>();
         const idCounts = new Map<string, number>();
@@ -11,12 +19,11 @@ export class SchemaGeneratorIndexSort {
         for (const schema of schemas) {
             const count = idCounts.get(schema.unid) ?? 0;
 
-            idCounts.set(schema.unid, count + 1);
-
             if (count > 0) {
                 throw new Error(`Dublicate found: The UUID '${schema.unid}' is dublicate.`);
             }
 
+            idCounts.set(schema.unid, count + 1);
             schemaMap.set(schema.unid, schema);
         }
 
@@ -43,22 +50,35 @@ export class SchemaGeneratorIndexSort {
                 visit(schemaMap.get(schema.extend)!);
             }
 
-            if (schema.values_schema && schema.values_schema !== "" && isSchemaId(schema.values_schema)) {
+            if (schema.values_schema && isSchemaId(schema.values_schema)) {
                 visit(schemaMap.get(schema.values_schema)!);
             }
 
             for (const field of schema.fields) {
-                const typeId = field.type;
+                const fieldType = field.type;
 
-                if (isSchemaId(typeId)) {
-                    visit(schemaMap.get(typeId)!);
+                if (typeof fieldType === "string") {
+                    continue;
                 }
 
-                for (const subType of field.subtypes) {
-                    if (isSchemaId(subType)) {
-                        visit(schemaMap.get(subType)!);
+                if (typeof fieldType === "object" && fieldType !== null) {
+                    if (isSchemaId(fieldType.type)) {
+                        visit(schemaMap.get(fieldType.type)!);
+                    }
+
+                    if (SchemaJsonSchemaFieldTypeArray.validate(fieldType.types, [])) {
+                        for (const t of fieldType.types) {
+                            if (typeof t === "string") {
+                                continue;
+                            }
+
+                            if (isSchemaId(t.type)) {
+                                visit(schemaMap.get(t.type)!);
+                            }
+                        }
                     }
                 }
+
             }
 
             visiting.delete(schema.unid);

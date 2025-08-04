@@ -1,0 +1,160 @@
+
+.multitype-wrapper {
+    padding: 10px;
+    padding-bottom: 6px;
+    border: 1px solid #DCC896;
+    background: rgba(250, 240, 210, 0.5);
+}
+
+.multitype-header {
+    margin-bottom: 10px;
+}
+
+.multitype-btn-group {
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.multitype-pull-right {
+    float: right !important;
+}
+
+.multitype-btn {
+    display: inline-block;
+    padding: 6px 12px;
+    margin-bottom: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.42857143;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    -ms-touch-action: manipulation;
+    touch-action: manipulation;
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    background-image: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+.multitype-btn-xs {
+    padding: 1px 5px;
+    font-size: 12px;
+    line-height: 1.5;
+    border-radius: 3px;
+}
+
+.multitype-btn-success {
+    color: #fff;
+    background-color: #5cb85c;
+    border-color: #4cae4c;
+}
+
+.multitype-btn-danger {
+    color: #fff;
+    background-color: #d9534f;
+    border-color: #d43f3a;
+}
+
+.multitype-group-conditions {
+}
+
+.multitype-label-primary {
+    color: #fff;
+    background-color: #337ab7;
+    border-color: #2e6da4;
+}
+
+.multitype-label-primary.active {
+    color: #fff;
+    background-color: #286090;
+    border-color: #204d74;
+}
+
+.multitype-label-none {
+    color: #000000;
+    background-color: #ffffff;
+    border-color: #2e6da4;
+}
+
+.multitype-btn-group>.multitype-btn {
+    position: relative;
+    float: left
+}
+
+.multitype-btn-group>.multitype-btn:first-child {
+    margin-left: 0;
+}
+
+.multitype-btn-group>.multitype-btn:first-child:not(:last-child):not(.dropdown-toggle) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.multitype-btn-group>.multitype-btn:last-child:not(:first-child), .multitype-btn-group>.dropdown-toggle:not(:first-child) {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.multitype-body {
+
+}
+
+.multitype-fieldlist {
+    list-style: none;
+    padding: 0 0 0 15px;
+    margin: 0;
+}
+
+.multitype-fieldlist > *::before, .multitype-fieldlist > *::after {
+    content: "";
+    position: absolute;
+    left: -10px;
+    width: 10px;
+    height: calc(50% + 4px);
+    border-color: #CCC;
+    border-style: solid;
+}
+.multitype-fieldlist > *::before {
+    top: -4px;
+    border-width: 0 0 2px 2px;
+}
+.multitype-fieldlist > *::after {
+    top: 50%;
+    border-width: 0 0 0 2px;
+}
+.multitype-fieldlist > *:first-child::before {
+    top: -12px;
+    height: calc(50% + 14px);
+}
+.multitype-fieldlist > *:last-child::before {
+    border-radius: 0 0 0 4px;
+}
+.multitype-fieldlist > *:last-child::after {
+    display: none;
+}
+
+.multitype-container {
+    position: relative;
+    margin: 4px 0;
+    border-radius: 5px;
+    padding: 5px;
+    border: 1px solid #EEE;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.multitypefield-header {
+
+}
+
+.multitypefield-value {
+    display: inline-block;
+    margin: 0 5px 0 0;
+    vertical-align: middle;
+    width: 80%;
+}

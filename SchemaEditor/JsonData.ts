@@ -1,3 +1,4 @@
+import * as trace_events from 'node:trace_events';
 import {ExtractSchemaResultType, Vts} from 'vts';
 
 /**
@@ -25,16 +26,39 @@ export enum SchemaJsonDataFSIcon {
 // ---------------------------------------------------------------------------------------------------------------------
 
 /**
+ * Schema json schema field type
+ */
+export const SchemaJsonSchemaFieldType = Vts.object({
+    type: Vts.string(),
+    optional: Vts.boolean(),
+    array: Vts.boolean(),
+    types: Vts.array(Vts.unknown()) // see JsonSchemaFieldTypeArray
+});
+
+/**
+ * Type json schema field type
+ */
+export type JsonSchemaFieldType = ExtractSchemaResultType<typeof SchemaJsonSchemaFieldType>;
+
+export const SchemaJsonSchemaFieldTypeArray = Vts.array(SchemaJsonSchemaFieldType);
+
+export type JsonSchemaFieldTypeArray = ExtractSchemaResultType<typeof SchemaJsonSchemaFieldTypeArray>;
+
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
  * Schema json schema field description
  */
 export const SchemaJsonSchemaFieldDescription = Vts.object({
     unid: Vts.or([Vts.string(), Vts.null()]),
     name: Vts.string(),
-    type: Vts.string(),
-    subtypes: Vts.array(Vts.string()),
-    optional: Vts.boolean(),
-    array: Vts.optional(Vts.boolean()),
+    type: Vts.or([Vts.string(), SchemaJsonSchemaFieldType]),
     description: Vts.string()
+}, {
+    objectSchema: {
+        ignoreAdditionalItems: true
+    }
 });
 
 /**
