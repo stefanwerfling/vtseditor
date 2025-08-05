@@ -1,4 +1,5 @@
 // vite.config.ts
+import {fastTrim} from '@jsplumb/browser-ui';
 import { defineConfig, Plugin } from 'vite';
 import express from 'express';
 import fs from 'fs';
@@ -30,6 +31,7 @@ function expressMiddleware(): Plugin {
             let createIndex = false;
             let autoGenerate = false;
             let destinationPath = path.resolve('schemas', 'src');
+            let destinationClear = false;
             let codeComment = false;
             let codeIndent = '    '
 
@@ -44,6 +46,10 @@ function expressMiddleware(): Plugin {
 
                     if (config.project.destinationPath) {
                         destinationPath = path.resolve(projectRoot, config.project.destinationPath);
+                    }
+
+                    if (config.project.destinationClear) {
+                        destinationClear = config.project.destinationClear ?? destinationClear;
                     }
 
                     if (config.project.code) {
@@ -64,7 +70,7 @@ function expressMiddleware(): Plugin {
             }
 
             const loader = new SchemaExternLoader(projectRoot);
-            loader.scan();
+            loader.scan().then();
 
             // ---------------------------------------------------------------------------------------------------------
 
@@ -75,6 +81,7 @@ function expressMiddleware(): Plugin {
             console.log(`\tCreate Index: ${createIndex ? 'true' : 'false'}`);
             console.log(`\tAuto Generate files by save: ${autoGenerate ? 'true' : 'false'}`);
             console.log(`\tDestination-Path: ${destinationPath}`);
+            console.log(`\tDestination-Clear: ${destinationClear ? 'true' : 'false'}`);
             console.log(`\tCode comments: ${createIndex ? 'true' : 'false'}`);
             console.log(' ');
 
@@ -90,6 +97,7 @@ function expressMiddleware(): Plugin {
                         createTypes: createTypes,
                         createIndex: createIndex,
                         destinationPath: destinationPath,
+                        destinationClear: destinationClear,
                         code_indent: codeIndent,
                         code_comment: codeComment
                     });

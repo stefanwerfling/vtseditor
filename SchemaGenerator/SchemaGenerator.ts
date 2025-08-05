@@ -23,6 +23,7 @@ export type SchemaGeneratorOptions = {
     createTypes: boolean;
     createIndex: boolean;
     destinationPath: string;
+    destinationClear: boolean;
     code_indent: string;
     code_comment: boolean;
 };
@@ -83,6 +84,11 @@ export class SchemaGenerator {
 
         if (data.type !== SchemaJsonDataFSType.root) {
             throw new Error(`❌ Schema data start not by root`);
+        }
+
+        if (this._options.destinationClear) {
+            console.info(`Clear destination: ${destPath}`);
+            SchemaPathUtil.clearFolder(destPath);
         }
 
         console.info(`Generate file in: ${destPath}`);

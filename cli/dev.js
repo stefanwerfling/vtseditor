@@ -24,6 +24,7 @@ if (!fs.existsSync(configFile)) {
             },
             autoGenerate: false,
             destinationPath: './schemas/src',
+            destinationClear: false
         },
         server: {
             port: 5173

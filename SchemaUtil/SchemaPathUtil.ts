@@ -1,4 +1,5 @@
 import * as path from "path";
+import * as fs from 'fs';
 import {readdir, stat} from 'fs/promises';
 
 /**
@@ -57,6 +58,22 @@ export class SchemaPathUtil {
         }));
 
         return files.flat();
+    }
+
+    public static clearFolder(folderPath: string): void {
+        if (!fs.existsSync(folderPath)) return;
+
+        for (const file of fs.readdirSync(folderPath)) {
+            const fullPath = path.join(folderPath, file);
+            const stat = fs.lstatSync(fullPath);
+
+            if (stat.isDirectory()) {
+                this.clearFolder(fullPath);
+                fs.rmdirSync(fullPath);
+            } else {
+                fs.unlinkSync(fullPath);
+            }
+        }
     }
 
 }

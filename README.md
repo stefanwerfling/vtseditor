@@ -79,7 +79,8 @@ This is especially useful for large projects, team collaboration, or when sharin
       "codeIndent": "    "
     },
     "autoGenerate": false,
-    "destinationPath": "./schemas/src"
+    "destinationPath": "./schemas/src", 
+    "destinationClear": false
   },
   "server": {
     "port": 5173

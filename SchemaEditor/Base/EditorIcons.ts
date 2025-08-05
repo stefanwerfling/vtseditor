@@ -20,5 +20,8 @@ export enum EditorIcons {
     toggle_open = '▼',
     toggle_close = '▶',
     vts = '🏷️',
-    info = 'ℹ️'
+    info = 'ℹ️',
+    project = '🌱',
+    global = '🌍',
+    setting = '⚙️'
 }
