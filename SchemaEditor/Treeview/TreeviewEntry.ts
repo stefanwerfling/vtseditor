@@ -574,8 +574,16 @@ export class TreeviewEntry {
      * @param {string} icon
      */
     public setIcon(icon: SchemaJsonDataFSIcon|string): void {
-        this._icon = icon;
-        this._setIcon(icon);
+        let mIcon = icon;
+
+        if (mIcon === '') {
+            if (this._type !== '') {
+                mIcon = this._type;
+            }
+        }
+
+        this._icon = mIcon;
+        this._setIcon(mIcon);
     }
 
     /**
