@@ -267,11 +267,22 @@ export class TreeviewEntry {
 
         // add button delete -------------------------------------------------------------------------------------------
 
-        if (type !== SchemaJsonDataFSType.root) {
+        const allowDeleteTypes: SchemaJsonDataFSType|string[] = [
+            SchemaJsonDataFSType.folder,
+            SchemaJsonDataFSType.file
+        ];
+
+        if (allowDeleteTypes.indexOf(type) > -1) {
             const btnDelete = document.createElement('button');
             btnDelete.textContent = '🗑';
             btnDelete.classList.add('delete-folder');
-
+            btnDelete.addEventListener('click', () => {
+                window.dispatchEvent(new CustomEvent('schemaeditor:deletefolderfile', {
+                    detail: {
+                        id: this.getId()
+                    }
+                }));
+            })
             folderLine.appendChild(btnDelete);
         }
 
@@ -898,19 +909,44 @@ export class TreeviewEntry {
 
     /**
      * Find parent
-     * @param {string} id
+     * @param {string} unid
      * @return {TreeviewEntry|null}
      */
-    public findParent(id: string): TreeviewEntry|null {
+    public findEntry(unid: string): TreeviewEntry|null {
         for (const [, entry] of this._list.entries()) {
-            if (entry.getId() === id) {
+            if (entry.getId() === unid) {
                 return this;
             }
 
-            const found = entry.findParent(id);
+            const found = entry.findEntry(unid);
 
             if (found !== null) {
                 return found;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * find parent entry
+     * @param {string} unid
+     * @return {TreeviewEntry|null}
+     */
+    public findParentEntry(unid: string): TreeviewEntry|null {
+        if (this.hasEntry(unid)) {
+            return this;
+        }
+
+        for (const [, entry] of this._list.entries()) {
+            if (entry.hasEntry(unid)) {
+                return entry;
+            }
+
+            const tentry = entry.findParentEntry(unid);
+
+            if (tentry !== null) {
+                return tentry;
             }
         }
 
@@ -1027,6 +1063,8 @@ export class TreeviewEntry {
 
         if (aEntry) {
             const allowDirectDeleteType: SchemaJsonDataFSType|string[] = [
+                SchemaJsonDataFSType.folder,
+                SchemaJsonDataFSType.file,
                 SchemaJsonDataFSType.enum,
                 SchemaJsonDataFSType.schema,
                 SchemaJsonDataFSType.link
@@ -1043,4 +1081,20 @@ export class TreeviewEntry {
         return false;
     }
 
+    /**
+     * Is Empty
+     * @return {boolean}
+     */
+    public isEmpty(): boolean {
+        return this._list.size === 0 && this._tables.length === 0 && this._enums.length === 0;
+    }
+
+    /**
+     * Has entry by unid
+     * @param {string} unid
+     * @return {boolean}
+     */
+    public hasEntry(unid: string): boolean {
+        return this._list.has(unid);
+    }
 }

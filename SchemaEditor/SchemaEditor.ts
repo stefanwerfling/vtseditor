@@ -1,10 +1,10 @@
 import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
 import {EnumTable} from './Enum/EnumTable.js';
-import jsPlumbInstance from './jsPlumbInstance.js';
-import {SchemaExtends} from './SchemaExtends.js';
 import {JsonData, JsonDataFS, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js';
-import {SchemaTypes} from './SchemaTypes.js';
+import jsPlumbInstance from './jsPlumbInstance.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
+import {SchemaExtends} from './SchemaExtends.js';
+import {SchemaTypes} from './SchemaTypes.js';
 import {Treeview} from './Treeview/Treeview.js';
 
 /**
@@ -162,7 +162,7 @@ export class SchemaEditor {
                 rootEntry.sortingEntrys();
             }
 
-            this.saveData().then(value => {
+            this.saveData().then(() => {
                 if (customEvent.detail) {
                     if (customEvent.detail.updateTreeView === true) {
                         this._updateTreeview();
@@ -229,6 +229,35 @@ export class SchemaEditor {
             }
         });
 
+        window.addEventListener('schemaeditor:deletefolderfile', (event: Event) => {
+            const customEvent = event as CustomEvent<{ id: string }>;
+            const rootEntry = this._treeview?.getRoot();
+
+            if (rootEntry) {
+                const entry = rootEntry.getEntryById(customEvent.detail.id);
+
+                if (entry) {
+                    if (entry.getType() === SchemaJsonDataFSType.file || entry.getType() === SchemaJsonDataFSType.folder) {
+                        if (entry.isEmpty()) {
+                            const parentEntry = rootEntry.findParentEntry(entry.getId());
+
+                            if (parentEntry) {
+                                parentEntry.removeEntry(entry.getId());
+
+                                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {
+                                    detail: {
+                                        updateView: true,
+                                        updateTreeView: true
+                                    }
+                                }));
+                            }
+                        } else {
+                            alert('Folder/File is not empty, please remove all entries first!');
+                        }
+                    }
+                }
+            }
+        });
 
         window.addEventListener('schemaeditor:sortingentrys', () => {
             const rootEntry = this._treeview?.getRoot();
@@ -306,7 +335,7 @@ export class SchemaEditor {
             const treeview = this._treeview;
 
             if (treeview) {
-                const entry = treeview.getRoot().findParent(customEvent.detail.schemaId);
+                const entry = treeview.getRoot().findEntry(customEvent.detail.schemaId);
                 const activeEntryId = Treeview.getActiveEntry()?.getId();
 
                 if (entry && activeEntryId) {
@@ -395,7 +424,7 @@ export class SchemaEditor {
             const rootEntry = this._treeview?.getRoot();
 
             if (rootEntry) {
-                const pentry = rootEntry.findParent(entryId);
+                const pentry = rootEntry.findEntry(entryId);
 
                 if (pentry) {
                     const tentry = pentry.getEntryById(entryId);
@@ -412,7 +441,7 @@ export class SchemaEditor {
             const rootEntry = this._treeview?.getRoot();
 
             if (rootEntry) {
-                const tentry = rootEntry.findParent(entryTable.getId());
+                const tentry = rootEntry.findEntry(entryTable.getId());
 
                 if (tentry) {
                     entry = tentry;

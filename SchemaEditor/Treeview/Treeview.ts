@@ -109,7 +109,7 @@ export class Treeview {
     }
 
     public moveToEntry(sourceId: string, destinationId: string): void {
-        const parentEntry = this._rootFolder.findParent(sourceId);
+        const parentEntry = this._rootFolder.findEntry(sourceId);
         const destinationEntry = this._rootFolder.getEntryById(destinationId);
 
         if (parentEntry && destinationEntry) {
@@ -132,7 +132,7 @@ export class Treeview {
     }
 
     public moveTableToEntry(sourceTableId: string, destinationId: string): void {
-        const parentEntry = this._rootFolder.findParent(sourceTableId);
+        const parentEntry = this._rootFolder.findEntry(sourceTableId);
         const destinationEntry = this._rootFolder.getEntryById(destinationId);
 
         if (parentEntry && destinationEntry) {
@@ -162,7 +162,7 @@ export class Treeview {
     }
 
     public moveEnumToEntry(sourceEnumId: string, destinationId: string): void {
-        const parentEntry = this._rootFolder.findParent(sourceEnumId);
+        const parentEntry = this._rootFolder.findEntry(sourceEnumId);
         const destinationEntry = this._rootFolder.getEntryById(destinationId);
 
         if (parentEntry && destinationEntry) {
@@ -196,7 +196,7 @@ export class Treeview {
      * @param {string} unid
      */
     public updateEntryNameTable(unid: string): void {
-        const parentEntry = this._rootFolder.findParent(unid);
+        const parentEntry = this._rootFolder.findEntry(unid);
 
         if (parentEntry) {
             const table = parentEntry.getTableById(unid);
@@ -216,7 +216,7 @@ export class Treeview {
      * @param {string} unid
      */
     public updateEntryNameEnum(unid: string): void {
-        const parentEntry = this._rootFolder.findParent(unid);
+        const parentEntry = this._rootFolder.findEntry(unid);
 
         if (parentEntry) {
             const aenum = parentEntry.getEnumById(unid);
@@ -236,7 +236,7 @@ export class Treeview {
      * @param {string} unid
      */
     public removeEntry(unid: string): void {
-        const parentEntry = this._rootFolder.findParent(unid);
+        const parentEntry = this._rootFolder.findEntry(unid);
 
         if (parentEntry) {
             parentEntry.removeEntry(unid);
