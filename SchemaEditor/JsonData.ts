@@ -6,10 +6,12 @@ import {ExtractSchemaResultType, Vts} from 'vts';
 export enum SchemaJsonDataFSType {
     root = 'root',
     extern = 'extern',
+    project = 'project',
     folder = 'folder',
     file = 'file',
     schema = 'schema',
-    enum = 'enum'
+    enum = 'enum',
+    link = 'link'
 }
 
 /**

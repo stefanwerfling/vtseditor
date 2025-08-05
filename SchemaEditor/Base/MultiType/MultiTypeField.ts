@@ -105,6 +105,14 @@ export class MultiTypeField {
                 }
             });
 
+            this._buttonDelete.addEventListener('mouseenter', () => {
+                this._divMainField.style.border = '1px dashed red';
+            });
+
+            this._buttonDelete.addEventListener('mouseleave', () => {
+                this._divMainField.style.border = '';
+            });
+
             grpAction.appendChild(this._buttonDelete);
         }
 

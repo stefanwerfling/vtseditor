@@ -1,5 +1,6 @@
 import {JsonSchemaFieldType, SchemaJsonSchemaFieldTypeArray} from '../../JsonData.js';
 import {SchemaTypes} from '../../SchemaTypes.js';
+import './MultiTypeFieldBadge.css';
 
 /**
  * Badge

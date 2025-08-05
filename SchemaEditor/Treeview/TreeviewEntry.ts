@@ -293,7 +293,7 @@ export class TreeviewEntry {
                         const tables = activeEntry.getSchemaTables();
 
                         for (const table of tables) {
-                            if (this.getId() !== table.getId()) {
+                            if (this.getId() !== table.getUnid()) {
                                 table.showDropArea(true);
                             }
                         }
@@ -670,13 +670,13 @@ export class TreeviewEntry {
     public addSchemaTable(table: SchemaTable): void {
         this._tables.push(table);
 
-        const entry = new TreeviewEntry(table.getId(), table.getName(), SchemaJsonDataFSType.schema);
+        const entry = new TreeviewEntry(table.getUnid(), table.getName(), SchemaJsonDataFSType.schema);
         this.addEntry(entry);
 
         table.setOnDelete(table1 => {
             window.dispatchEvent(new CustomEvent('schemaeditor:deleteschematable', {
                 detail: {
-                    id: table1.getId()
+                    id: table1.getUnid()
                 }
             }));
         });
@@ -695,7 +695,7 @@ export class TreeviewEntry {
         table.setOnDelete(table1 => {
             window.dispatchEvent(new CustomEvent('schemaeditor:deleteenumtable', {
                 detail: {
-                    id: table1.getId()
+                    id: table1.getUnid()
                 }
             }));
         });
@@ -730,7 +730,7 @@ export class TreeviewEntry {
         }
 
         for (const table of this._tables) {
-            if (table.getId() === id) {
+            if (table.getUnid() === id) {
                 continue;
             }
 
@@ -750,7 +750,7 @@ export class TreeviewEntry {
     public removeSchemaTable(id: string): boolean {
         for (let i = 0; i < this._tables.length; i++) {
             const table = this._tables[i];
-            if (table.getId() === id) {
+            if (table.getUnid() === id) {
                 table.remove();
                 this._tables.splice(i, 1);
                 return true;
@@ -919,7 +919,7 @@ export class TreeviewEntry {
      */
     public getTableById(tableId: string): SchemaTable|null {
         for (const table of this._tables) {
-            if (table.getId() === tableId) {
+            if (table.getUnid() === tableId) {
                 return table;
             }
         }
@@ -933,7 +933,7 @@ export class TreeviewEntry {
      * @return SchemaTable|null
      */
     public spliceTable(id: string): SchemaTable|null {
-        const index = this._tables.findIndex(table => table.getId() === id);
+        const index = this._tables.findIndex(table => table.getUnid() === id);
 
         if (index !== -1) {
             return this._tables.splice(index, 1)[0];

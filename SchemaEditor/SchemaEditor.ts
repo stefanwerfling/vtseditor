@@ -80,7 +80,7 @@ export class SchemaEditor {
         this._container!.appendChild(table.getElement());
         this._jsPlumbInstance!.revalidate(table.getElement());
 
-        SchemaExtends.getInstance().setExtend(table.getId(), table.getName());
+        SchemaExtends.getInstance().setExtend(table.getUnid(), table.getName());
     }
 
     /**
@@ -378,7 +378,7 @@ export class SchemaEditor {
                 table.updateView();
 
                 if (entryTable) {
-                    if (table.getId() === entryTable.getId()) {
+                    if (table.getUnid() === entryTable.getId()) {
                         table.setActivView(true);
                     } else {
                         table.setActivView(false);

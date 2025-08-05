@@ -1,6 +1,7 @@
 import {Connection} from '@jsplumb/browser-ui';
 import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
 import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
+import {BaseTable} from '../Base/BaseTable.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../SchemaExtends.js';
 import {
@@ -14,14 +15,9 @@ import {SchemaTableField} from './SchemaTableField.js';
 import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';
 
 /**
- * On delete table
- */
-export type SchemaTableOnDelete = (table: SchemaTable) => void;
-
-/**
  * Schema table
  */
-export class SchemaTable {
+export class SchemaTable extends BaseTable {
 
     public static painStyle: PaintStyle = {
         stroke: '#000000',
@@ -32,18 +28,6 @@ export class SchemaTable {
         stroke: '#ff6600',
         strokeWidth: 2,
     };
-
-    /**
-     * Id
-     * @protected
-     */
-    protected _unid: string = '';
-
-    /**
-     * name
-     * @protected
-     */
-    protected _name: string = '';
 
     /**
      * extend
@@ -64,12 +48,6 @@ export class SchemaTable {
     protected _description: string = '';
 
     /**
-     * table
-     * @protected
-     */
-    protected _table: HTMLDivElement;
-
-    /**
      * Button sort
      * @protected
      */
@@ -88,25 +66,10 @@ export class SchemaTable {
     protected _fields: Map<string, SchemaTableField> = new Map<string, SchemaTableField>();
 
     /**
-     * Schema name
-     * @protected
-     */
-    protected _schemaName: HTMLSpanElement;
-
-    /**
      * Schema extend
      * @protected
      */
     protected _schemaExtend: HTMLSpanElement;
-
-    /**
-     * Grid position
-     * @protected
-     */
-    protected _position: JsonSchemaPositionDescription = {
-        x: 0,
-        y: 0
-    };
 
     /**
      * Options
@@ -133,71 +96,28 @@ export class SchemaTable {
     protected _dropArea: HTMLDivElement;
 
     /**
-     * on delete
-     * @protected
-     */
-    protected _onDelete: SchemaTableOnDelete|null = null;
-
-    /**
      * Constructor
-     * @param {string} id
+     * @param {string} unid
      * @param {string} name
      * @param {string} extend
      */
-    public constructor(id: string, name: string, extend: string = 'object') {
-        this._unid = id;
-        this._name = name;
+    public constructor(unid: string, name: string, extend: string = 'object') {
+        super(unid, name);
+
         this._extend = extend;
 
         // update Schema Types
         SchemaTypes.getInstance().setType(this._unid, this._name);
-
-        this._table = document.createElement('div');
         this._table.classList.add(...['table', 'vts-schema-table', 'vts-schema-element']);
 
-        this._table.addEventListener('mouseenter', () => {
-            this._setConnectionHoverByElement(true);
-        });
-
-        this._table.addEventListener('mouseleave', () => {
-            this._setConnectionHoverByElement(false);
-        });
-
-        this._position = {
-            x: 50 + Math.random() * 300,
-            y: 50 + Math.random() * 500
-        };
-
-        const elName = document.createElement('div');
-        elName.classList.add(...['vts-schema-element-name']);
-
-        const targetpoint = document.createElement('div');
-        targetpoint.id = `targetpoint-${this._unid}`;
-        elName.appendChild(targetpoint);
-
-        const elDelete = document.createElement('div');
-        elDelete.title = 'Delete Schema';
-        elDelete.classList.add(...['vts-schema-delete', 'vts-schema-delete-vertex']);
-        elDelete.addEventListener('click', () => {
-            if (this._onDelete) {
-                this._onDelete(this);
-            }
-        });
-
-        elName.appendChild(elDelete);
-
-        this._schemaName = document.createElement('span');
-        this._schemaName.textContent = name;
-        elName.appendChild(this._schemaName);
-
         this._schemaExtend = document.createElement('span');
-        elName.appendChild(this._schemaExtend);
+        this._headline.appendChild(this._schemaExtend);
 
         // Buttons -----------------------------------------------------------------------------------------------------
 
         const elBtn = document.createElement('div');
         elBtn.classList.add(...['vts-schema-buttons']);
-        elName.appendChild(elBtn);
+        this._headline.appendChild(elBtn);
 
         // Button edit -------------------------------------------------------------------------------------------------
 
@@ -237,7 +157,7 @@ export class SchemaTable {
                 window.dispatchEvent(new CustomEvent('schemaeditor:updatename', {
                     detail: {
                         sourceType: SchemaJsonDataFSType.schema,
-                        sourceId: this.getId()
+                        sourceId: this.getUnid()
                     }
                 }));
 
@@ -253,7 +173,7 @@ export class SchemaTable {
 
         this._btnSort = document.createElement('div');
         this._btnSort.classList.add(...['vts-schema-sort-name']);
-        this._btnSort.title = 'Sortieren';
+        this._btnSort.title = 'Sorting';
         this._btnSort.addEventListener('click', () => {
             if (confirm('Do you want to sort the fields by name?')) {
                 this.sortingFields();
@@ -281,9 +201,6 @@ export class SchemaTable {
         endpoint.classList.add('endpoint');
         elBtn.appendChild(endpoint);
 
-        // Add content -------------------------------------------------------------------------------------------------
-
-        this._table.appendChild(elName);
 
         // columns -----------------------------------------------------------------------------------------------------
 
@@ -461,28 +378,11 @@ export class SchemaTable {
     }
 
     /**
-     * Return the table id
-     * @return {string}
-     */
-    public getId(): string {
-        return this._unid;
-    }
-
-    /**
-     * Return the table name
-     * @return {string}
-     */
-    public getName(): string {
-        return this._name;
-    }
-
-    /**
      * Set name
      * @param {string} name
      */
-    public setName(name: string): void {
-        this._name = name;
-        this._schemaName.textContent = name;
+    public override setName(name: string): void {
+        super.setName(name);
 
         // update new name
         SchemaTypes.getInstance().setType(this._unid, this._name);
@@ -529,26 +429,6 @@ export class SchemaTable {
 
             this._schemaExtend.appendChild(span);
         }
-    }
-
-    /**
-     * Return the Element from Table
-     * @return {HTMLDivElement}
-     */
-    public getElement(): HTMLDivElement {
-        return this._table;
-    }
-
-    /**
-     * Set Position of table
-     * @param {number} x
-     * @param {number} y
-     */
-    public setPosition(x: number, y: number): void {
-        this._position.x = x;
-        this._position.y = y;
-        this._table.style.left = `${x}px`;
-        this._table.style.top = `${y}px`;
     }
 
     /**
@@ -606,7 +486,7 @@ export class SchemaTable {
                     }
                 ],
                 parameters: {
-                    tableId: this.getId(),
+                    tableId: this.getUnid(),
                     connectionType: 'extend'
                 }
             });
@@ -678,14 +558,6 @@ export class SchemaTable {
     }
 
     /**
-     * Set on delete
-     * @param {SchemaTableOnDelete|null} onDelete
-     */
-    public setOnDelete(onDelete: SchemaTableOnDelete|null): void {
-        this._onDelete = onDelete;
-    }
-
-    /**
      * Is schema table use
      * @param {string} id
      * @return {boolean}
@@ -709,17 +581,17 @@ export class SchemaTable {
     /**
      * Remove all
      */
-    public remove(): void {
+    public override remove(): void {
         for (const [id, field] of this._fields.entries()) {
             field.remove();
             this._fields.delete(id);
         }
 
         this._fields.clear();
-        this._table.remove();
+        super.remove();
     }
 
-    protected _setConnectionHoverByElement(hover: boolean) {
+    protected override _setConnectionHoverByElement(hover: boolean) {
         const connections = jsPlumbInstance.getConnections() as Connection[];
 
         connections.forEach(conn => {
@@ -772,25 +644,6 @@ export class SchemaTable {
         this._fields = new Map(
             sortedFields.map(field => [field.getName(), field])
         );
-    }
-
-    /**
-     * Set activ view
-     * @param {boolean} active
-     */
-    public setActivView(active: boolean): void {
-        if (active) {
-            this._table.classList.add('selected');
-        } else {
-            this._table.classList.remove('selected');
-        }
-    }
-
-    public runWiggle(): void {
-        this._table.classList.add('table-wiggle');
-        setTimeout(() => {
-            this._table.classList.remove('table-wiggle');
-        }, 300);
     }
 
 }
