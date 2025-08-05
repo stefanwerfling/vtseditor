@@ -150,14 +150,29 @@ export class SchemaEditor {
 
         // update events -----------------------------------------------------------------------------------------------
 
-        window.addEventListener('schemaeditor:updatedata', () => {
+        window.addEventListener('schemaeditor:updatedata', (event: Event) => {
+            const customEvent = event as CustomEvent<{
+                updateView?: boolean,
+                updateTreeView?: boolean;
+            }>;
+
             const rootEntry = this._treeview?.getRoot();
 
             if (rootEntry) {
                 rootEntry.sortingEntrys();
             }
 
-            this.saveData().then();
+            this.saveData().then(value => {
+                if (customEvent.detail) {
+                    if (customEvent.detail.updateTreeView === true) {
+                        this._updateTreeview();
+                    }
+
+                    if (customEvent.detail.updateView === true) {
+                        this._updateView();
+                    }
+                }
+            });
         });
 
         window.addEventListener('schemaeditor:updateview', () => {
@@ -176,7 +191,14 @@ export class SchemaEditor {
 
                 if (confirm('Do you really want to delete Schema?')) {
                     if (rootEntry.removeSchemaTable(customEvent.detail.id)) {
-                        window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+                        rootEntry.removeEntry(customEvent.detail.id);
+
+                        window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {
+                            detail: {
+                                updateView: true,
+                                updateTreeView: true
+                            }
+                        }));
                     }
                 }
             }
@@ -194,7 +216,14 @@ export class SchemaEditor {
 
                 if (confirm('Do you really want to delete enum?')) {
                     if (rootEntry.removeEnumTable(customEvent.detail.id)) {
-                        window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+                        rootEntry.removeEntry(customEvent.detail.id);
+
+                        window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {
+                            detail: {
+                                updateView: true,
+                                updateTreeView: true
+                            }
+                        }));
                     }
                 }
             }
@@ -360,13 +389,33 @@ export class SchemaEditor {
         const entryTable = Treeview.getActivEntryTable();
         let entry = Treeview.getActiveEntry();
 
+        if (entry !== null) {
+            const entryId = entry.getId();
+
+            const rootEntry = this._treeview?.getRoot();
+
+            if (rootEntry) {
+                const pentry = rootEntry.findParent(entryId);
+
+                if (pentry) {
+                    const tentry = pentry.getEntryById(entryId);
+
+                    if (tentry) {
+                        entry = tentry;
+                        Treeview.setActivEntry(entry);
+                    }
+                }
+            }
+        }
+
         if (entryTable !== null) {
             const rootEntry = this._treeview?.getRoot();
 
             if (rootEntry) {
-                entry = rootEntry.findParent(entryTable.getId());
+                const tentry = rootEntry.findParent(entryTable.getId());
 
-                if (entry) {
+                if (tentry) {
+                    entry = tentry;
                     Treeview.setActivEntry(entry);
                 }
             }

@@ -193,16 +193,16 @@ export class Treeview {
 
     /**
      * Update entry name by table name
-     * @param {string} id
+     * @param {string} unid
      */
-    public updateEntryNameTable(id: string): void {
-        const parentEntry = this._rootFolder.findParent(id);
+    public updateEntryNameTable(unid: string): void {
+        const parentEntry = this._rootFolder.findParent(unid);
 
         if (parentEntry) {
-            const table = parentEntry.getTableById(id);
+            const table = parentEntry.getTableById(unid);
 
             if (table) {
-                const entry = parentEntry.getEntryById(id);
+                const entry = parentEntry.getEntryById(unid);
 
                 if (entry) {
                     entry.setName(table.getName());
@@ -213,16 +213,16 @@ export class Treeview {
 
     /**
      * Update entry name by enum name
-     * @param {string} id
+     * @param {string} unid
      */
-    public updateEntryNameEnum(id: string): void {
-        const parentEntry = this._rootFolder.findParent(id);
+    public updateEntryNameEnum(unid: string): void {
+        const parentEntry = this._rootFolder.findParent(unid);
 
         if (parentEntry) {
-            const aenum = parentEntry.getEnumById(id);
+            const aenum = parentEntry.getEnumById(unid);
 
             if (aenum) {
-                const entry = parentEntry.getEntryById(id);
+                const entry = parentEntry.getEntryById(unid);
 
                 if (entry) {
                     entry.setName(aenum.getName());
@@ -231,4 +231,15 @@ export class Treeview {
         }
     }
 
+    /**
+     * Remove entry
+     * @param {string} unid
+     */
+    public removeEntry(unid: string): void {
+        const parentEntry = this._rootFolder.findParent(unid);
+
+        if (parentEntry) {
+            parentEntry.removeEntry(unid);
+        }
+    }
 }

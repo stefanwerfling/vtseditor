@@ -1017,4 +1017,30 @@ export class TreeviewEntry {
         return null;
     }
 
+    /**
+     * Remove a children entry
+     * @param {string} unid
+     * @return {boolean}
+     */
+    public removeEntry(unid: string): boolean {
+        const aEntry = this._list.get(unid);
+
+        if (aEntry) {
+            const allowDirectDeleteType: SchemaJsonDataFSType|string[] = [
+                SchemaJsonDataFSType.enum,
+                SchemaJsonDataFSType.schema,
+                SchemaJsonDataFSType.link
+            ];
+
+            if (allowDirectDeleteType.indexOf(aEntry.getType()) > -1) {
+                aEntry.removeEntrys();
+                this._list.delete(unid);
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 }
