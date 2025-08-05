@@ -1,6 +1,9 @@
 import './TypeFieldSelect.css';
 import {SchemaTypes} from '../SchemaTypes.js';
 
+/**
+ * Type field select category
+ */
 export enum TypeFieldSelectCategory {
     'vtstype' = 'vtstype',
     'schema' = 'schema',
@@ -14,8 +17,6 @@ export type TypeFieldSelectEventChange = (value: string) => void;
 
 /**
  * TypeSelect
- * https://querybuilder.js.org/
- * https://docs.easyforms.dev/form-builder.html
  */
 export class TypeFieldSelect {
 
@@ -252,6 +253,16 @@ export class TypeFieldSelect {
                 this._divOptions.appendChild(div);
             }
         }
+
+        const headers = this._divHeaders.querySelectorAll('.typefield-section-header');
+        headers.forEach(header => {
+            const headerCategory = header.getAttribute('data-category');
+
+            if (headerCategory === this._currentCategory) {
+                headers.forEach(h => h.classList.remove('active'));
+                header.classList.add('active');
+            }
+        });
     }
 
     /**
