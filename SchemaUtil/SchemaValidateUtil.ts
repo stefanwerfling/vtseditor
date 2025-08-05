@@ -42,7 +42,7 @@ export class SchemaValidateUtil {
     }
 
     /**
-     * Create a enum
+     * Create an enum
      * @param {string} unid
      * @return {Record<string, string> | undefined}
      * @protected

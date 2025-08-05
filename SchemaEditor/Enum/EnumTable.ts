@@ -36,7 +36,6 @@ export class EnumTable extends BaseTable {
     public constructor(unid: string, name: string) {
         super(unid, name);
 
-
         // update Schema Types
         SchemaTypes.getInstance().setEnumType(this._unid, this._name);
 
@@ -55,27 +54,7 @@ export class EnumTable extends BaseTable {
         elBtnEdit.classList.add(...['vts-schema-edit-name', 'vts-schema-edit']);
         elBtnEdit.title = 'Edit Enum';
         elBtnEdit.addEventListener('click', () => {
-            const dialog = new EnumTableDialog();
-            dialog.show();
-            dialog.setEnumName(this._name);
-            dialog.setOnConfirm(dialog1 => {
-                const tdialog = dialog1 as unknown as EnumTableDialog;
-                const enumName = tdialog.getEnumName();
-
-                this.setName(enumName);
-                this.updateView();
-
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatename', {
-                    detail: {
-                        sourceType: SchemaJsonDataFSType.enum,
-                        sourceId: this.getId()
-                    }
-                }));
-
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
-
-                return true;
-            });
+            this.openEditDialog();
         });
 
         elBtn.appendChild(elBtnEdit);
@@ -133,11 +112,30 @@ export class EnumTable extends BaseTable {
     }
 
     /**
-     * Return the table id
-     * @return {string}
+     * open the edit dialog
      */
-    public getId(): string {
-        return this._unid;
+    public openEditDialog(): void {
+        const dialog = new EnumTableDialog();
+        dialog.show();
+        dialog.setEnumName(this._name);
+        dialog.setOnConfirm(dialog1 => {
+            const tdialog = dialog1 as unknown as EnumTableDialog;
+            const enumName = tdialog.getEnumName();
+
+            this.setName(enumName);
+            this.updateView();
+
+            window.dispatchEvent(new CustomEvent('schemaeditor:updatename', {
+                detail: {
+                    sourceType: SchemaJsonDataFSType.enum,
+                    sourceId: this.getUnid()
+                }
+            }));
+
+            window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+
+            return true;
+        });
     }
 
     /**
@@ -239,7 +237,7 @@ export class EnumTable extends BaseTable {
         this._table.style.left = `${this._position.x}px`;
     }
 
-    protected override _setConnectionHoverByElement(hover: boolean) {
+    protected override _setConnectionHoverByElement(hover: boolean): void {
         const connections = jsPlumbInstance.getConnections() as Connection[];
 
         connections.forEach(conn => {
@@ -287,6 +285,10 @@ export class EnumTable extends BaseTable {
         super.remove();
     }
 
+    /**
+     * Set activ view
+     * @param {boolean} active
+     */
     public setActivView(active: boolean): void {
         if (active) {
             this._table.classList.add('selected');

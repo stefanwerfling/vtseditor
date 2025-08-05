@@ -689,7 +689,7 @@ export class TreeviewEntry {
     public addEnumTable(table: EnumTable): void {
         this._enums.push(table);
 
-        const entry = new TreeviewEntry(table.getId(), table.getName(), SchemaJsonDataFSType.enum);
+        const entry = new TreeviewEntry(table.getUnid(), table.getName(), SchemaJsonDataFSType.enum);
         this.addEntry(entry);
 
         table.setOnDelete(table1 => {
@@ -719,22 +719,22 @@ export class TreeviewEntry {
 
     /**
      * Is schema table use
-     * @param {string} id
+     * @param {string} unid
      * @return {boolean}
      */
-    public isSchemaTableUse(id: string): boolean {
+    public isSchemaTableUse(unid: string): boolean {
         for (const [, entry] of this._list.entries()) {
-            if (entry.isSchemaTableUse(id)) {
+            if (entry.isSchemaTableUse(unid)) {
                 return true;
             }
         }
 
         for (const table of this._tables) {
-            if (table.getUnid() === id) {
+            if (table.getUnid() === unid) {
                 continue;
             }
 
-            if (table.isSchemaTableUse(id)) {
+            if (table.isSchemaTableUse(unid)) {
                 return true;
             }
         }
@@ -759,6 +759,30 @@ export class TreeviewEntry {
 
         for (const [, entry] of this._list.entries()) {
             if (entry.removeSchemaTable(id)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Remove an enum table
+     * @param {string} id
+     * @return {boolean}
+     */
+    public removeEnumTable(id: string): boolean {
+        for (let i = 0; i < this._enums.length; i++) {
+            const table = this._enums[i];
+            if (table.getUnid() === id) {
+                table.remove();
+                this._enums.splice(i, 1);
+                return true;
+            }
+        }
+
+        for (const [, entry] of this._list.entries()) {
+            if (entry.removeEnumTable(id)) {
                 return true;
             }
         }
@@ -970,7 +994,7 @@ export class TreeviewEntry {
      */
     public getEnumById(enumId: string): EnumTable|null {
         for (const aenum of this._enums) {
-            if (aenum.getId() === enumId) {
+            if (aenum.getUnid() === enumId) {
                 return aenum;
             }
         }
@@ -984,7 +1008,7 @@ export class TreeviewEntry {
      * @return {EnumTable|null}
      */
     public spliceEnum(id: string): EnumTable|null {
-        const index = this._enums.findIndex(table => table.getId() === id);
+        const index = this._enums.findIndex(table => table.getUnid() === id);
 
         if (index !== -1) {
             return this._enums.splice(index, 1)[0];

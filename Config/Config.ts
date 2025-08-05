@@ -19,7 +19,7 @@ export const SchemaConfigProject = Vts.object({
     code: Vts.optional(SchemaConfigProjectCode),
     autoGenerate: Vts.optional(Vts.boolean()),
     destinationPath: Vts.optional(Vts.string()),
-
+    destinationClear: Vts.optional(Vts.boolean()),
 });
 
 /**

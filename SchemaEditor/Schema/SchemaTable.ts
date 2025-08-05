@@ -7,7 +7,7 @@ import {SchemaExtends} from '../SchemaExtends.js';
 import {
     JsonSchemaDescription, JsonSchemaDescriptionOption,
     JsonSchemaFieldDescription, JsonSchemaFieldType,
-    JsonSchemaPositionDescription, SchemaJsonDataFSType, SchemaJsonSchemaFieldType
+    SchemaJsonDataFSType, SchemaJsonSchemaFieldType
 } from '../JsonData.js';
 import {SchemaTypes} from '../SchemaTypes.js';
 import {SchemaTableDialog} from './SchemaTableDialog.js';
@@ -125,46 +125,7 @@ export class SchemaTable extends BaseTable {
         elBtnEdit.classList.add(...['vts-schema-edit-name', 'vts-schema-edit']);
         elBtnEdit.title = 'Edit Schema';
         elBtnEdit.addEventListener('click', () => {
-            const dialog = new SchemaTableDialog();
-            dialog.show();
-            dialog.setSchemaName(this._name);
-            dialog.setExtendOptions(SchemaExtends.getInstance().getExtends([this._unid]));
-            dialog.setValuesSchemaOptions(SchemaExtends.getInstance().getExtends([this._unid], true));
-            dialog.setSchemaExtend(this._extend);
-            dialog.setSchemaValuesSchema(this._valuesSchema);
-            dialog.setOptions(this._options);
-            dialog.setDescription(this._description);
-            dialog.setOnConfirm(tdialog => {
-                const dialog1 = tdialog as unknown as SchemaTableDialog;
-                const schemaName = dialog1.getSchemaName();
-                const tId = SchemaExtends.getInstance().getExtendIdByName(schemaName);
-
-                if (tId !== null && tId !== this._unid) {
-                    alert('The Schemaname is already exist, please change your name!');
-                    return false;
-                }
-
-                this.setName(schemaName);
-                this.setExtend(dialog1.getSchemaExtend());
-                this.setValuesSchema(dialog1.getSchemaValuesSchema());
-                this._description = dialog1.getDescription();
-                this._options = dialog1.getOptions();
-
-                SchemaExtends.getInstance().setExtend(this._unid, this._name);
-
-                this.updateView();
-
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatename', {
-                    detail: {
-                        sourceType: SchemaJsonDataFSType.schema,
-                        sourceId: this.getUnid()
-                    }
-                }));
-
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
-
-                return true;
-            });
+            this.openEditDialog();
         });
 
         elBtn.appendChild(elBtnEdit);
@@ -261,6 +222,52 @@ export class SchemaTable extends BaseTable {
                     this._openNewColumnDialog(id);
                 }
             }
+        });
+    }
+
+    /**
+     * open the edit dialog
+     */
+    public openEditDialog(): void {
+        const dialog = new SchemaTableDialog();
+        dialog.show();
+        dialog.setSchemaName(this._name);
+        dialog.setExtendOptions(SchemaExtends.getInstance().getExtends([this._unid]));
+        dialog.setValuesSchemaOptions(SchemaExtends.getInstance().getExtends([this._unid], true));
+        dialog.setSchemaExtend(this._extend);
+        dialog.setSchemaValuesSchema(this._valuesSchema);
+        dialog.setOptions(this._options);
+        dialog.setDescription(this._description);
+        dialog.setOnConfirm(tdialog => {
+            const dialog1 = tdialog as unknown as SchemaTableDialog;
+            const schemaName = dialog1.getSchemaName();
+            const tId = SchemaExtends.getInstance().getExtendIdByName(schemaName);
+
+            if (tId !== null && tId !== this._unid) {
+                alert('The Schemaname is already exist, please change your name!');
+                return false;
+            }
+
+            this.setName(schemaName);
+            this.setExtend(dialog1.getSchemaExtend());
+            this.setValuesSchema(dialog1.getSchemaValuesSchema());
+            this._description = dialog1.getDescription();
+            this._options = dialog1.getOptions();
+
+            SchemaExtends.getInstance().setExtend(this._unid, this._name);
+
+            this.updateView();
+
+            window.dispatchEvent(new CustomEvent('schemaeditor:updatename', {
+                detail: {
+                    sourceType: SchemaJsonDataFSType.schema,
+                    sourceId: this.getUnid()
+                }
+            }));
+
+            window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+
+            return true;
         });
     }
 

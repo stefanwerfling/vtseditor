@@ -1,3 +1,5 @@
+import './BaseDialog.css';
+
 /**
  * Base dialog on close
  */

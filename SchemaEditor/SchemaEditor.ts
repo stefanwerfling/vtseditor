@@ -7,6 +7,9 @@ import {SchemaTypes} from './SchemaTypes.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
 import {Treeview} from './Treeview/Treeview.js';
 
+/**
+ * SchemaEditor move event detail
+ */
 type SchemaEditorMoveEventDetail = {
     sourceType: string;
     destinationType: string;
@@ -14,11 +17,17 @@ type SchemaEditorMoveEventDetail = {
     detionationId: string;
 };
 
+/**
+ * SchemaEditor update name event detail
+ */
 type SchemaEditorUpdatenameEventDetail = {
     sourceId: string;
     sourceType: string;
 };
 
+/**
+ * SchemaEditor wiggle event detail
+ */
 type SchemaEditorWiggleEventDetail = {
     schemaId: string;
 };
@@ -81,6 +90,8 @@ export class SchemaEditor {
         this._jsPlumbInstance!.revalidate(table.getElement());
 
         SchemaExtends.getInstance().setExtend(table.getUnid(), table.getName());
+
+        table.openEditDialog();
     }
 
     /**
@@ -98,6 +109,8 @@ export class SchemaEditor {
 
         this._container!.appendChild(table.getElement());
         this._jsPlumbInstance!.revalidate(table.getElement());
+
+        table.openEditDialog();
     }
 
     /**
@@ -168,6 +181,25 @@ export class SchemaEditor {
                 }
             }
         });
+
+        window.addEventListener('schemaeditor:deleteenumtable', (event: Event) => {
+            const customEvent = event as CustomEvent<{ id: string }>;
+            const rootEntry = this._treeview?.getRoot();
+
+            if (rootEntry) {
+                if (rootEntry.isSchemaTableUse(customEvent.detail.id)) {
+                    alert('Your Enum is used and can not delete!');
+                    return;
+                }
+
+                if (confirm('Do you really want to delete enum?')) {
+                    if (rootEntry.removeEnumTable(customEvent.detail.id)) {
+                        window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+                    }
+                }
+            }
+        });
+
 
         window.addEventListener('schemaeditor:sortingentrys', () => {
             const rootEntry = this._treeview?.getRoot();
@@ -365,7 +397,7 @@ export class SchemaEditor {
                 tenum.updateView();
 
                 if (entryTable) {
-                    if (tenum.getId() === entryTable.getId()) {
+                    if (tenum.getUnid() === entryTable.getId()) {
                         tenum.setActivView(true);
                     } else {
                         tenum.setActivView(false);

@@ -1,0 +1,143 @@
+dialog, .modal {
+  all: unset;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  min-width: 40%;
+  max-width: 90vw;
+  background: #ffffff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  transform: translate(-50%, -50%);
+  z-index: 2000;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Optional: Overlay für eigene modale <div> */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 1999;
+}
+
+.dialog-title {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 10px;
+  color: #3e7e9c;
+}
+
+.dialog-body {
+  font-size: 14px;
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dialog-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dialog-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.dialog-input {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.dialog-button {
+  background-color: #3e7e9c;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.dialog-button:hover {
+  background-color: #316481;
+}
+
+.dialog-subtypes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.dialog-subtypes-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dialog-select {
+  width: 100%;
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.delete-button {
+  background: none;
+  border: none;
+  color: #d00;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.delete-button:hover {
+  color: #900;
+}
+
+.centered-button {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.dialog-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #555;
+  margin-top: 10px;
+}
