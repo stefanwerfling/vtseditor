@@ -1,4 +1,5 @@
 import './Tooltip.css';
+import {EditorIcons} from './EditorIcons.js';
 
 /**
  * Tooltip
@@ -26,7 +27,7 @@ export class Tooltip {
 
         const iconInfo = document.createElement('span');
         iconInfo.classList.add('info-tooltip-icon');
-        iconInfo.textContent = 'ℹ️';
+        iconInfo.textContent = EditorIcons.info;
         this._divWrapper.appendChild(iconInfo);
 
         this._divInfoContent = document.createElement('div');

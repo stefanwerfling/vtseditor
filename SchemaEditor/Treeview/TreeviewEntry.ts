@@ -1,3 +1,4 @@
+import {EditorIcons} from '../Base/EditorIcons.js';
 import {EnumTable} from '../Enum/EnumTable.js';
 import {
     JsonDataFS,
@@ -7,6 +8,7 @@ import {
     SchemaJsonDataFSIcon,
     SchemaJsonDataFSType
 } from '../JsonData.js';
+import {LinkTable} from '../Link/LinkTable.js';
 import {SchemaTable} from '../Schema/SchemaTable.js';
 import {Treeview} from './Treeview.js';
 import {TreeviewDialog} from './TreeviewDialog.js';
@@ -89,6 +91,12 @@ export class TreeviewEntry {
     protected _enums: EnumTable[] = [];
 
     /**
+     * List of links
+     * @protected
+     */
+    protected _links: LinkTable[] = [];
+
+    /**
      * Constructor
      * @param {string} id
      * @param {string} name
@@ -107,7 +115,7 @@ export class TreeviewEntry {
         // toggle ------------------------------------------------------------------------------------------------------
         this._spanToggle = document.createElement('span');
         this._spanToggle.classList.add('toggle-icon');
-        this._spanToggle.textContent = '▼';
+        this._spanToggle.textContent = EditorIcons.toggle_open;
         this._spanToggle.addEventListener("click", () => {
             this.setToggle(!this.isToggle());
         });
@@ -149,10 +157,10 @@ export class TreeviewEntry {
             const types = new Map<string, string>();
 
             if (this._tables.length === 0) {
-                types.set('folder', '📁 Folder');
+                types.set('folder', `${EditorIcons.folder} Folder`);
             }
 
-            types.set('file', '📄 File');
+            types.set('file', `${EditorIcons.file} File`);
 
             return types;
         };
@@ -161,10 +169,10 @@ export class TreeviewEntry {
             const icons = new Map<string, string>();
 
             icons.set('', 'None');
-            icons.set(SchemaJsonDataFSIcon.package, '📦 Package');
-            icons.set(SchemaJsonDataFSIcon.libary, '🧱 Libary');
-            icons.set(SchemaJsonDataFSIcon.registry, '🗂️ Registry');
-            icons.set(SchemaJsonDataFSIcon.archiv, '🗃️ Archiv');
+            icons.set(SchemaJsonDataFSIcon.package, `${EditorIcons.package} Package`);
+            icons.set(SchemaJsonDataFSIcon.libary, `${EditorIcons.libary} Libary`);
+            icons.set(SchemaJsonDataFSIcon.registry, `${EditorIcons.registry} Registry`);
+            icons.set(SchemaJsonDataFSIcon.archiv, `${EditorIcons.archiv} Archiv`);
 
             return icons;
         };
@@ -173,7 +181,7 @@ export class TreeviewEntry {
 
         if (type === SchemaJsonDataFSType.root || type === SchemaJsonDataFSType.folder) {
             const btnAdd = document.createElement('button');
-            btnAdd.textContent = '➕';
+            btnAdd.textContent = EditorIcons.add;
             btnAdd.classList.add('add-folder');
             btnAdd.addEventListener('click', () => {
                 folderLine.classList.add('folder-line-hover');
@@ -219,7 +227,7 @@ export class TreeviewEntry {
 
         if (type === SchemaJsonDataFSType.root) {
             const btnSorting = document.createElement('button');
-            btnSorting.textContent = '↕️';
+            btnSorting.textContent = EditorIcons.sort;
             btnSorting.classList.add('add-folder');
             btnSorting.addEventListener('click', () => {
                 window.dispatchEvent(new CustomEvent('schemaeditor:sortingentrys', {}));
@@ -231,7 +239,7 @@ export class TreeviewEntry {
 
         if (type === SchemaJsonDataFSType.folder || type === SchemaJsonDataFSType.file) {
             const btnEdit = document.createElement('button');
-            btnEdit.textContent = '📝';
+            btnEdit.textContent = EditorIcons.edit;
             btnEdit.classList.add('add-folder');
             btnEdit.addEventListener('click', () => {
                 folderLine.classList.add('folder-line-hover');
@@ -274,7 +282,7 @@ export class TreeviewEntry {
 
         if (allowDeleteTypes.indexOf(type) > -1) {
             const btnDelete = document.createElement('button');
-            btnDelete.textContent = '🗑';
+            btnDelete.textContent = EditorIcons.delete;
             btnDelete.classList.add('delete-folder');
             btnDelete.addEventListener('click', () => {
                 window.dispatchEvent(new CustomEvent('schemaeditor:deletefolderfile', {
@@ -442,10 +450,10 @@ export class TreeviewEntry {
 
         if (open) {
             line.classList.add('open');
-            this._spanToggle.textContent = '▼';
+            this._spanToggle.textContent = EditorIcons.toggle_open;
         } else {
             line.classList.remove('open');
-            this._spanToggle.textContent = '▶';
+            this._spanToggle.textContent = EditorIcons.toggle_close;
         }
 
         if (this._icon !== '') {
@@ -494,48 +502,48 @@ export class TreeviewEntry {
      * @param icon
      */
     protected _setIcon(icon: SchemaJsonDataFSType|SchemaJsonDataFSIcon|string): void {
-        let iconText = '❓';
+        let iconText: string = EditorIcons.unknown;
 
         switch (icon) {
             case SchemaJsonDataFSType.root:
-                iconText = '🌳';
+                iconText = EditorIcons.root;
                 break;
 
             case SchemaJsonDataFSType.folder:
-                iconText = '📁';
+                iconText = EditorIcons.folder;
 
                 if (this.isToggle()) {
-                    iconText = '📂';
+                    iconText = EditorIcons.folder_open;
                 }
 
                 break;
 
             case SchemaJsonDataFSType.file:
-                iconText = '📄';
+                iconText = EditorIcons.file;
                 break;
 
             case SchemaJsonDataFSType.schema:
-                iconText = '🧬';
+                iconText = EditorIcons.schema;
                 break;
 
             case SchemaJsonDataFSType.enum:
-                iconText = '🧩';
+                iconText = EditorIcons.enum;
                 break;
 
             case SchemaJsonDataFSIcon.package:
-                iconText = '📦';
+                iconText = EditorIcons.package;
                 break;
 
             case SchemaJsonDataFSIcon.libary:
-                iconText = '🧱';
+                iconText = EditorIcons.libary;
                 break;
 
             case SchemaJsonDataFSIcon.registry:
-                iconText = '🗂️';
+                iconText = EditorIcons.registry;
                 break;
 
             case SchemaJsonDataFSIcon.archiv:
-                iconText = '🗃️';
+                iconText = EditorIcons.archiv;
                 break;
         }
 

@@ -1,5 +1,6 @@
 import './TypeFieldSelect.css';
 import {SchemaTypes} from '../SchemaTypes.js';
+import {EditorIcons} from './EditorIcons.js';
 
 /**
  * Type field select category
@@ -114,21 +115,21 @@ export class TypeFieldSelect {
         // header select -----------------------------------------------------------------------------------------------
         const selectType = document.createElement('div');
         selectType.classList.add(...['typefield-section-header', 'active']);
-        selectType.textContent = '🏷️ VTS Type';
+        selectType.textContent = `${EditorIcons.vts} VTS Type`;
         selectType.setAttribute('data-category', TypeFieldSelectCategory.vtstype);
 
         this._divHeaders.appendChild(selectType);
 
         const selectSchema = document.createElement('div');
         selectSchema.classList.add(...['typefield-section-header']);
-        selectSchema.textContent = '🧬 Schema';
+        selectSchema.textContent = `${EditorIcons.schema} Schema`;
         selectSchema.setAttribute('data-category', TypeFieldSelectCategory.schema);
 
         this._divHeaders.appendChild(selectSchema);
 
         const selectEnum = document.createElement('div');
         selectEnum.classList.add(...['typefield-section-header']);
-        selectEnum.textContent = '🧩 Enum';
+        selectEnum.textContent = `${EditorIcons.enum} Enum`;
         selectEnum.setAttribute('data-category', TypeFieldSelectCategory.enum);
 
         this._divHeaders.appendChild(selectEnum);
@@ -213,19 +214,19 @@ export class TypeFieldSelect {
             return;
         }
 
-        let icon = '🏷️';
+        let icon = EditorIcons.vts;
 
         switch (this._currentCategory) {
             case TypeFieldSelectCategory.vtstype:
-                icon = '🏷️';
+                icon = EditorIcons.vts;
                 break;
 
             case TypeFieldSelectCategory.schema:
-                icon = '🧬';
+                icon = EditorIcons.schema;
                 break;
 
             case TypeFieldSelectCategory.enum:
-                icon = '🧩️';
+                icon = EditorIcons.enum;
                 break;
         }
 
@@ -299,16 +300,16 @@ export class TypeFieldSelect {
             if (options.has(id)) {
                 const title = options.get(id)!;
 
-                let icon = '🏷️';
+                let icon = EditorIcons.vts;
                 switch (category) {
                     case TypeFieldSelectCategory.vtstype:
-                        icon = '🏷️';
+                        icon = EditorIcons.vts;
                         break;
                     case TypeFieldSelectCategory.schema:
-                        icon = '🧬';
+                        icon = EditorIcons.schema;
                         break;
                     case TypeFieldSelectCategory.enum:
-                        icon = '🧩️';
+                        icon = EditorIcons.enum;
                         break;
                 }
 
