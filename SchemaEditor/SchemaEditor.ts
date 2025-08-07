@@ -271,6 +271,26 @@ export class SchemaEditor {
             }
         });
 
+        window.addEventListener('schemaeditor:deletelinktable', (event: Event) => {
+            const customEvent = event as CustomEvent<{ id: string }>;
+            const activEntry = Treeview.getActiveEntry();
+
+            if (activEntry) {
+                if (activEntry.hasLinkObject(customEvent.detail.id)) {
+                    if (confirm('Do you really want to delete link?')) {
+                        activEntry.removeLinkTable(customEvent.detail.id);
+
+                        window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {
+                            detail: {
+                                updateView: true,
+                                updateTreeView: true
+                            }
+                        }));
+                    }
+                }
+            }
+        });
+
         window.addEventListener('schemaeditor:deletefolderfile', (event: Event) => {
             const customEvent = event as CustomEvent<{ id: string }>;
             const rootEntry = this._treeview?.getRoot();

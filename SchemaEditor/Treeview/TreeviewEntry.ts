@@ -730,14 +730,6 @@ export class TreeviewEntry {
 
         const entry = new TreeviewEntry(table.getUnid(), table.getName(), SchemaJsonDataFSType.schema);
         this.addEntry(entry);
-
-        table.setOnDelete(table1 => {
-            window.dispatchEvent(new CustomEvent('schemaeditor:deleteschematable', {
-                detail: {
-                    id: table1.getUnid()
-                }
-            }));
-        });
     }
 
     /**
@@ -749,16 +741,12 @@ export class TreeviewEntry {
 
         const entry = new TreeviewEntry(table.getUnid(), table.getName(), SchemaJsonDataFSType.enum);
         this.addEntry(entry);
-
-        table.setOnDelete(table1 => {
-            window.dispatchEvent(new CustomEvent('schemaeditor:deleteenumtable', {
-                detail: {
-                    id: table1.getUnid()
-                }
-            }));
-        });
     }
 
+    /**
+     * Add link table
+     * @param {LinkTable} table
+     */
     public addLinkTable(table: LinkTable): void {
         this._links.push(table);
     }
@@ -820,6 +808,7 @@ export class TreeviewEntry {
     public removeSchemaTable(id: string): boolean {
         for (let i = 0; i < this._tables.length; i++) {
             const table = this._tables[i];
+
             if (table.getUnid() === id) {
                 table.remove();
                 this._tables.splice(i, 1);
@@ -844,6 +833,7 @@ export class TreeviewEntry {
     public removeEnumTable(id: string): boolean {
         for (let i = 0; i < this._enums.length; i++) {
             const table = this._enums[i];
+
             if (table.getUnid() === id) {
                 table.remove();
                 this._enums.splice(i, 1);
@@ -853,6 +843,24 @@ export class TreeviewEntry {
 
         for (const [, entry] of this._list.entries()) {
             if (entry.removeEnumTable(id)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * removeLinkTable
+     * @param {string} objectUnid
+     * @return {boolean}
+     */
+    public removeLinkTable(objectUnid: string): boolean {
+        for (let i = 0; i < this._links.length; i++) {
+            const table = this._links[i];
+
+            if (table.getLinkObjectUnid() === objectUnid) {
+                this._links.splice(i, 1);
                 return true;
             }
         }

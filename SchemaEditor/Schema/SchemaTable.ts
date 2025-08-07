@@ -1,7 +1,7 @@
 import {Connection} from '@jsplumb/browser-ui';
 import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
 import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
-import {BaseTable} from '../Base/BaseTable.js';
+import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../SchemaExtends.js';
@@ -14,6 +14,19 @@ import {SchemaTypes} from '../SchemaTypes.js';
 import {SchemaTableDialog} from './SchemaTableDialog.js';
 import {SchemaTableField} from './SchemaTableField.js';
 import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';
+
+/**
+ * Delete event for Schema
+ * @param {BaseTable} table
+ * @constructor
+ */
+export const SchemaTableEventOnDelete: BaseTableOnDelete = (table: BaseTable) => {
+    window.dispatchEvent(new CustomEvent('schemaeditor:deleteschematable', {
+        detail: {
+            id: table.getUnid()
+        }
+    }));
+};
 
 /**
  * Schema table
@@ -438,6 +451,7 @@ export class SchemaTable extends BaseTable {
         super.updateView();
 
         this.getIconElement().textContent = EditorIcons.schema;
+        this.setOnDelete(SchemaTableEventOnDelete);
 
         for (const [, field] of this._fields.entries()) {
             field.updateView();

@@ -1,6 +1,19 @@
-import {BaseTable} from '../Base/BaseTable.js';
+import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import {JsonLinkDescription, JsonSchemaPositionDescription} from '../JsonData.js';
+
+/**
+ * Link table on delete
+ * @param table
+ * @constructor
+ */
+export const LinkTableOnDelete: BaseTableOnDelete = (table: BaseTable) => {
+    window.dispatchEvent(new CustomEvent('schemaeditor:deletelinktable', {
+        detail: {
+            id: table.getUnid()
+        }
+    }));
+};
 
 /**
  * Link table
@@ -82,6 +95,8 @@ export class LinkTable {
         this._linkObject = linkObject;
         this._linkObject.setOnPositionMove((table, offsetTop, offsetLeft) => {
             this.setPosition(offsetLeft, offsetTop);
+
+            window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
         });
 
         this._linkObject.getElement().classList.add('vts-link-table');
@@ -130,6 +145,7 @@ export class LinkTable {
             }
 
             this._linkObject.getIconElement().textContent = EditorIcons.link;
+            this._linkObject.setOnDelete(LinkTableOnDelete);
             this._linkObject.updateConnection();
         }
     }

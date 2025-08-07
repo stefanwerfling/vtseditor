@@ -1,5 +1,5 @@
 import {Connection} from '@jsplumb/browser-ui';
-import {BaseTable} from '../Base/BaseTable.js';
+import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {
@@ -11,6 +11,19 @@ import {SchemaTypes} from '../SchemaTypes.js';
 import {EnumTableDialog} from './EnumTableDialog.js';
 import {EnumTableValue} from './EnumTableValue.js';
 import {EnumTableValueDialog} from './EnumTableValueDialog.js';
+
+/**
+ * Enum table event on delete
+ * @param {BaseTable} table
+ * @constructor
+ */
+export const EnumTableEventOnDelete: BaseTableOnDelete = (table: BaseTable) => {
+    window.dispatchEvent(new CustomEvent('schemaeditor:deleteenumtable', {
+        detail: {
+            id: table.getUnid()
+        }
+    }));
+};
 
 /**
  * Enum table
@@ -230,6 +243,7 @@ export class EnumTable extends BaseTable {
     public override updateView(): void {
         super.updateView();
         this.getIconElement().textContent = EditorIcons.enum;
+        this.setOnDelete(EnumTableEventOnDelete);
     }
 
     protected override _setConnectionHoverByElement(hover: boolean): void {
