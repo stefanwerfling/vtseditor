@@ -2,6 +2,7 @@ import {Connection} from '@jsplumb/browser-ui';
 import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
 import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
 import {BaseTable} from '../Base/BaseTable.js';
+import {EditorIcons} from '../Base/EditorIcons.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../SchemaExtends.js';
 import {
@@ -109,6 +110,8 @@ export class SchemaTable extends BaseTable {
         // update Schema Types
         SchemaTypes.getInstance().setType(this._unid, this._name);
         this._table.classList.add(...['table', 'vts-schema-table', 'vts-schema-element']);
+
+        this.getIconElement().textContent = EditorIcons.schema;
 
         this._schemaExtend = document.createElement('span');
         this._headline.appendChild(this._schemaExtend);
@@ -433,6 +436,8 @@ export class SchemaTable extends BaseTable {
      */
     public override updateView(): void {
         super.updateView();
+
+        this.getIconElement().textContent = EditorIcons.schema;
 
         for (const [, field] of this._fields.entries()) {
             field.updateView();

@@ -59,6 +59,12 @@ export class BaseTable {
     protected _btnDelete: HTMLDivElement;
 
     /**
+     * Span icon
+     * @protected
+     */
+    protected _spanIcon: HTMLSpanElement;
+
+    /**
      * Span title
      * @protected
      */
@@ -129,6 +135,10 @@ export class BaseTable {
         this._headline.appendChild(this._btnDelete);
 
         // -------------------------------------------------------------------------------------------------------------
+
+        this._spanIcon = document.createElement('span');
+        this._spanIcon.classList.add('vts-schema-name-icon');
+        this._headline.appendChild(this._spanIcon);
 
         this._spanTitle = document.createElement('span');
         this._spanTitle.textContent = name;
@@ -228,6 +238,14 @@ export class BaseTable {
      */
     public getHeadlineElement(): HTMLDivElement {
         return this._headline;
+    }
+
+    /**
+     * Return the icon element
+     * @return {HTMLSpanElement}
+     */
+    public getIconElement(): HTMLSpanElement {
+        return this._spanIcon;
     }
 
     /**

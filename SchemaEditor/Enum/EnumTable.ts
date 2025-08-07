@@ -1,5 +1,6 @@
 import {Connection} from '@jsplumb/browser-ui';
 import {BaseTable} from '../Base/BaseTable.js';
+import {EditorIcons} from '../Base/EditorIcons.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {
     JsonEnumDescription,
@@ -41,6 +42,8 @@ export class EnumTable extends BaseTable {
 
         this._table.classList.add(...['table', 'vts-schema-table', 'vts-schema-element', 'vts-enum-table']);
         this._headline.classList.add(...['vts-enum-element-name']);
+
+        this.getIconElement().textContent = EditorIcons.enum;
 
         // Buttons -----------------------------------------------------------------------------------------------------
 
@@ -226,6 +229,7 @@ export class EnumTable extends BaseTable {
      */
     public override updateView(): void {
         super.updateView();
+        this.getIconElement().textContent = EditorIcons.enum;
     }
 
     protected override _setConnectionHoverByElement(hover: boolean): void {

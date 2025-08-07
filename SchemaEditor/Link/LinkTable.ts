@@ -1,4 +1,5 @@
 import {BaseTable} from '../Base/BaseTable.js';
+import {EditorIcons} from '../Base/EditorIcons.js';
 import {JsonLinkDescription, JsonSchemaPositionDescription} from '../JsonData.js';
 
 /**
@@ -85,6 +86,7 @@ export class LinkTable {
 
         this._linkObject.getElement().classList.add('vts-link-table');
         this._linkObject.getHeadlineElement().classList.add('vts-element-link-name');
+        this._linkObject.getIconElement().textContent = EditorIcons.link;
     }
 
     /**
@@ -127,6 +129,7 @@ export class LinkTable {
                 this._linkObject.getElement().classList.add('vts-link-table')
             }
 
+            this._linkObject.getIconElement().textContent = EditorIcons.link;
             this._linkObject.updateConnection();
         }
     }
