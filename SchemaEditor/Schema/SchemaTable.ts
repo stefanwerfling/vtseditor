@@ -181,17 +181,7 @@ export class SchemaTable extends BaseTable {
 
         // set jsPlumb -------------------------------------------------------------------------------------------------
 
-        jsPlumbInstance.manage(this._table);
-        jsPlumbInstance.setDraggable(this._table, true);
-
-        jsPlumbInstance.bind('drag:stop', (info) => {
-            if (info.el === this._table) {
-                this._position.y = this._table.offsetTop;
-                this._position.x = this._table.offsetLeft;
-
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
-            }
-        });
+        this._initJsPlumb();
 
         // set drag and drop -------------------------------------------------------------------------------------------
 
@@ -441,10 +431,20 @@ export class SchemaTable extends BaseTable {
     /**
      * Update view
      */
-    public updateView(): void {
-        this._table.style.top = `${this._position.y}px`;
-        this._table.style.left = `${this._position.x}px`;
+    public override updateView(): void {
+        super.updateView();
 
+        for (const [, field] of this._fields.entries()) {
+            field.updateView();
+        }
+
+        this.updateConnection();
+    }
+
+    /**
+     * update connection
+     */
+    public override updateConnection(): void {
         if (this._connection !== null) {
             jsPlumbInstance.deleteConnection(this._connection);
         }

@@ -36,6 +36,15 @@
   background-color: #3e9c3e;
 }
 
+.vts-link-table {
+  opacity: 0.5;
+  transition: opacity 0.3s;
+}
+
+.vts-link-table:hover {
+  opacity: 1;
+}
+
 .vts-schema-buttons {
   display:flex;
   align-items: center;
@@ -139,6 +148,11 @@
 
 .vts-enum-element-name {
   background-color: #3e9c3e;
+}
+
+.vts-element-link-name {
+  //background-color: #000000;
+  //color: #ffffff;
 }
 
 .vts-schema-element-name span {

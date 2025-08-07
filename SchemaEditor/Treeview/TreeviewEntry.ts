@@ -2,7 +2,7 @@ import {EditorIcons} from '../Base/EditorIcons.js';
 import {EnumTable} from '../Enum/EnumTable.js';
 import {
     JsonDataFS,
-    JsonEnumDescription,
+    JsonEnumDescription, JsonLinkDescription,
     JsonSchemaDescription,
     SchemaJsonDataFS,
     SchemaJsonDataFSIcon,
@@ -626,17 +626,31 @@ export class TreeviewEntry {
             entrys.push(entry.getData());
         }
 
+        // enums -------------------------------------------------------------------------------------------------------
+
         const enums: JsonEnumDescription[] = [];
 
         for (const aenum of this._enums) {
             enums.push(aenum.getData());
         }
 
+        // schemas -----------------------------------------------------------------------------------------------------
+
         const schemas: JsonSchemaDescription[] = [];
 
         for (const table of this._tables) {
             schemas.push(table.getData());
         }
+
+        // links -------------------------------------------------------------------------------------------------------
+
+        const links: JsonLinkDescription[] = [];
+
+        for (const link of this._links) {
+            links.push(link.getData());
+        }
+
+        // -------------------------------------------------------------------------------------------------------------
 
         return {
             unid: this.unid,
@@ -647,6 +661,7 @@ export class TreeviewEntry {
             entrys: entrys,
             schemas: schemas,
             enums: enums,
+            links: links
         };
     }
 
@@ -667,6 +682,8 @@ export class TreeviewEntry {
             this.setToggle(data.istoggle);
         }
 
+        // entrys ------------------------------------------------------------------------------------------------------
+
         for (const aEntry of data.entrys) {
             if (SchemaJsonDataFS.validate(aEntry, [])) {
                 const entry = new TreeviewEntry(aEntry.unid, aEntry.name, aEntry.type);
@@ -674,6 +691,8 @@ export class TreeviewEntry {
                 entry.setData(aEntry);
             }
         }
+
+        // enums -------------------------------------------------------------------------------------------------------
 
         if (data.enums) {
             for (const aEnum of data.enums) {
@@ -683,10 +702,22 @@ export class TreeviewEntry {
             }
         }
 
+        // schemas -----------------------------------------------------------------------------------------------------
+
         for (const aSchema of data.schemas) {
             const schema = new SchemaTable(aSchema.unid, aSchema.name, aSchema.extend);
             schema.setData(aSchema);
             this.addSchemaTable(schema);
+        }
+
+        // links -------------------------------------------------------------------------------------------------------
+
+        if (data.links) {
+            for (const aLink of data.links) {
+                const link = new LinkTable(aLink.unid, aLink.link_unid);
+                link.setData(aLink);
+                this.addLinkTable(link);
+            }
         }
     }
 
@@ -728,6 +759,10 @@ export class TreeviewEntry {
         });
     }
 
+    public addLinkTable(table: LinkTable): void {
+        this._links.push(table);
+    }
+
     /**
      * Return schema tables
      * @return {SchemaTable[]}
@@ -742,6 +777,14 @@ export class TreeviewEntry {
      */
     public getEnumTables(): EnumTable[] {
         return this._enums;
+    }
+
+    /**
+     * Return link tables
+     * @return {LinkTable[]}
+     */
+    public getLinkTables(): LinkTable[] {
+        return this._links;
     }
 
     /**
@@ -970,7 +1013,7 @@ export class TreeviewEntry {
     }
 
     /**
-     * splice a entry
+     * splice an entry
      * @param {string} id
      * @return {TreeviewEntry|null}
      */
@@ -1113,4 +1156,34 @@ export class TreeviewEntry {
     public hasEntry(unid: string): boolean {
         return this._list.has(unid);
     }
+
+    /**
+     * Has a link object
+     * @param {string} objectUnid
+     */
+    public hasLinkObject(objectUnid: string): boolean {
+        for (const link of this._links) {
+            if (link.getLinkObjectUnid() === objectUnid) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Return a link table by object unid
+     * @param {string} objectUnid
+     * @return {LinkTable|null}
+     */
+    public getLinkTableByObjectUnid(objectUnid: string): LinkTable|null {
+        for (const link of this._links) {
+            if (link.getLinkObjectUnid() === objectUnid) {
+                return link;
+            }
+        }
+
+        return null;
+    }
+
 }

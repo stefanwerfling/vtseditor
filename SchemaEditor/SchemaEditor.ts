@@ -1,7 +1,9 @@
 import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
+import {BaseTable} from './Base/BaseTable.js';
 import {EnumTable} from './Enum/EnumTable.js';
 import {JsonData, JsonDataFS, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js';
 import jsPlumbInstance from './jsPlumbInstance.js';
+import {LinkTable} from './Link/LinkTable.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
 import {SchemaExtends} from './SchemaExtends.js';
 import {SchemaTypes} from './SchemaTypes.js';
@@ -29,7 +31,7 @@ type SchemaEditorUpdatenameEventDetail = {
  * SchemaEditor wiggle event detail
  */
 type SchemaEditorWiggleEventDetail = {
-    schemaId: string;
+    tableId: string;
 };
 
 /**
@@ -111,6 +113,46 @@ export class SchemaEditor {
         this._jsPlumbInstance!.revalidate(table.getElement());
 
         table.openEditDialog();
+    }
+
+    /**
+     * Add a new link
+     * @param {string} sourceUnid id from schema or enum
+     * @protected
+     */
+    protected _addLink(sourceUnid: string): void {
+        if (Treeview.getActiveEntry() === null) {
+            return;
+        }
+
+        const rootEntry = this._treeview?.getRoot();
+
+        if (rootEntry) {
+            const entry = rootEntry.findParentEntry(sourceUnid);
+
+            if (entry) {
+                let table: BaseTable|null = entry.getTableById(sourceUnid);
+
+                if (table === null) {
+                    table = entry.getEnumById(sourceUnid);
+                }
+
+                if (table !== null) {
+                    const link = new LinkTable(crypto.randomUUID(), table.getUnid(), table);
+
+                    Treeview.getActiveEntry()!.addLinkTable(link);
+
+                    const linkElement = link.getElement();
+
+                    if (linkElement) {
+                        this._container!.appendChild(linkElement);
+                        this._jsPlumbInstance!.revalidate(linkElement);
+
+                        this._updateView();
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -327,34 +369,48 @@ export class SchemaEditor {
                         treeview.updateEntryNameEnum(customEvent.detail.sourceId);
                         break;
                 }
+
+                this._updateView();
             }
         });
 
-        window.addEventListener('schemaeditor:showschema', (event: Event) => {
+        window.addEventListener('schemaeditor:showtable', (event: Event) => {
             const customEvent = event as CustomEvent<SchemaEditorWiggleEventDetail>;
             const treeview = this._treeview;
 
             if (treeview) {
-                const entry = treeview.getRoot().findEntry(customEvent.detail.schemaId);
-                const activeEntryId = Treeview.getActiveEntry()?.getId();
+                const entry = treeview.getRoot().findEntry(customEvent.detail.tableId);
+                const activeEntry = Treeview.getActiveEntry();
 
-                if (entry && activeEntryId) {
-                    if (entry.getId() === activeEntryId) {
-                        const table = entry.getTableById(customEvent.detail.schemaId);
+                if (activeEntry) {
+                    const activeEntryId = activeEntry.getId();
 
-                        if (table !== null) {
-                            table.runWiggle();
-                            return;
+                    if (entry && activeEntryId) {
+                        if (entry.getId() === activeEntryId) {
+                            const table = entry.getTableById(customEvent.detail.tableId);
+
+                            if (table !== null) {
+                                table.runWiggle();
+                                return;
+                            }
+
+                            const aenum =  entry.getEnumById(customEvent.detail.tableId);
+
+                            if (aenum !== null) {
+                                aenum.runWiggle();
+                                return;
+                            }
+                        } else if(activeEntry.hasLinkObject(customEvent.detail.tableId)) {
+                            const link = activeEntry.getLinkTableByObjectUnid(customEvent.detail.tableId);
+
+                            if (link) {
+                                link.getLinkObject()?.runWiggle();
+                            }
+                        } else {
+                            if (confirm('Do you want to add a link object to see the source schema/enum?')) {
+                                this._addLink(customEvent.detail.tableId);
+                            }
                         }
-
-                        const aenum =  entry.getEnumById(customEvent.detail.schemaId);
-
-                        if (aenum !== null) {
-                            aenum.runWiggle();
-                            return;
-                        }
-                    } else {
-                        alert('Not found');
                     }
                 }
             }
@@ -415,13 +471,12 @@ export class SchemaEditor {
 
         this._treeview?.removeAllActiveName();
 
+        const rootEntry = this._treeview?.getRoot();
         const entryTable = Treeview.getActivEntryTable();
         let entry = Treeview.getActiveEntry();
 
         if (entry !== null) {
             const entryId = entry.getId();
-
-            const rootEntry = this._treeview?.getRoot();
 
             if (rootEntry) {
                 const pentry = rootEntry.findEntry(entryId);
@@ -438,8 +493,6 @@ export class SchemaEditor {
         }
 
         if (entryTable !== null) {
-            const rootEntry = this._treeview?.getRoot();
-
             if (rootEntry) {
                 const tentry = rootEntry.findEntry(entryTable.getId());
 
@@ -450,27 +503,70 @@ export class SchemaEditor {
             }
         }
 
+        // -------------------------------------------------------------------------------------------------------------
+
         if (entry) {
             this._btnAddSchema!.style.display = '';
             this._btnAddEnum!.style.display = '';
 
-            // Schemas ---------------------------------------------------------------------------------------------
+            // Schemas -------------------------------------------------------------------------------------------------
             const sTables = entry.getSchemaTables();
 
             for (const table of sTables) {
                 this._container!.appendChild(table.getElement());
-                this._jsPlumbInstance!.revalidate(table.getElement());
+
+                requestAnimationFrame(() => {
+                    this._jsPlumbInstance!.revalidate(table.getElement());
+                });
             }
 
-            // Enums -----------------------------------------------------------------------------------------------
+            // Enums ---------------------------------------------------------------------------------------------------
             const sEnums = entry.getEnumTables();
 
             for (const tenum of sEnums) {
                 this._container!.appendChild(tenum.getElement());
-                this._jsPlumbInstance!.revalidate(tenum.getElement());
+
+                requestAnimationFrame(() => {
+                    this._jsPlumbInstance!.revalidate(tenum.getElement());
+                });
             }
 
-            // updates view ----------------------------------------------------------------------------------------
+            // links ---------------------------------------------------------------------------------------------------
+
+            const links = entry.getLinkTables();
+
+            for (const link of links) {
+                if (link.getLinkObject() === null) {
+                    const parentEntry = rootEntry?.findParentEntry(link.getLinkUnid());
+
+                    if (parentEntry) {
+                        let aTable: BaseTable|null = parentEntry.getTableById(link.getLinkUnid());
+
+                        if (aTable === null) {
+                            aTable = parentEntry.getEnumById(link.getLinkUnid());
+                        }
+
+                        if (aTable) {
+                            link.setLinkObject(aTable);
+                        }
+                    }
+                }
+
+                // readd to container
+                const linkElement = link.getElement();
+
+                if (linkElement) {
+                    this._container!.appendChild(linkElement);
+
+                    requestAnimationFrame(() => {
+                        this._jsPlumbInstance!.revalidate(linkElement);
+                    });
+                }
+            }
+
+            this._jsPlumbInstance!.repaintEverything();
+
+            // updates view --------------------------------------------------------------------------------------------
             for (const tenum of sEnums) {
                 tenum.updateView();
 
@@ -481,6 +577,10 @@ export class SchemaEditor {
                         tenum.setActivView(false);
                     }
                 }
+            }
+
+            for (const link of links) {
+                link.updateView();
             }
 
             for (const table of sTables) {
@@ -494,7 +594,6 @@ export class SchemaEditor {
                         table.setActivView(false);
                     }
                 }
-
             }
 
             entry.setActiveName();

@@ -1,5 +1,4 @@
 // vite.config.ts
-import {fastTrim} from '@jsplumb/browser-ui';
 import { defineConfig, Plugin } from 'vite';
 import express from 'express';
 import fs from 'fs';

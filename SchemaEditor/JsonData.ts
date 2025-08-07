@@ -154,6 +154,22 @@ export type JsonEnumDescription = ExtractSchemaResultType<typeof SchemaJsonEnumD
 // ---------------------------------------------------------------------------------------------------------------------
 
 /**
+ * Schema json data link
+ */
+export const SchemaJsonLinkDescription = Vts.object({
+    unid: Vts.string(),
+    pos: SchemaJsonSchemaPositionDescription,
+    link_unid: Vts.string()
+});
+
+/**
+ * Type of schema json data link
+ */
+export type JsonLinkDescription = ExtractSchemaResultType<typeof SchemaJsonLinkDescription>;
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
  * Schema json data FS
  */
 export const SchemaJsonDataFS = Vts.object({
@@ -164,7 +180,8 @@ export const SchemaJsonDataFS = Vts.object({
     istoggle: Vts.optional(Vts.boolean()),
     entrys: Vts.array(Vts.unknown()),
     schemas: Vts.array(SchemaJsonSchemaDescription),
-    enums: Vts.array(SchemaJsonEnumDescription)
+    enums: Vts.array(SchemaJsonEnumDescription),
+    links: Vts.optional(Vts.array(SchemaJsonLinkDescription))
 });
 
 /**

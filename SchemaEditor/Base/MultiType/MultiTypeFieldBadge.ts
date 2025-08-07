@@ -37,9 +37,9 @@ export class MultiTypeFieldBadge {
         if (SchemaTypes.getInstance().isTypeASchema(data.type)) {
             spanType.classList.add(...['vts-badge-wh-2']);
             spanType.addEventListener('click', () => {
-                window.dispatchEvent(new CustomEvent('schemaeditor:showschema', {
+                window.dispatchEvent(new CustomEvent('schemaeditor:showtable', {
                     detail: {
-                        schemaId: data.type
+                        tableId: data.type
                     }
                 }));
             });

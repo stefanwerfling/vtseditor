@@ -98,17 +98,9 @@ export class EnumTable extends BaseTable {
 
         this._table.appendChild(this._columns);
 
-        jsPlumbInstance.manage(this._table);
-        jsPlumbInstance.setDraggable(this._table, true);
+        // -------------------------------------------------------------------------------------------------------------
 
-        jsPlumbInstance.bind('drag:stop', (info) => {
-            if (info.el === this._table) {
-                this._position.y = this._table.offsetTop;
-                this._position.x = this._table.offsetLeft;
-
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
-            }
-        });
+        this._initJsPlumb();
     }
 
     /**
@@ -232,9 +224,8 @@ export class EnumTable extends BaseTable {
     /**
      * Update view
      */
-    public updateView(): void {
-        this._table.style.top = `${this._position.y}px`;
-        this._table.style.left = `${this._position.x}px`;
+    public override updateView(): void {
+        super.updateView();
     }
 
     protected override _setConnectionHoverByElement(hover: boolean): void {

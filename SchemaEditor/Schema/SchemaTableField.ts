@@ -278,6 +278,9 @@ export class SchemaTableField {
      * Update view, create connection new/right on ui
      */
     public updateView(): void {
+        // update type
+        this.setType(this._type);
+
         if (this._connection !== null) {
             jsPlumbInstance.deleteConnection(this._connection);
         }

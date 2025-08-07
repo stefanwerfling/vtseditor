@@ -10,6 +10,11 @@ import {Wiggle} from './Wiggle.js';
 export type BaseTableOnDelete = (table: BaseTable) => void;
 
 /**
+ * On position move table
+ */
+export type BaseTableOnPositionMove = (table: BaseTable, offsetTop: number, offsetLeft: number) => void;
+
+/**
  * Base table
  */
 export class BaseTable {
@@ -64,6 +69,12 @@ export class BaseTable {
      * @protected
      */
     protected _onDelete: BaseTableOnDelete|null = null;
+
+    /**
+     * on position move
+     * @protected
+     */
+    protected _onPositionMove: BaseTableOnPositionMove|null = null;
 
     /**
      * Constructor
@@ -127,6 +138,33 @@ export class BaseTable {
     }
 
     /**
+     * init js plumb
+     * @protected
+     */
+    protected _initJsPlumb(): void {
+        jsPlumbInstance.manage(this._table);
+        jsPlumbInstance.setDraggable(this._table, true);
+
+        jsPlumbInstance.bind('drag:stop', (info) => {
+            if (info.el === this._table) {
+                if (this._onPositionMove !== null) {
+                    this._onPositionMove(
+                        this,
+                        this._table.offsetTop,
+                        this._table.offsetLeft
+                    );
+                } else {
+                    // default
+                    this._position.y = this._table.offsetTop;
+                    this._position.x = this._table.offsetLeft;
+
+                    window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+                }
+            }
+        });
+    }
+
+    /**
      * Set connection Hover by element
      * @param hover
      * @protected
@@ -185,6 +223,14 @@ export class BaseTable {
     }
 
     /**
+     * Return the Headline element from table
+     * @return {HTMLDivElement}
+     */
+    public getHeadlineElement(): HTMLDivElement {
+        return this._headline;
+    }
+
+    /**
      * Set Position of table
      * @param {number} x
      * @param {number} y
@@ -224,10 +270,38 @@ export class BaseTable {
     }
 
     /**
+     * Set on position move
+     * @param {BaseTableOnPositionMove|null} onMove
+     */
+    public setOnPositionMove(onMove: BaseTableOnPositionMove|null): void {
+        this._onPositionMove = onMove;
+    }
+
+    /**
      * Remove all
      */
     public remove(): void {
         this._table.remove();
+    }
+
+    /**
+     * Update view
+     */
+    public updateView(): void {
+        this._table.style.top = `${this._position.y}px`;
+        this._table.style.left = `${this._position.x}px`;
+
+        if (this._headline.classList.contains('vts-element-link-name')) {
+            this._headline.classList.remove('vts-element-link-name')
+        }
+
+        if (this._table.classList.contains('vts-link-table')) {
+            this._table.classList.remove('vts-link-table');
+        }
+    }
+
+    public updateConnection(): void {
+        // overwrite
     }
 
 }
