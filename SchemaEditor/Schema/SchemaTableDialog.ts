@@ -38,6 +38,12 @@ export class SchemaTableDialog extends BaseDialog {
     protected _checkboxIai: HTMLInputElement;
 
     /**
+     * Checkbox not export
+     * @protected
+     */
+    protected _checkboxNotExport: HTMLInputElement;
+
+    /**
      * textarea description
      * @protected
      */
@@ -122,6 +128,22 @@ export class SchemaTableDialog extends BaseDialog {
         labelIai.prepend(this._checkboxIai);
         wrapper.appendChild(labelIai);
 
+        // --- not export Checkbox ---
+        const labelNotExport = document.createElement('label');
+        labelNotExport.classList.add('dialog-label');
+        labelNotExport.textContent = 'Not export';
+        labelNotExport.style.display = 'flex';
+        labelNotExport.style.alignItems = 'center';
+        labelNotExport.style.gap = '6px';
+
+        this._checkboxNotExport = document.createElement('input');
+        this._checkboxNotExport.type = 'checkbox';
+        this._checkboxNotExport.classList.add('dialog-checkbox');
+
+        labelNotExport.prepend(this._checkboxNotExport);
+        wrapper.appendChild(labelNotExport);
+
+        // ---
 
         this._divBody.appendChild(wrapper);
 
@@ -258,6 +280,7 @@ export class SchemaTableDialog extends BaseDialog {
      */
     public setOptions(option: JsonSchemaDescriptionOption): void {
         this._checkboxIai.checked = option.ignore_additional_items ?? false;
+        this._checkboxNotExport.checked = option.not_export ?? false;
     }
 
     /**
@@ -266,7 +289,8 @@ export class SchemaTableDialog extends BaseDialog {
      */
     public getOptions(): JsonSchemaDescriptionOption {
         return {
-            ignore_additional_items: this._checkboxIai.checked
+            ignore_additional_items: this._checkboxIai.checked,
+            not_export: this._checkboxNotExport.checked
         };
     }
 

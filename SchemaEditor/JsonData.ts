@@ -88,7 +88,8 @@ export type JsonSchemaPositionDescription = ExtractSchemaResultType<typeof Schem
  * Schema json schema description option
  */
 export const SchemaJsonSchemaDescriptionOption = Vts.object({
-    ignore_additional_items: Vts.optional(Vts.boolean())
+    ignore_additional_items: Vts.optional(Vts.boolean()),
+    not_export: Vts.optional(Vts.boolean())
 });
 
 /**

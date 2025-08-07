@@ -148,10 +148,18 @@ export class SchemaGenerator {
         for (const schema of sortedSchemas) {
             const schemaName = this._buildName(schema.name);
 
-            this._fileRegister.set(schemaName, file);
+            let allowedExport = true;
 
-            if (this._options.createTypes) {
-                this._fileRegister.set(schema.name.trim(), file);
+            if (schema.options && schema.options.not_export) {
+                allowedExport = false;
+            }
+
+            if (allowedExport) {
+                this._fileRegister.set(schemaName, file);
+
+                if (this._options.createTypes) {
+                    this._fileRegister.set(schema.name.trim(), file);
+                }
             }
 
             this._idRegister.set(schema.unid, schemaName);
@@ -345,7 +353,13 @@ export class SchemaGenerator {
             content += ' */\r\n'
         }
 
-        content += `export const ${schemaName} = `;
+        let strExport = 'export';
+
+        if (schema.options && schema.options.not_export) {
+            strExport = '';
+        }
+
+        content += `${strExport} const ${schemaName} = `;
 
         if (schema.extend === 'object2') {
             content += 'Vts.object2(';
@@ -428,7 +442,7 @@ export class SchemaGenerator {
                 content += ' */\r\n'
             }
 
-            content += `export type ${schema.name} = ExtractSchemaResultType<typeof ${schemaName}>;`;
+            content += `${strExport} type ${schema.name} = ExtractSchemaResultType<typeof ${schemaName}>;`;
         }
 
         return content;
