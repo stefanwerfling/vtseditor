@@ -1,5 +1,5 @@
 import './TypeFieldSelect.css';
-import {SchemaTypes} from '../SchemaTypes.js';
+import {SchemaTypes} from '../Register/SchemaTypes.js';
 import {EditorIcons} from './EditorIcons.js';
 
 /**

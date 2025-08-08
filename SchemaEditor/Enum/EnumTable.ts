@@ -7,7 +7,7 @@ import {
     JsonEnumValueDescription,
     SchemaJsonDataFSType
 } from '../JsonData.js';
-import {SchemaTypes} from '../SchemaTypes.js';
+import {SchemaTypes} from '../Register/SchemaTypes.js';
 import {EnumTableDialog} from './EnumTableDialog.js';
 import {EnumTableValue} from './EnumTableValue.js';
 import {EnumTableValueDialog} from './EnumTableValueDialog.js';

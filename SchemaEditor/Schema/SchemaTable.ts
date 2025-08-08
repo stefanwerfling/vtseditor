@@ -4,13 +4,13 @@ import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
-import {SchemaExtends} from '../SchemaExtends.js';
+import {SchemaExtends} from '../Register/SchemaExtends.js';
 import {
     JsonSchemaDescription, JsonSchemaDescriptionOption,
     JsonSchemaFieldDescription, JsonSchemaFieldType,
     SchemaJsonDataFSType, SchemaJsonSchemaFieldType
 } from '../JsonData.js';
-import {SchemaTypes} from '../SchemaTypes.js';
+import {SchemaTypes} from '../Register/SchemaTypes.js';
 import {SchemaTableDialog} from './SchemaTableDialog.js';
 import {SchemaTableField} from './SchemaTableField.js';
 import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';

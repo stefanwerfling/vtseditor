@@ -22,10 +22,10 @@ export class SchemaExtends {
     }
 
     /**
-     * Map of extends
+     * Map of complex extends
      * @protected
      */
-    protected _mapExtends: Map<string, string> = new Map<string, string>();
+    protected _mapComplexExtends: Map<string, string> = new Map<string, string>();
 
     /**
      * Map of schema extends
@@ -37,8 +37,8 @@ export class SchemaExtends {
      * Constructor
      */
     public constructor() {
-        this._mapExtends.set('object', 'Vts.object');
-        this._mapExtends.set('object2', 'Vts.object2');
+        this._mapComplexExtends.set('object', 'Vts.object');
+        this._mapComplexExtends.set('object2', 'Vts.object2');
     }
 
     /**
@@ -48,7 +48,7 @@ export class SchemaExtends {
      */
     protected _getAllExtends(): Map<string, string> {
         return new Map<string, string>([
-            ...this._mapExtends,
+            ...this._mapComplexExtends,
             ...this._mapSchemaExtends
         ]);
     }

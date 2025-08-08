@@ -5,8 +5,8 @@ import {JsonData, JsonDataFS, SchemaJsonDataFS, SchemaJsonDataFSType} from './Js
 import jsPlumbInstance from './jsPlumbInstance.js';
 import {LinkTable} from './Link/LinkTable.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
-import {SchemaExtends} from './SchemaExtends.js';
-import {SchemaTypes} from './SchemaTypes.js';
+import {SchemaExtends} from './Register/SchemaExtends.js';
+import {SchemaTypes} from './Register/SchemaTypes.js';
 import {Treeview} from './Treeview/Treeview.js';
 
 /**

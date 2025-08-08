@@ -4,7 +4,7 @@ import {MultiTypeFieldBadge} from '../Base/MultiType/MultiTypeFieldBadge.js';
 import {Tooltip} from '../Base/Tooltip.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {JsonSchemaFieldDescription, JsonSchemaFieldType, SchemaJsonSchemaFieldType} from '../JsonData.js';
-import {SchemaTypes} from './../SchemaTypes.js';
+import {SchemaTypes} from '../Register/SchemaTypes.js';
 import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';
 
 /**
