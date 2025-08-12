@@ -13,19 +13,21 @@ const configFile = path.resolve(projectRoot, 'vtseditor.json');
 
 if (!fs.existsSync(configFile)) {
     fs.writeFileSync(configFile, JSON.stringify({
-        project: {
-            schemaPath: './schemas/schema.json',
-            code: {
-                schemaPrefix: 'Schema',
-                createTypes: true,
-                createIndex: false,
-                codeComment: true,
-                codeIndent: '    '
-            },
-            autoGenerate: false,
-            destinationPath: './schemas/src',
-            destinationClear: false
-        },
+        projects: [
+            {
+                schemaPath: './schemas/schema.json',
+                code: {
+                    schemaPrefix: 'Schema',
+                    createTypes: true,
+                    createIndex: false,
+                    codeComment: true,
+                    codeIndent: '    '
+                },
+                autoGenerate: false,
+                destinationPath: './schemas/src',
+                destinationClear: false
+            }
+        ],
         server: {
             port: 5173
         }

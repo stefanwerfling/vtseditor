@@ -69,19 +69,21 @@ This is especially useful for large projects, team collaboration, or when sharin
 2. create your config ```vtseditor.json``` and add your config:
 ```json
 {
-  "project": {
-    "schemaPath": "./schemas/schema.json",
-    "code": {
-      "schemaPrefix": "Schema",
-      "createTypes": true,
-      "createIndex": true,
-      "codeComment": true,
-      "codeIndent": "    "
-    },
-    "autoGenerate": false,
-    "destinationPath": "./schemas/src", 
-    "destinationClear": false
-  },
+  "projects": [
+    {
+      "schemaPath": "./schemas/schema.json",
+      "code": {
+        "schemaPrefix": "Schema",
+        "createTypes": true,
+        "createIndex": true,
+        "codeComment": true,
+        "codeIndent": "    "
+      },
+      "autoGenerate": false,
+      "destinationPath": "./schemas/src",
+      "destinationClear": false
+    }
+  ],
   "server": {
     "port": 5173
   }
