@@ -26,6 +26,12 @@ export class BaseTable {
     protected _unid: string = '';
 
     /**
+     * Read only
+     * @protected
+     */
+    protected _readOnly: boolean = false;
+
+    /**
      * name
      * @protected
      */
@@ -205,6 +211,28 @@ export class BaseTable {
      */
     public getUnid(): string {
         return this._unid;
+    }
+
+    /**
+     * Is table read only
+     * @return {boolean}
+     */
+    public isReadOnly(): boolean {
+        return this._readOnly;
+    }
+
+    /**
+     * Set the read only
+     * @param {boolean} readonly
+     */
+    public setReadOnly(readonly: boolean): void {
+        this._readOnly = readonly;
+
+        if (readonly) {
+            this._btnDelete.style.display = 'none';
+        } else {
+            this._btnDelete.style.display = '';
+        }
     }
 
     /**

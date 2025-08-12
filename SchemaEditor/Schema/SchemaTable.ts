@@ -62,6 +62,18 @@ export class SchemaTable extends BaseTable {
     protected _description: string = '';
 
     /**
+     * button line right
+     * @protected
+     */
+    protected _btnLineRight: HTMLDivElement;
+
+    /**
+     * Button edit
+     * @protected
+     */
+    protected _btnEdit: HTMLDivElement;
+
+    /**
      * Button sort
      * @protected
      */
@@ -131,20 +143,25 @@ export class SchemaTable extends BaseTable {
 
         // Buttons -----------------------------------------------------------------------------------------------------
 
-        const elBtn = document.createElement('div');
-        elBtn.classList.add(...['vts-schema-buttons']);
-        this._headline.appendChild(elBtn);
+        this._btnLineRight = document.createElement('div');
+        this._btnLineRight.classList.add(...['vts-schema-buttons']);
+        this._headline.appendChild(this._btnLineRight);
 
         // Button edit -------------------------------------------------------------------------------------------------
 
-        const elBtnEdit = document.createElement('div');
-        elBtnEdit.classList.add(...['vts-schema-edit-name', 'vts-schema-edit']);
-        elBtnEdit.title = 'Edit Schema';
-        elBtnEdit.addEventListener('click', () => {
+        this._btnEdit = document.createElement('div');
+        this._btnEdit.classList.add(...['vts-schema-edit-name', 'vts-schema-edit']);
+        this._btnEdit.title = 'Edit Schema';
+        this._btnEdit.addEventListener('click', () => {
+            if (this._readOnly) {
+                alert('Schema is readonly!');
+                return;
+            }
+
             this.openEditDialog();
         });
 
-        elBtn.appendChild(elBtnEdit);
+        this._btnLineRight.appendChild(this._btnEdit);
 
         // Button sorting ----------------------------------------------------------------------------------------------
 
@@ -152,6 +169,11 @@ export class SchemaTable extends BaseTable {
         this._btnSort.classList.add(...['vts-schema-sort-name']);
         this._btnSort.title = 'Sorting';
         this._btnSort.addEventListener('click', () => {
+            if (this._readOnly) {
+                alert('Schema is readonly!');
+                return;
+            }
+
             if (confirm('Do you want to sort the fields by name?')) {
                 this.sortingFields();
                 this.updateView();
@@ -159,7 +181,7 @@ export class SchemaTable extends BaseTable {
             }
         });
 
-        elBtn.appendChild(this._btnSort);
+        this._btnLineRight.appendChild(this._btnSort);
 
         // Button add --------------------------------------------------------------------------------------------------
 
@@ -167,16 +189,21 @@ export class SchemaTable extends BaseTable {
         this._btnAdd.classList.add(...['vts-schema-new-column', 'vts-schema-add']);
         this._btnAdd.title = 'Add Field';
         this._btnAdd.addEventListener('click', () => {
+            if (this._readOnly) {
+                alert('Schema is readonly!');
+                return;
+            }
+
             this._openNewColumnDialog();
         });
 
-        elBtn.appendChild(this._btnAdd);
+        this._btnLineRight.appendChild(this._btnAdd);
 
         // for connection
         const endpoint = document.createElement('div');
         endpoint.id = `endpoint-${this._unid}`;
         endpoint.classList.add('endpoint');
-        elBtn.appendChild(endpoint);
+        this._btnLineRight.appendChild(endpoint);
 
 
         // columns -----------------------------------------------------------------------------------------------------
@@ -204,6 +231,10 @@ export class SchemaTable extends BaseTable {
         this._table.addEventListener('dragover', e => {
             e.preventDefault();
 
+            if (this._readOnly) {
+                return;
+            }
+
             const type = e.dataTransfer?.getData('type');
 
             if (type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum) {
@@ -219,6 +250,10 @@ export class SchemaTable extends BaseTable {
             this._dropArea.classList.remove('hover');
             e.preventDefault();
 
+            if (this._readOnly) {
+                return;
+            }
+
             const type = e.dataTransfer?.getData('type');
 
             if (type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum) {
@@ -232,10 +267,40 @@ export class SchemaTable extends BaseTable {
     }
 
     /**
+     * Set read only
+     * @param {boolean} readonly
+     */
+    public override setReadOnly(readonly: boolean) {
+        super.setReadOnly(readonly);
+
+        for (const [, field] of this._fields.entries()) {
+            field.setReadOnly(readonly);
+        }
+
+        if (readonly) {
+            this._btnEdit.style.display = 'none';
+            this._btnAdd.style.display = 'none';
+            this._btnSort.style.display = 'none';
+            this._dropArea.style.display = 'none';
+        } else {
+            this._btnEdit.style.display = '';
+            this._btnAdd.style.display = '';
+            this._btnSort.style.display = '';
+            this._dropArea.style.display = '';
+        }
+    }
+
+    /**
      * open the edit dialog
      */
     public openEditDialog(): void {
+        if (this._readOnly) {
+            alert('Schema is readonly!');
+            return;
+        }
+
         const dialog = new SchemaTableDialog();
+
         dialog.show();
         dialog.setSchemaName(this._name);
         dialog.setExtendOptions(SchemaExtends.getInstance().getExtends([this._unid]));

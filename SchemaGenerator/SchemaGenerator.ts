@@ -166,6 +166,12 @@ export class SchemaGenerator {
         }
     }
 
+    /**
+     * Create enum register
+     * @param {string} file
+     * @param {JsonEnumDescription[]} enums
+     * @protected
+     */
     protected _createEnumRegister(file: string, enums: JsonEnumDescription[]): void {
         for (const aenum of enums) {
             this._fileRegister.set(aenum.name, file);

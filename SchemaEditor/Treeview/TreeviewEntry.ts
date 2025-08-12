@@ -2,7 +2,8 @@ import {EditorIcons} from '../Base/EditorIcons.js';
 import {EnumTable} from '../Enum/EnumTable.js';
 import {
     JsonDataFS,
-    JsonEnumDescription, JsonLinkDescription,
+    JsonEnumDescription,
+    JsonLinkDescription,
     JsonSchemaDescription,
     SchemaJsonDataFS,
     SchemaJsonDataFSIcon,
@@ -49,10 +50,22 @@ export class TreeviewEntry {
     protected _spanName: HTMLSpanElement;
 
     /**
-     * Id
+     * div button
      * @protected
      */
-    protected unid: string = '';
+    protected _divButtons: HTMLDivElement;
+
+    /**
+     * Unid
+     * @protected
+     */
+    protected _unid: string = '';
+
+    /**
+     * is the entry readonly
+     * @protected
+     */
+    protected _readonly: boolean = false;
 
     /**
      * Name
@@ -98,13 +111,23 @@ export class TreeviewEntry {
 
     /**
      * Constructor
-     * @param {string} id
+     * @param {string} unid
      * @param {string} name
      * @param {SchemaJsonDataFSType|string} type
      * @param {string} icon
      */
-    public constructor(id: string = '', name: string = 'Root', type: SchemaJsonDataFSType|string = SchemaJsonDataFSType.root, icon: string = '') {
-        this.unid = id;
+    public constructor(
+        unid: string = '',
+        name: string = 'Root',
+        type: SchemaJsonDataFSType|string = SchemaJsonDataFSType.root,
+        icon: string = ''
+    ) {
+        this._unid = unid;
+
+        if (type === SchemaJsonDataFSType.extern) {
+            this._readonly = true;
+        }
+
         this._ul = document.createElement('ul');
         this._liElement = document.createElement('li');
 
@@ -151,6 +174,9 @@ export class TreeviewEntry {
 
         this._spanName.addEventListener('click', clickSetActiv);
 
+        this._divButtons = document.createElement('div');
+        folderLine.appendChild(this._divButtons);
+
         // helper function ---------------------------------------------------------------------------------------------
 
         const getDialogTypes = (): Map<string, string> =>  {
@@ -179,11 +205,16 @@ export class TreeviewEntry {
 
         // add folder/file ---------------------------------------------------------------------------------------------
 
-        if (type === SchemaJsonDataFSType.root || type === SchemaJsonDataFSType.folder) {
+        if (type === SchemaJsonDataFSType.project || type === SchemaJsonDataFSType.folder) {
             const btnAdd = document.createElement('button');
             btnAdd.textContent = EditorIcons.add;
             btnAdd.classList.add('add-folder');
             btnAdd.addEventListener('click', () => {
+                if (this._readonly) {
+                    alert('Add new folder/file can not use by readonly!');
+                    return;
+                }
+
                 folderLine.classList.add('folder-line-hover');
 
                 const dialog = new TreeviewDialog();
@@ -205,7 +236,7 @@ export class TreeviewEntry {
                         tdialog.getIcon()
                     );
 
-                    this._list.set(entry.getId(), entry);
+                    this._list.set(entry.getUnid(), entry);
                     this._liElement.appendChild(entry.getElement());
 
                     folderLine.classList.remove('folder-line-hover');
@@ -220,7 +251,7 @@ export class TreeviewEntry {
                 });
             });
 
-            folderLine.appendChild(btnAdd);
+            this._divButtons.appendChild(btnAdd);
         }
 
         // add sorting -------------------------------------------------------------------------------------------------
@@ -232,7 +263,8 @@ export class TreeviewEntry {
             btnSorting.addEventListener('click', () => {
                 window.dispatchEvent(new CustomEvent('schemaeditor:sortingentrys', {}));
             });
-            folderLine.appendChild(btnSorting);
+
+            this._divButtons.appendChild(btnSorting);
         }
 
         // edit folder/file --------------------------------------------------------------------------------------------
@@ -242,6 +274,11 @@ export class TreeviewEntry {
             btnEdit.textContent = EditorIcons.edit;
             btnEdit.classList.add('add-folder');
             btnEdit.addEventListener('click', () => {
+                if (this._readonly) {
+                    alert('Edit folder/file can not use by readonly!');
+                    return;
+                }
+
                 folderLine.classList.add('folder-line-hover');
 
                 const dialog = new TreeviewDialog();
@@ -267,10 +304,10 @@ export class TreeviewEntry {
 
                 dialog.setOnClose(() => {
                     folderLine.classList.remove('folder-line-hover');
-                })
+                });
             });
 
-            folderLine.appendChild(btnEdit);
+            this._divButtons.appendChild(btnEdit);
         }
 
         // add button delete -------------------------------------------------------------------------------------------
@@ -285,13 +322,19 @@ export class TreeviewEntry {
             btnDelete.textContent = EditorIcons.delete;
             btnDelete.classList.add('delete-folder');
             btnDelete.addEventListener('click', () => {
+                if (this._readonly) {
+                    alert('Delete folder/file can not use by readonly!');
+                    return;
+                }
+
                 window.dispatchEvent(new CustomEvent('schemaeditor:deletefolderfile', {
                     detail: {
-                        id: this.getId()
+                        id: this.getUnid()
                     }
                 }));
-            })
-            folderLine.appendChild(btnDelete);
+            });
+
+            this._divButtons.appendChild(btnDelete);
         }
 
         // set draggable -----------------------------------------------------------------------------------------------
@@ -301,8 +344,16 @@ export class TreeviewEntry {
         {
             folderLine.draggable = true;
             folderLine.addEventListener('dragstart', e => {
+                if (this._readonly) {
+                    if (type === SchemaJsonDataFSType.file || type === SchemaJsonDataFSType.folder) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
+                }
+
                 e.dataTransfer?.setData('type', this.getType());
-                e.dataTransfer?.setData('id', this.getId());
+                e.dataTransfer?.setData('id', this.getUnid());
                 folderLine.classList.add('dragging');
 
                 if (this.getType() === SchemaJsonDataFSType.schema || this.getType() === SchemaJsonDataFSType.enum) {
@@ -312,7 +363,7 @@ export class TreeviewEntry {
                         const tables = activeEntry.getSchemaTables();
 
                         for (const table of tables) {
-                            if (this.getId() !== table.getUnid()) {
+                            if (this.getUnid() !== table.getUnid()) {
                                 table.showDropArea(true);
                             }
                         }
@@ -322,6 +373,12 @@ export class TreeviewEntry {
         }
 
         folderLine.addEventListener('dragover', e => {
+            if (this._readonly) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
             const type = e.dataTransfer?.getData('type');
 
             switch (this.getType()) {
@@ -360,6 +417,12 @@ export class TreeviewEntry {
         });
 
         folderLine.addEventListener('drop', e => {
+            if (this._readonly) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
             const type = e.dataTransfer?.getData('type');
 
             switch (this.getType()) {
@@ -370,7 +433,7 @@ export class TreeviewEntry {
                                 sourceType: type,
                                 destinationType: this.getType(),
                                 sourceId: e.dataTransfer?.getData('id'),
-                                detionationId: this.getId()
+                                detionationId: this.getUnid()
                             }
                         }));
                     }
@@ -383,7 +446,7 @@ export class TreeviewEntry {
                                 sourceType: type,
                                 destinationType: this.getType(),
                                 sourceId: e.dataTransfer?.getData('id'),
-                                detionationId: this.getId()
+                                detionationId: this.getUnid()
                             }
                         }));
                     }
@@ -417,6 +480,28 @@ export class TreeviewEntry {
      */
     public getElement(): HTMLUListElement {
         return this._ul;
+    }
+
+    /**
+     * Is this entry only read
+     * @return {boolean}
+     */
+    public isReadOnly(): boolean {
+        return this._readonly;
+    }
+
+    /**
+     * Set readonly
+     * @param {boolean} readOnly
+     */
+    public setReadOnly(readOnly: boolean): void {
+        this._readonly = readOnly;
+
+        if (this._readonly) {
+            this._divButtons.style.display = 'none';
+        } else {
+            this._divButtons.style.display = '';
+        }
     }
 
     /**
@@ -509,6 +594,14 @@ export class TreeviewEntry {
                 iconText = EditorIcons.root;
                 break;
 
+            case SchemaJsonDataFSType.project:
+                iconText = EditorIcons.project;
+                break;
+
+            case SchemaJsonDataFSType.extern:
+                iconText = EditorIcons.package;
+                break;
+
             case SchemaJsonDataFSType.folder:
                 iconText = EditorIcons.folder;
 
@@ -595,11 +688,11 @@ export class TreeviewEntry {
     }
 
     /**
-     * Get id
+     * Get unid
      * @return {string}
      */
-    public getId(): string {
-        return this.unid;
+    public getUnid(): string {
+        return this._unid;
     }
 
     /**
@@ -607,7 +700,11 @@ export class TreeviewEntry {
      * @param {TreeviewEntry} entry
      */
     public addEntry(entry: TreeviewEntry): void {
-        this._list.set(entry.getId(), entry);
+        if (this._type !== SchemaJsonDataFSType.root) {
+            entry.setReadOnly(this._readonly);
+        }
+
+        this._list.set(entry.getUnid(), entry);
         this._liElement.appendChild(entry.getElement());
     }
 
@@ -653,7 +750,7 @@ export class TreeviewEntry {
         // -------------------------------------------------------------------------------------------------------------
 
         return {
-            unid: this.unid,
+            unid: this._unid,
             name: this._name,
             type: this._type,
             icon: this._icon === '' ? undefined : this._icon,
@@ -670,7 +767,7 @@ export class TreeviewEntry {
      * @param {JsonDataFS} data
      */
     public setData(data: JsonDataFS): void {
-        this.unid = data.unid;
+        this._unid = data.unid;
         this.setType(data.type);
         this.setName(data.name);
 
@@ -726,9 +823,15 @@ export class TreeviewEntry {
      * @param {SchemaTable} table
      */
     public addSchemaTable(table: SchemaTable): void {
+        table.setReadOnly(this._readonly);
         this._tables.push(table);
 
-        const entry = new TreeviewEntry(table.getUnid(), table.getName(), SchemaJsonDataFSType.schema);
+        const entry = new TreeviewEntry(
+            table.getUnid(),
+            table.getName(),
+            SchemaJsonDataFSType.schema
+        );
+
         this.addEntry(entry);
     }
 
@@ -737,6 +840,7 @@ export class TreeviewEntry {
      * @param {EnumTable} table
      */
     public addEnumTable(table: EnumTable): void {
+        table.setReadOnly(this._readonly);
         this._enums.push(table);
 
         const entry = new TreeviewEntry(table.getUnid(), table.getName(), SchemaJsonDataFSType.enum);
@@ -802,14 +906,14 @@ export class TreeviewEntry {
 
     /**
      * Remove a Schema table
-     * @param {string} id
+     * @param {string} unid
      * @return {boolean}
      */
-    public removeSchemaTable(id: string): boolean {
+    public removeSchemaTable(unid: string): boolean {
         for (let i = 0; i < this._tables.length; i++) {
             const table = this._tables[i];
 
-            if (table.getUnid() === id) {
+            if (table.getUnid() === unid) {
                 table.remove();
                 this._tables.splice(i, 1);
                 return true;
@@ -817,7 +921,7 @@ export class TreeviewEntry {
         }
 
         for (const [, entry] of this._list.entries()) {
-            if (entry.removeSchemaTable(id)) {
+            if (entry.removeSchemaTable(unid)) {
                 return true;
             }
         }
@@ -827,14 +931,14 @@ export class TreeviewEntry {
 
     /**
      * Remove an enum table
-     * @param {string} id
+     * @param {string} unid
      * @return {boolean}
      */
-    public removeEnumTable(id: string): boolean {
+    public removeEnumTable(unid: string): boolean {
         for (let i = 0; i < this._enums.length; i++) {
             const table = this._enums[i];
 
-            if (table.getUnid() === id) {
+            if (table.getUnid() === unid) {
                 table.remove();
                 this._enums.splice(i, 1);
                 return true;
@@ -842,7 +946,7 @@ export class TreeviewEntry {
         }
 
         for (const [, entry] of this._list.entries()) {
-            if (entry.removeEnumTable(id)) {
+            if (entry.removeEnumTable(unid)) {
                 return true;
             }
         }
@@ -930,15 +1034,16 @@ export class TreeviewEntry {
 
     /**
      * Return the entry by id
-     * @param {string} id
+     * @param {string} unid
+     * @return {TreeviewEntry|null}
      */
-    public getEntryById(id: string): TreeviewEntry|null {
-        if (this.unid === id) {
+    public getEntryById(unid: string): TreeviewEntry|null {
+        if (this._unid === unid) {
             return this;
         }
 
         for (const [, enty] of this._list.entries()) {
-            const tentry = enty.getEntryById(id);
+            const tentry = enty.getEntryById(unid);
 
             if (tentry !== null) {
                 return tentry;
@@ -948,6 +1053,12 @@ export class TreeviewEntry {
         return null;
     }
 
+    /**
+     * has entry with
+     * @param {string} name
+     * @param {string} eType
+     * @return {boolean}
+     */
     public hasEntryWith(name: string, eType: string): boolean {
         for (const [, entry] of this._list.entries()) {
             if (entry.getName() === name && entry.getType() === eType) {
@@ -981,7 +1092,7 @@ export class TreeviewEntry {
      */
     public findEntry(unid: string): TreeviewEntry|null {
         for (const [, entry] of this._list.entries()) {
-            if (entry.getId() === unid) {
+            if (entry.getUnid() === unid) {
                 return this;
             }
 
@@ -1022,15 +1133,15 @@ export class TreeviewEntry {
 
     /**
      * splice an entry
-     * @param {string} id
+     * @param {string} unid
      * @return {TreeviewEntry|null}
      */
-    public spliceEntry(id: string): TreeviewEntry|null {
-        if (this._list.has(id)) {
-            const entry = this._list.get(id);
+    public spliceEntry(unid: string): TreeviewEntry|null {
+        if (this._list.has(unid)) {
+            const entry = this._list.get(unid);
 
             if (entry) {
-                this._list.delete(id);
+                this._list.delete(unid);
 
                 return entry;
             }
@@ -1056,11 +1167,11 @@ export class TreeviewEntry {
 
     /**
      * Splice a table
-     * @param {string} id
-     * @return SchemaTable|null
+     * @param {string} unid
+     * @return {SchemaTable|null}
      */
-    public spliceTable(id: string): SchemaTable|null {
-        const index = this._tables.findIndex(table => table.getUnid() === id);
+    public spliceTable(unid: string): SchemaTable|null {
+        const index = this._tables.findIndex(table => table.getUnid() === unid);
 
         if (index !== -1) {
             return this._tables.splice(index, 1)[0];
@@ -1072,7 +1183,7 @@ export class TreeviewEntry {
     /**
      * has table or enum name in this entry
      * @param {string} name
-     * @return boolean
+     * @return {boolean}
      */
     public hasTableOrEnumName(name: string): boolean {
         for (const table of this._tables) {
@@ -1107,11 +1218,11 @@ export class TreeviewEntry {
 
     /**
      * Splice a enum
-     * @param {string} id
+     * @param {string} unid
      * @return {EnumTable|null}
      */
-    public spliceEnum(id: string): EnumTable|null {
-        const index = this._enums.findIndex(table => table.getUnid() === id);
+    public spliceEnum(unid: string): EnumTable|null {
+        const index = this._enums.findIndex(table => table.getUnid() === unid);
 
         if (index !== -1) {
             return this._enums.splice(index, 1)[0];
@@ -1168,6 +1279,7 @@ export class TreeviewEntry {
     /**
      * Has a link object
      * @param {string} objectUnid
+     * @return {boolean}
      */
     public hasLinkObject(objectUnid: string): boolean {
         for (const link of this._links) {

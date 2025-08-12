@@ -29,6 +29,12 @@ export class SchemaTableField {
     protected _unid: string;
 
     /**
+     * Read only
+     * @protected
+     */
+    protected _readOnly: boolean = false;
+
+    /**
      * name
      * @protected
      */
@@ -68,6 +74,18 @@ export class SchemaTableField {
      * @protected
      */
     protected _contentType: HTMLSpanElement;
+
+    /**
+     * Button delete
+     * @protected
+     */
+    protected _btnDelete: HTMLDivElement;
+
+    /**
+     * Button edit
+     * @protected
+     */
+    protected _btnEdit: HTMLDivElement;
 
     /**
      * info icon wrapper
@@ -115,15 +133,20 @@ export class SchemaTableField {
 
         // delete button -----------------------------------------------------------------------------------------------
 
-        const btnDelete = document.createElement('div');
-        btnDelete.classList.add(...['vts-schema-table-column-delete', 'vts-schema-delete']);
-        btnDelete.addEventListener('click', () => {
+        this._btnDelete = document.createElement('div');
+        this._btnDelete.classList.add(...['vts-schema-table-column-delete', 'vts-schema-delete']);
+        this._btnDelete.addEventListener('click', () => {
+            if (this._readOnly) {
+                alert('Field can not delete by readonly!');
+                return;
+            }
+
             if (this._onDelete) {
                 this._onDelete(this);
             }
         });
 
-        this._column.appendChild(btnDelete);
+        this._column.appendChild(this._btnDelete);
 
         // content -----------------------------------------------------------------------------------------------------
 
@@ -151,9 +174,14 @@ export class SchemaTableField {
 
         // edit button -------------------------------------------------------------------------------------------------
 
-        const btnEdit = document.createElement('div');
-        btnEdit.classList.add(...['vts-schema-table-column-edit', 'vts-schema-edit']);
-        btnEdit.addEventListener('click', () => {
+        this._btnEdit = document.createElement('div');
+        this._btnEdit.classList.add(...['vts-schema-table-column-edit', 'vts-schema-edit']);
+        this._btnEdit.addEventListener('click', () => {
+            if (this._readOnly) {
+                alert('Field can not edit by readonly!');
+                return;
+            }
+
             const dialog = new SchemaTableFieldDialog();
             dialog.setFieldName(this._name);
             dialog.setFieldType(this._type);
@@ -172,7 +200,7 @@ export class SchemaTableField {
             });
         });
 
-        elBtn.appendChild(btnEdit);
+        elBtn.appendChild(this._btnEdit);
 
         // for connection
         this._endpoint = document.createElement('div');
@@ -333,6 +361,30 @@ export class SchemaTableField {
                     }
                 });
             }
+        }
+    }
+
+    /**
+     * Is table read only
+     * @return {boolean}
+     */
+    public isReadOnly(): boolean {
+        return this._readOnly;
+    }
+
+    /**
+     * Set the read only
+     * @param {boolean} readonly
+     */
+    public setReadOnly(readonly: boolean): void {
+        this._readOnly = readonly;
+
+        if (readonly) {
+            this._btnDelete.style.display = 'none';
+            this._btnEdit.style.display = 'none';
+        } else {
+            this._btnDelete.style.display = '';
+            this._btnEdit.style.display = '';
         }
     }
 

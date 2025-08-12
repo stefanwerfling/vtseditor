@@ -36,6 +36,12 @@ export class EnumTableValue {
     protected _value: string = '';
 
     /**
+     * Read only
+     * @protected
+     */
+    protected _readOnly: boolean = false;
+
+    /**
      * Span content name
      * @protected
      */
@@ -52,6 +58,18 @@ export class EnumTableValue {
      * @protected
      */
     protected _column: HTMLDivElement;
+
+    /**
+     * button delete
+     * @protected
+     */
+    protected _btnDelete: HTMLDivElement;
+
+    /**
+     * button edit
+     * @protected
+     */
+    protected _btnEdit: HTMLDivElement;
 
     /**
      * On Save
@@ -81,15 +99,15 @@ export class EnumTableValue {
 
         // delete button -----------------------------------------------------------------------------------------------
 
-        const btnDelete = document.createElement('div');
-        btnDelete.classList.add(...['vts-schema-table-column-delete', 'vts-schema-delete']);
-        btnDelete.addEventListener('click', () => {
+        this._btnDelete = document.createElement('div');
+        this._btnDelete.classList.add(...['vts-schema-table-column-delete', 'vts-schema-delete']);
+        this._btnDelete.addEventListener('click', () => {
             if (this._onDelete) {
                 this._onDelete(this);
             }
         });
 
-        this._column.appendChild(btnDelete);
+        this._column.appendChild(this._btnDelete);
 
         // content -----------------------------------------------------------------------------------------------------
 
@@ -111,9 +129,9 @@ export class EnumTableValue {
 
         // edit button -------------------------------------------------------------------------------------------------
 
-        const btnEdit = document.createElement('div');
-        btnEdit.classList.add(...['vts-schema-table-column-edit', 'vts-schema-edit']);
-        btnEdit.addEventListener('click', () => {
+        this._btnEdit = document.createElement('div');
+        this._btnEdit.classList.add(...['vts-schema-table-column-edit', 'vts-schema-edit']);
+        this._btnEdit.addEventListener('click', () => {
             const dialog = new EnumTableValueDialog();
 
             dialog.setName(this._name);
@@ -132,7 +150,7 @@ export class EnumTableValue {
             });
         });
 
-        elBtn.appendChild(btnEdit);
+        elBtn.appendChild(this._btnEdit);
     }
 
     /**
@@ -159,6 +177,30 @@ export class EnumTableValue {
      */
     public getName(): string {
         return this._name;
+    }
+
+    /**
+     * Is read only
+     * @return {boolean}
+     */
+    public isReadOnly(): boolean {
+        return this._readOnly;
+    }
+
+    /**
+     * Set read only
+     * @param {boolean} readonly
+     */
+    public setReadOnly(readonly: boolean): void {
+        this._readOnly = readonly;
+
+        if (readonly) {
+            this._btnDelete.style.display = 'none';
+            this._btnEdit.style.display = 'none';
+        } else {
+            this._btnDelete.style.display = '';
+            this._btnEdit.style.display = '';
+        }
     }
 
     /**
@@ -189,9 +231,7 @@ export class EnumTableValue {
     /**
      * Update view, create connection new/right on ui
      */
-    public updateView(): void {
-
-    }
+    public updateView(): void {}
 
     /**
      * Set on save
@@ -228,6 +268,10 @@ export class EnumTableValue {
         };
     }
 
+    /**
+     * Set data
+     * @param {JsonEnumValueDescription} data
+     */
     public setData(data: JsonEnumValueDescription): void {
         this._id = data.unid;
         this.setName(data.name);

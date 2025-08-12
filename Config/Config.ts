@@ -15,6 +15,7 @@ export const SchemaConfigProjectCode = Vts.object({
  * Schema config project
  */
 export const SchemaConfigProject = Vts.object({
+    name: Vts.optional(Vts.string()),
     schemaPath: Vts.string(),
     code: Vts.optional(SchemaConfigProjectCode),
     autoGenerate: Vts.optional(Vts.boolean()),
@@ -33,7 +34,7 @@ export const SchemaConfigServer = Vts.object({
  * Schema of Config
  */
 export const SchemaConfig = Vts.object({
-    project: SchemaConfigProject,
+    projects: Vts.array(SchemaConfigProject),
     editor: Vts.optional(Vts.null()),
     server: Vts.optional(SchemaConfigServer)
 });

@@ -166,7 +166,7 @@ export class LinkTable {
         return {
             unid: this._unid,
             pos: this._position,
-            link_unid: this._linkObject?.getUnid() ?? ''
+            link_unid: this._linkObject?.getUnid() ?? this._linkUnid
         };
     }
 

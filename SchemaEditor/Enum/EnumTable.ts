@@ -43,6 +43,18 @@ export class EnumTable extends BaseTable {
     protected _values: Map<string, EnumTableValue> = new Map<string, EnumTableValue>();
 
     /**
+     * button edit
+     * @protected
+     */
+    protected _btnEdit: HTMLDivElement;
+
+    /**
+     * Button add
+     * @protected
+     */
+    protected _btnAdd: HTMLDivElement;
+
+    /**
      * Constructor
      * @param {string} unid
      * @param {string} name
@@ -66,21 +78,26 @@ export class EnumTable extends BaseTable {
 
         // Button edit -------------------------------------------------------------------------------------------------
 
-        const elBtnEdit = document.createElement('div');
-        elBtnEdit.classList.add(...['vts-schema-edit-name', 'vts-schema-edit']);
-        elBtnEdit.title = 'Edit Enum';
-        elBtnEdit.addEventListener('click', () => {
+        this._btnEdit = document.createElement('div');
+        this._btnEdit.classList.add(...['vts-schema-edit-name', 'vts-schema-edit']);
+        this._btnEdit.title = 'Edit Enum';
+        this._btnEdit.addEventListener('click', () => {
+            if (this._readOnly) {
+                alert('Enum can not edit by readonly!');
+                return;
+            }
+
             this.openEditDialog();
         });
 
-        elBtn.appendChild(elBtnEdit);
+        elBtn.appendChild(this._btnEdit);
 
         // Button add --------------------------------------------------------------------------------------------------
 
-        const elBtnAdd = document.createElement('div');
-        elBtnAdd.classList.add(...['vts-schema-new-column', 'vts-schema-add']);
-        elBtnAdd.title = 'Add Value';
-        elBtnAdd.addEventListener('click', () => {
+        this._btnAdd = document.createElement('div');
+        this._btnAdd.classList.add(...['vts-schema-new-column', 'vts-schema-add']);
+        this._btnAdd.title = 'Add Value';
+        this._btnAdd.addEventListener('click', () => {
             const dialog = new EnumTableValueDialog();
             dialog.show();
             dialog.setOnConfirm(dialog1 => {
@@ -105,7 +122,7 @@ export class EnumTable extends BaseTable {
             });
         });
 
-        elBtn.appendChild(elBtnAdd);
+        elBtn.appendChild(this._btnAdd);
 
         // columns -----------------------------------------------------------------------------------------------------
 
@@ -117,6 +134,26 @@ export class EnumTable extends BaseTable {
         // -------------------------------------------------------------------------------------------------------------
 
         this._initJsPlumb();
+    }
+
+    /**
+     * Set read only
+     * @param {boolean} readonly
+     */
+    public override setReadOnly(readonly: boolean): void {
+        super.setReadOnly(readonly);
+
+        for (const [, value] of this._values.entries()) {
+            value.setReadOnly(readonly);
+        }
+
+        if (readonly) {
+            this._btnEdit.style.display = 'none';
+            this._btnAdd.style.display = 'none';
+        } else {
+            this._btnEdit.style.display = '';
+            this._btnAdd.style.display = '';
+        }
     }
 
     /**

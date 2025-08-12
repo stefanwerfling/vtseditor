@@ -1,6 +1,4 @@
 import path from 'path';
-import {SchemaErrors} from 'vts';
-import {JsonData, SchemaJsonData} from '../SchemaEditor/JsonData.js';
 import {SchemaFileUtil} from '../SchemaUtil/SchemaFileUtil.js';
 import {SchemaPathUtil} from '../SchemaUtil/SchemaPathUtil.js';
 import {SchemaPackageExtend} from './SchemaExternConfig.js';
@@ -11,7 +9,7 @@ import {SchemaPackageExtend} from './SchemaExternConfig.js';
 export type SchemaExternLoaderSchemaFile = {
     name: string;
     path: string;
-    schemas: JsonData
+    schemaFile: string;
 };
 
 /**
@@ -29,7 +27,7 @@ export class SchemaExternLoader {
      * List
      * @protected
      */
-    protected _list: SchemaExternLoaderSchemaFile[] = [];
+    protected _list: Map<string, SchemaExternLoaderSchemaFile> = new Map<string, SchemaExternLoaderSchemaFile>();
 
     /**
      * Constructor
@@ -37,6 +35,13 @@ export class SchemaExternLoader {
      */
     public constructor(rootPath: string) {
         this._rootPath = rootPath;
+    }
+
+    /**
+     * Return the list
+     */
+    public getList(): Map<string, SchemaExternLoaderSchemaFile> {
+        return this._list;
     }
 
     /**
@@ -66,23 +71,19 @@ export class SchemaExternLoader {
 
                             for (const schemaFile of vtseditor.schemaFiles) {
                                 const schemaFilePath = path.join(packageJsonPath, schemaFile);
-                                const schemacontent = await SchemaFileUtil.readJsonFile(schemaFilePath);
-                                const errors: SchemaErrors = [];
 
-                                if (SchemaJsonData.validate(schemacontent, errors)) {
-                                    this._list.push({
-                                        name: packetData.name,
-                                        path: packageJsonPath,
-                                        schemas: schemacontent
-                                    });
-                                } else {
-                                    console.log(`Schema file has wrong fromat (${packetData.name}): ${schemaFilePath}`);
-                                }
+                                this._list.set(crypto.randomUUID(), {
+                                    name: packetData.name,
+                                    path: packageJsonPath,
+                                    schemaFile: schemaFilePath
+                                });
+
+                                console.log(`Load node_module schema: ${packetData.name}`);
                             }
                         }
                     }
                 } catch (e) {
-                    console.log(`package.json can not read: ${packageFile}`);
+                    // console.log(`package.json can not read: ${packageFile}`);
                 }
             }
         }

@@ -1,7 +1,9 @@
 import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
+import {ProjectSave} from '../SchemaProject/SchemaProjectSave.js';
+import {ProjectsData, SchemaProjectsResponse} from '../SchemaProject/SchemaProjectsResponse.js';
 import {BaseTable} from './Base/BaseTable.js';
 import {EnumTable} from './Enum/EnumTable.js';
-import {JsonData, JsonDataFS, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js';
+import {JsonDataFS, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js';
 import jsPlumbInstance from './jsPlumbInstance.js';
 import {LinkTable} from './Link/LinkTable.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
@@ -301,10 +303,10 @@ export class SchemaEditor {
                 if (entry) {
                     if (entry.getType() === SchemaJsonDataFSType.file || entry.getType() === SchemaJsonDataFSType.folder) {
                         if (entry.isEmpty()) {
-                            const parentEntry = rootEntry.findParentEntry(entry.getId());
+                            const parentEntry = rootEntry.findParentEntry(entry.getUnid());
 
                             if (parentEntry) {
-                                parentEntry.removeEntry(entry.getId());
+                                parentEntry.removeEntry(entry.getUnid());
 
                                 window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {
                                     detail: {
@@ -325,8 +327,8 @@ export class SchemaEditor {
             const rootEntry = this._treeview?.getRoot();
 
             if (rootEntry) {
-                const activeEntryTableId = Treeview.getActivEntryTable()?.getId();
-                const activeEntryId = Treeview.getActiveEntry()?.getId();
+                const activeEntryTableId = Treeview.getActivEntryTable()?.getUnid();
+                const activeEntryId = Treeview.getActiveEntry()?.getUnid();
 
                 rootEntry.sortingEntrys();
                 this._updateTreeview();
@@ -403,10 +405,10 @@ export class SchemaEditor {
                 const activeEntry = Treeview.getActiveEntry();
 
                 if (activeEntry) {
-                    const activeEntryId = activeEntry.getId();
+                    const activeEntryId = activeEntry.getUnid();
 
                     if (entry && activeEntryId) {
-                        if (entry.getId() === activeEntryId) {
+                        if (entry.getUnid() === activeEntryId) {
                             const table = entry.getTableById(customEvent.detail.tableId);
 
                             if (table !== null) {
@@ -496,7 +498,7 @@ export class SchemaEditor {
         let entry = Treeview.getActiveEntry();
 
         if (entry !== null) {
-            const entryId = entry.getId();
+            const entryId = entry.getUnid();
 
             if (rootEntry) {
                 const pentry = rootEntry.findEntry(entryId);
@@ -514,7 +516,7 @@ export class SchemaEditor {
 
         if (entryTable !== null) {
             if (rootEntry) {
-                const tentry = rootEntry.findEntry(entryTable.getId());
+                const tentry = rootEntry.findEntry(entryTable.getUnid());
 
                 if (tentry) {
                     entry = tentry;
@@ -591,7 +593,7 @@ export class SchemaEditor {
                 tenum.updateView();
 
                 if (entryTable) {
-                    if (tenum.getUnid() === entryTable.getId()) {
+                    if (tenum.getUnid() === entryTable.getUnid()) {
                         tenum.setActivView(true);
                     } else {
                         tenum.setActivView(false);
@@ -608,7 +610,7 @@ export class SchemaEditor {
                 table.updateView();
 
                 if (entryTable) {
-                    if (table.getUnid() === entryTable.getId()) {
+                    if (table.getUnid() === entryTable.getUnid()) {
                         table.setActivView(true);
                     } else {
                         table.setActivView(false);
@@ -637,13 +639,60 @@ export class SchemaEditor {
      * Return the data
      * @return {JsonData}
      */
-    public getData(): JsonData {
-        return {
-            fs: this._treeview?.getData()!,
+    public getData(): ProjectsData {
+        const data: ProjectsData = {
+            projects: [],
+            extern: [],
             editor: {
                 controls_width: parseInt(this._controls!.style.width , 10) ?? 300
             }
         };
+
+        if (this._treeview) {
+            const treeviewData = this._treeview.getData();
+
+            if (treeviewData.type === SchemaJsonDataFSType.root) {
+                const entrys = treeviewData.entrys;
+
+                for (const aEntry of entrys) {
+                    if (SchemaJsonDataFS.validate(aEntry, [])) {
+                        if (aEntry.type === SchemaJsonDataFSType.project) {
+                            data.projects.push({
+                                unid: aEntry.unid,
+                                name: aEntry.name,
+                                fs: {
+                                    unid: 'root',
+                                    name: 'root',
+                                    istoggle: true,
+                                    icon: 'root',
+                                    type: SchemaJsonDataFSType.root,
+                                    entrys: aEntry.entrys,
+                                    schemas: [],
+                                    enums: []
+                                }
+                            });
+                        } else if (aEntry.type === SchemaJsonDataFSType.extern) {
+                            data.extern.push({
+                                unid: aEntry.unid,
+                                name: aEntry.name,
+                                fs: {
+                                    unid: 'root',
+                                    name: 'root',
+                                    istoggle: true,
+                                    icon: 'root',
+                                    type: SchemaJsonDataFSType.root,
+                                    entrys: aEntry.entrys,
+                                    schemas: [],
+                                    enums: []
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        return data;
     }
 
     /**
@@ -670,11 +719,52 @@ export class SchemaEditor {
 
     /**
      * Set data
-     * @param {JsonData} data
+     * @param {ProjectsResponse} data
      */
-    public setData(data: JsonData): void {
-        this._updateRegisters(data.fs);
-        this._treeview?.setData(data.fs);
+    public setData(data: ProjectsData): void {
+        const rootEntry: JsonDataFS = {
+            unid: 'root',
+            name: 'root',
+            istoggle: true,
+            icon: 'root',
+            type: SchemaJsonDataFSType.root,
+            entrys: [],
+            schemas: [],
+            enums: []
+        };
+
+        for (const project of data.projects) {
+            const projectEntry: JsonDataFS = {
+                unid: project.unid,
+                name: project.name,
+                istoggle: true,
+                icon: 'project',
+                type: SchemaJsonDataFSType.project,
+                entrys: project.fs.entrys,
+                schemas: [],
+                enums: []
+            };
+
+            rootEntry.entrys.push(projectEntry);
+        }
+
+        for (const extern of data.extern) {
+            const externEntry: JsonDataFS = {
+                unid: extern.unid,
+                name: extern.name,
+                istoggle: true,
+                icon: 'extern',
+                type: SchemaJsonDataFSType.extern,
+                entrys: extern.fs.entrys,
+                schemas: [],
+                enums: []
+            };
+
+            rootEntry.entrys.push(externEntry);
+        }
+
+        this._updateRegisters(rootEntry);
+        this._treeview?.setData(rootEntry);
 
         if (data.editor) {
             this._controls!.style.width = `${data.editor.controls_width}px`;
@@ -690,10 +780,14 @@ export class SchemaEditor {
      * Save data to vite server
      */
     public async saveData(): Promise<void> {
+        const save: ProjectSave = {
+            data: this.getData()
+        }
+
         await fetch('/api/save-schema', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(this.getData())
+            body: JSON.stringify(save)
         });
     }
 
@@ -707,9 +801,13 @@ export class SchemaEditor {
             throw new Error(`Can not load: ${response.statusText}`);
         }
 
-        const data = await response.json() as JsonData;
+        const projectResponse = await response.json();
 
-        this.setData(data);
+        if (SchemaProjectsResponse.validate(projectResponse, [])) {
+            this.setData(projectResponse.data);
+        } else {
+            alert('Schema response format is broken!');
+        }
     }
 
 }
