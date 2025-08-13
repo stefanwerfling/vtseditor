@@ -10,6 +10,7 @@ export type SchemaExternLoaderSchemaFile = {
     name: string;
     path: string;
     schemaFile: string;
+    schemaPrefix: string;
 };
 
 /**
@@ -69,13 +70,14 @@ export class SchemaExternLoader {
                         if (SchemaPackageExtend.validate(packetData, [])) {
                             const vtseditor = packetData.vtseditor;
 
-                            for (const schemaFile of vtseditor.schemaFiles) {
-                                const schemaFilePath = path.join(packageJsonPath, schemaFile);
+                            for (const aexport of vtseditor.exports) {
+                                const schemaFilePath = path.join(packageJsonPath, aexport.schemaFile);
 
                                 this._list.set(crypto.randomUUID(), {
                                     name: packetData.name,
                                     path: packageJsonPath,
-                                    schemaFile: schemaFilePath
+                                    schemaFile: schemaFilePath,
+                                    schemaPrefix: aexport.schemaPrefix
                                 });
 
                                 console.log(`Load node_module schema: ${packetData.name}`);

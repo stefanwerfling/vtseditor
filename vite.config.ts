@@ -130,6 +130,24 @@ function expressMiddleware(): Plugin {
                                 });
 
                                 try {
+                                    const externFiles = loader.getList();
+
+                                    for (const [, externSource] of externFiles.entries()) {
+                                        try {
+                                            if (fs.existsSync(externSource.schemaFile)) {
+                                                const content = fs.readFileSync(externSource.schemaFile, 'utf-8');
+                                                const schemaData = JSON.parse(content);
+
+                                                if (SchemaJsonData.validate(schemaData, [])) {
+                                                    gen.setExternSource(externSource, schemaData.fs);
+                                                }
+                                            }
+                                        } catch (e) {
+                                            console.log('Error: ');
+                                            console.log(e);
+                                        }
+                                    }
+
                                     gen.generate(schema.fs);
                                 } catch (e) {
                                     console.log(e);

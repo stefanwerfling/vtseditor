@@ -11,9 +11,12 @@ import {
     SchemaJsonSchemaFieldTypeArray,
     SchemaJsonSchemaFieldType
 } from '../SchemaEditor/JsonData.js';
+import {SchemaExternLoaderSchemaFile} from '../SchemaExtern/SchemaExternLoader.js';
 import {SchemaDescriptionUtil} from '../SchemaUtil/SchemaDescriptionUtil.js';
 import {SchemaPathUtil} from '../SchemaUtil/SchemaPathUtil.js';
+import {SchemaGeneratorExternRegister} from './SchemaGeneratorExternRegister.js';
 import {SchemaGeneratorIndexSort} from './SchemaGeneratorIndexSort.js';
+import {SchemaGeneratorRegister} from './SchemaGeneratorRegister.js';
 
 /**
  * Schema generator options
@@ -40,28 +43,23 @@ export class SchemaGenerator {
     protected _options: SchemaGeneratorOptions;
 
     /**
-     * File register
+     * Register
      * @protected
      */
-    protected _fileRegister: Map<string, string> = new Map<string, string>();
+    protected _register: SchemaGeneratorRegister|null = null;
 
     /**
-     * Id register
+     * Extern register
      * @protected
      */
-    protected _idRegister: Map<string, string> = new Map<string, string>();
-
-    /**
-     * List of enums
-     * @protected
-     */
-    protected _enumRegister: string[] = [];
+    protected _externRegister: SchemaGeneratorExternRegister = new SchemaGeneratorExternRegister();
 
     /**
      * file used schemas
+     * ID, SchemaName
      * @protected
      */
-    protected _fileUsedSchemas: string[] = [];
+    protected _fileUsedSchemas: Map<string, string> = new Map<string, string>();
 
     /**
      * constructor
@@ -69,6 +67,15 @@ export class SchemaGenerator {
      */
     public constructor(options: SchemaGeneratorOptions) {
         this._options = options;
+    }
+
+    /**
+     * Set an extern source
+     * @param {SchemaExternLoaderSchemaFile} source
+     * @param {JsonDataFS} data
+     */
+    public setExternSource(source: SchemaExternLoaderSchemaFile, data: JsonDataFS): void {
+        this._externRegister.setExtern(source.name, source.schemaPrefix, data);
     }
 
     /**
@@ -93,90 +100,17 @@ export class SchemaGenerator {
 
         console.info(`Generate file in: ${destPath}`);
 
-        this._createFileRegister(data.entrys);
+        this._register = new SchemaGeneratorRegister(
+            data,
+            this._options.schemaPrefix,
+            this._options.createTypes
+        );
+
         this._generateEntrys(destPath, data.entrys);
 
         if (this._options.createIndex) {
             console.info(`Generate index in: ${destPath}`);
             this._generateIndex(destPath);
-        }
-    }
-
-    /**
-     * Build name
-     * @param {string} name
-     * @return {string}
-     * @protected
-     */
-    protected _buildName(name: string): string {
-        return `${this._options.schemaPrefix}${name.trim()}`;
-    }
-
-    /**
-     * create file register
-     * @param {unknown[]} entrys
-     * @param {string} aPath
-     * @protected
-     */
-    protected _createFileRegister(entrys: unknown[], aPath: string = './'): void {
-        for (const entry of entrys) {
-            const errors: SchemaErrors = [];
-
-            if (SchemaJsonDataFS.validate(entry, errors)) {
-                switch (entry.type) {
-                    case SchemaJsonDataFSType.folder:
-                        const newPath = path.join(aPath, entry.name);
-                        this._createFileRegister(entry.entrys, newPath);
-
-                        break;
-
-                    case SchemaJsonDataFSType.file:
-                        const filePath = path.join(aPath, entry.name);
-                        this._createSchemaRegister(filePath, entry.schemas);
-                        this._createEnumRegister(filePath, entry.enums);
-                        break;
-                }
-            } else {
-                console.log('_createFileRegister:SchemaJsonDataFS: wrong schema!');
-            }
-        }
-    }
-
-    protected _createSchemaRegister(file: string, schemas: JsonSchemaDescription[]): void {
-        const sortedSchemas = SchemaGeneratorIndexSort.sortSchemas(schemas);
-
-        for (const schema of sortedSchemas) {
-            const schemaName = this._buildName(schema.name);
-
-            let allowedExport = true;
-
-            if (schema.options && schema.options.not_export) {
-                allowedExport = false;
-            }
-
-            if (allowedExport) {
-                this._fileRegister.set(schemaName, file);
-
-                if (this._options.createTypes) {
-                    this._fileRegister.set(schema.name.trim(), file);
-                }
-            }
-
-            this._idRegister.set(schema.unid, schemaName);
-        }
-    }
-
-    /**
-     * Create enum register
-     * @param {string} file
-     * @param {JsonEnumDescription[]} enums
-     * @protected
-     */
-    protected _createEnumRegister(file: string, enums: JsonEnumDescription[]): void {
-        for (const aenum of enums) {
-            this._fileRegister.set(aenum.name, file);
-            this._idRegister.set(aenum.unid, aenum.name);
-            this._enumRegister.push(aenum.unid);
         }
     }
 
@@ -231,8 +165,13 @@ export class SchemaGenerator {
         schemas: JsonSchemaDescription[],
         enums: JsonEnumDescription[]
     ): void {
+        if (this._register === null) {
+            console.log('Register is not init!');
+            return;
+        }
+
         // reset used schemas
-        this._fileUsedSchemas = [];
+        this._fileUsedSchemas.clear();
 
         let contentHeader = '';
         let content = '';
@@ -254,8 +193,31 @@ export class SchemaGenerator {
 
             contentHeader = 'import {ExtractSchemaResultType, Vts} from \'vts\';\r\n';
 
-            for (const schemaImport of this._fileUsedSchemas) {
-                const importPath = this._fileRegister.get(schemaImport);
+            const nameImportRegister: string[] = [];
+
+            const buildAliasName = (orgName: string, count: number = 1) => {
+                const newAliasName = `${orgName}${count}`;
+
+                if (nameImportRegister.indexOf(newAliasName) !== -1) {
+                    return buildAliasName(orgName, count++);
+                }
+
+                return newAliasName;
+            };
+
+            for (const [schemaUnid, schemaImport] of this._fileUsedSchemas.entries()) {
+                let importNameLine = schemaImport;
+
+                if (nameImportRegister.indexOf(schemaImport) !== -1) {
+                    const aliasName = buildAliasName(schemaImport);
+                    nameImportRegister.push(aliasName);
+
+                    importNameLine = `${schemaImport} as ${aliasName}`;
+                } else {
+                    nameImportRegister.push(schemaImport);
+                }
+
+                const importPath = this._register.getFileBySchemaName(schemaImport);
 
                 if (importPath) {
                     if (importPath !== relPath) {
@@ -264,7 +226,13 @@ export class SchemaGenerator {
                             `./${importPath}.js`
                         );
 
-                        contentHeader += `import {${schemaImport}} from '${relativImportPath}';\r\n`;
+                        contentHeader += `import {${importNameLine}} from '${relativImportPath}';\r\n`;
+                    }
+                } else {
+                    const externInfo = this._externRegister.findSchema(schemaUnid);
+
+                    if (externInfo) {
+                        contentHeader += `import {${importNameLine}} from '${externInfo.packageName}';\r\n`;
                     }
                 }
             }
@@ -320,7 +288,7 @@ export class SchemaGenerator {
         const sortedSchemas = SchemaGeneratorIndexSort.sortSchemas(schemas);
 
         for (const schema of sortedSchemas) {
-            const schemaName = this._buildName(schema.name);
+            const schemaName = this._register!.buildName(schema.name);
 
             if (content !== '') {
                 content += '\r\n\r\n';
@@ -387,16 +355,26 @@ export class SchemaGenerator {
             if (schema.extend === 'object') {
                 content += 'Vts.object({\r\n';
             } else {
-                const extendSchemaName = this._idRegister.get(schema.extend);
+                const extendSchemaName = this._register!.getSchemaNameByUnid(schema.extend);
 
                 if (extendSchemaName) {
-                    if (this._fileUsedSchemas.indexOf(extendSchemaName) === -1) {
-                        this._fileUsedSchemas.push(extendSchemaName);
+                    if (!this._fileUsedSchemas.has(schema.extend)) {
+                        this._fileUsedSchemas.set(schema.extend, extendSchemaName);
                     }
 
                     content += `${extendSchemaName}.extend({\r\n`;
                 } else {
-                    content += 'Vts.object({\r\n';
+                    const extendExternSchemaName = this._externRegister.findSchema(schema.extend);
+
+                    if (extendExternSchemaName) {
+                        if (!this._fileUsedSchemas.has(schema.extend)) {
+                            this._fileUsedSchemas.set(schema.extend, extendExternSchemaName.schemaName);
+                        }
+
+                        content += `${extendExternSchemaName.schemaName}.extend({\r\n`;
+                    } else {
+                        content += 'Vts.object({\r\n';
+                    }
                 }
             }
 
@@ -530,12 +508,12 @@ export class SchemaGenerator {
                 break;
 
             default:
-                const isEnum = this._enumRegister.indexOf(type.type) !== -1;
-                const tschemaName = this._idRegister.get(type.type);
+                const isEnum = this._register!.isUnidEnum(type.type);
+                const tschemaName = this._register!.getSchemaNameByUnid(type.type);
 
                 if (tschemaName) {
-                    if (this._fileUsedSchemas.indexOf(tschemaName) === -1) {
-                        this._fileUsedSchemas.push(tschemaName);
+                    if (!this._fileUsedSchemas.has(type.type)) {
+                        this._fileUsedSchemas.set(type.type, tschemaName);
                     }
 
                     if (isEnum) {
@@ -544,7 +522,21 @@ export class SchemaGenerator {
                         content += `${tschemaName}`;
                     }
                 } else {
-                    content += 'Vts.null()';
+                    const tExternSchemaName = this._externRegister.findSchema(type.type);
+
+                    if (tExternSchemaName) {
+                        if (!this._fileUsedSchemas.has(type.type)) {
+                            this._fileUsedSchemas.set(type.type, tExternSchemaName.schemaName);
+                        }
+
+                        if (tExternSchemaName.isEnum) {
+                            content += `Vts.enum(${tExternSchemaName.schemaName})`;
+                        } else {
+                            content += `${tExternSchemaName.schemaName}`;
+                        }
+                    } else {
+                        content += 'Vts.null()';
+                    }
                 }
         }
 
@@ -568,8 +560,8 @@ export class SchemaGenerator {
         const indexFile = path.join(aPath, 'index');
 
         const list: Map<string, string[]> = new Map<string, string[]>();
-
-        for (const [schemaName, file] of this._fileRegister) {
+        const files = this._register!.getFiles();
+        for (const [schemaName, file] of files.entries()) {
             let schemaList: string[] = [];
 
             if (list.has(file)) {

@@ -1,10 +1,18 @@
 import {Vts,ExtractSchemaResultType} from 'vts';
 
 /**
+ * Schema extern export
+ */
+export const SchemaExternExport = Vts.object({
+    schemaFile: Vts.string(),
+    schemaPrefix: Vts.string()
+});
+
+/**
  * Extern config
  */
 export const SchemaExternConfig = Vts.object({
-    schemaFiles: Vts.array(Vts.string()),
+    exports: Vts.array(SchemaExternExport),
 });
 
 export type ExternConfig = ExtractSchemaResultType<typeof SchemaExternConfig>;
