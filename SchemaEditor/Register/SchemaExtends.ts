@@ -22,10 +22,16 @@ export class SchemaExtends {
     }
 
     /**
-     * Map of complex extends
+     * Map of vts extends
      * @protected
      */
-    protected _mapComplexExtends: Map<string, string> = new Map<string, string>();
+    protected _mapVtsExtends: Map<string, string> = new Map<string, string>();
+
+    /**
+     * Map of vts simple extends
+     * @protected
+     */
+    protected _mapVtsSimpleExtends: Map<string, string> = new Map<string, string>();
 
     /**
      * Map of schema extends
@@ -37,8 +43,15 @@ export class SchemaExtends {
      * Constructor
      */
     public constructor() {
-        this._mapComplexExtends.set('object', 'Vts.object');
-        this._mapComplexExtends.set('object2', 'Vts.object2');
+        this._mapVtsExtends.set('object', 'Object');
+        this._mapVtsExtends.set('object2', 'Object2');
+        this._mapVtsSimpleExtends.set('string', 'String');
+        this._mapVtsSimpleExtends.set('number', 'Number');
+        this._mapVtsSimpleExtends.set('boolean', 'Boolean');
+        this._mapVtsSimpleExtends.set('null', 'Null');
+        this._mapVtsSimpleExtends.set('unknown', 'Unknown');
+        this._mapVtsSimpleExtends.set('date', 'Date');
+        this._mapVtsSimpleExtends.set('datestring', 'DateString');
     }
 
     /**
@@ -48,7 +61,8 @@ export class SchemaExtends {
      */
     protected _getAllExtends(): Map<string, string> {
         return new Map<string, string>([
-            ...this._mapComplexExtends,
+            ...this._mapVtsExtends,
+            ...this._mapVtsSimpleExtends,
             ...this._mapSchemaExtends
         ]);
     }
@@ -60,6 +74,33 @@ export class SchemaExtends {
      */
     public setExtend(uuid: string, name: string): void {
         this._mapSchemaExtends.set(uuid, name);
+    }
+
+    /**
+     * Return the Vts Types
+     * @return {Map<string, string>}
+     */
+    public getVtsTypes(): Map<string, string> {
+        return new Map<string, string>([
+            ...this._mapVtsExtends,
+            ...this._mapVtsSimpleExtends
+        ]);
+    }
+
+    /**
+     * Return the Vts simple Types
+     * @return {Map<string, string>}
+     */
+    public getVtsSimpleTypes(): Map<string, string> {
+        return this._mapVtsSimpleExtends;
+    }
+
+    /**
+     * Return the schema types
+     * @return {Map<string, string>}
+     */
+    public getSchemaTypes(): Map<string, string> {
+        return this._mapSchemaExtends;
     }
 
     /**

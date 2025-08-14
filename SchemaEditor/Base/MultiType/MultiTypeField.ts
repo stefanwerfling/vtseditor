@@ -13,6 +13,12 @@ export type MultiTypeFieldOnDelete = (unid: string) => void;
 export class MultiTypeField {
 
     /**
+     * Table unid
+     * @protected
+     */
+    protected _tableUnid: string;
+
+    /**
      * unid
      * @protected
      */
@@ -74,10 +80,12 @@ export class MultiTypeField {
 
     /**
      * constructor
+     * @param {string} tableUnid
      * @param {string} unid
      * @param {boolean} allowDelete
      */
-    public constructor(unid: string = '', allowDelete: boolean = false) {
+    public constructor(tableUnid: string, unid: string = '', allowDelete: boolean = false) {
+        this._tableUnid = tableUnid;
         this._unid = unid === '' ? crypto.randomUUID() : unid;
         this._divMainField = document.createElement('div');
         this._divMainField.classList.add('multitype-container');
@@ -122,7 +130,7 @@ export class MultiTypeField {
         valueContainer.classList.add(...['multitypefield-value']);
         this._divMainField.appendChild(valueContainer);
 
-        this._select = new TypeFieldSelect();
+        this._select = new TypeFieldSelect(tableUnid);
         this._select.setEventChange(value => {
             if (value === 'or') {
                 this._showMultiType();
@@ -190,7 +198,7 @@ export class MultiTypeField {
      */
     protected _showMultiType(): void {
         if (this._multiTypeGroup === null) {
-            this._multiTypeGroup = new MultiTypeGroup();
+            this._multiTypeGroup = new MultiTypeGroup(this._tableUnid);
             this._divMainField.appendChild(this._multiTypeGroup.getElement());
         }
 
@@ -237,6 +245,10 @@ export class MultiTypeField {
         return this._divMainField;
     }
 
+    /**
+     * Return the value
+     * @return {JsonSchemaFieldType}
+     */
     public getValue(): JsonSchemaFieldType {
         const isOr = this._select.getValue() === 'or';
         let types: JsonSchemaFieldType[] = [];
@@ -253,6 +265,10 @@ export class MultiTypeField {
         };
     }
 
+    /**
+     * Set the value
+     * @param {JsonSchemaFieldType} type
+     */
     public setValue(type: JsonSchemaFieldType): void {
         if (type.type === 'or') {
             this._showMultiType();

@@ -20,12 +20,6 @@ export class SchemaTableFieldDialog extends BaseDialog {
      */
     protected _multiType: MultiTypeField;
 
-    /**
-     * select Subtypes
-     * @protected
-     */
-    protected _selectSubTypes: HTMLSelectElement[] = [];
-
 
     /**
      * textarea description
@@ -35,8 +29,9 @@ export class SchemaTableFieldDialog extends BaseDialog {
 
     /**
      * constructor
+     * @param {string} tableUnid
      */
-    public constructor() {
+    public constructor(tableUnid: string) {
         super();
         this.setDialogTitle('Add/Edit Field');
 
@@ -61,7 +56,7 @@ export class SchemaTableFieldDialog extends BaseDialog {
         labelTypeM.textContent = 'Type';
         this._divBody.appendChild(labelTypeM);
 
-        this._multiType = new MultiTypeField();
+        this._multiType = new MultiTypeField(tableUnid);
         this._divBody.appendChild(this._multiType.getElement());
 
         // description -------------------------------------------------------------------------------------------------

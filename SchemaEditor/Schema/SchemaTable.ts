@@ -3,12 +3,13 @@ import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
 import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
+import {ExtendTypeBadge} from '../Base/ExtendType/ExtendTypeBadge.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../Register/SchemaExtends.js';
 import {
-    JsonSchemaDescription, JsonSchemaDescriptionOption,
+    JsonSchemaDescription, JsonSchemaDescriptionExtend, JsonSchemaDescriptionOption,
     JsonSchemaFieldDescription, JsonSchemaFieldType,
-    SchemaJsonDataFSType, SchemaJsonSchemaFieldType
+    SchemaJsonDataFSType, SchemaJsonSchemaDescriptionExtend, SchemaJsonSchemaFieldType
 } from '../JsonData.js';
 import {SchemaTypes} from '../Register/SchemaTypes.js';
 import {SchemaTableDialog} from './SchemaTableDialog.js';
@@ -47,13 +48,9 @@ export class SchemaTable extends BaseTable {
      * extend
      * @protected
      */
-    protected _extend: string = '';
-
-    /**
-     * values schema
-     * @protected
-     */
-    protected _valuesSchema: string = '';
+    protected _extend: JsonSchemaDescriptionExtend = {
+        type: 'object',
+    };
 
     /**
      * Description
@@ -98,12 +95,6 @@ export class SchemaTable extends BaseTable {
     protected _schemaExtend: HTMLSpanElement;
 
     /**
-     * Options
-     * @protected
-     */
-    protected _options: JsonSchemaDescriptionOption = {};
-
-    /**
      * columns
      * @protected
      */
@@ -125,12 +116,14 @@ export class SchemaTable extends BaseTable {
      * Constructor
      * @param {string} unid
      * @param {string} name
-     * @param {string} extend
+     * @param {JsonSchemaDescriptionExtend|null} extend
      */
-    public constructor(unid: string, name: string, extend: string = 'object') {
+    public constructor(unid: string, name: string, extend: JsonSchemaDescriptionExtend|null = null) {
         super(unid, name);
 
-        this._extend = extend;
+        if (extend) {
+            this._extend = extend;
+        }
 
         // update Schema Types
         SchemaTypes.getInstance().setType(this._unid, this._name);
@@ -213,7 +206,7 @@ export class SchemaTable extends BaseTable {
 
         this._table.appendChild(this._columns);
 
-        this.setExtend(extend);
+        this.setExtend(this._extend);
 
         // drop area ---------------------------------------------------------------------------------------------------
 
@@ -299,15 +292,11 @@ export class SchemaTable extends BaseTable {
             return;
         }
 
-        const dialog = new SchemaTableDialog();
+        const dialog = new SchemaTableDialog(this._unid);
 
         dialog.show();
         dialog.setSchemaName(this._name);
-        dialog.setExtendOptions(SchemaExtends.getInstance().getExtends([this._unid]));
-        dialog.setValuesSchemaOptions(SchemaExtends.getInstance().getExtends([this._unid], true));
         dialog.setSchemaExtend(this._extend);
-        dialog.setSchemaValuesSchema(this._valuesSchema);
-        dialog.setOptions(this._options);
         dialog.setDescription(this._description);
         dialog.setOnConfirm(tdialog => {
             const dialog1 = tdialog as unknown as SchemaTableDialog;
@@ -321,9 +310,7 @@ export class SchemaTable extends BaseTable {
 
             this.setName(schemaName);
             this.setExtend(dialog1.getSchemaExtend());
-            this.setValuesSchema(dialog1.getSchemaValuesSchema());
             this._description = dialog1.getDescription();
-            this._options = dialog1.getOptions();
 
             SchemaExtends.getInstance().setExtend(this._unid, this._name);
 
@@ -360,7 +347,7 @@ export class SchemaTable extends BaseTable {
      * @protected
      */
     protected _openNewColumnDialog(type: string|null = null): void {
-        const dialog = new SchemaTableFieldDialog();
+        const dialog = new SchemaTableFieldDialog(this._unid);
         dialog.show();
 
         if (type !== null) {
@@ -468,45 +455,29 @@ export class SchemaTable extends BaseTable {
 
     /**
      * Set extend
-     * @param {string} extend
+     * @param {JsonSchemaDescriptionExtend} extend
      */
-    public setExtend(extend: string): void {
-        const extendName = SchemaExtends.getInstance().getExtendNameBy(extend);
+    public setExtend(extend: JsonSchemaDescriptionExtend): void {
         this._extend = extend;
-        this._schemaExtend.textContent = `${extendName}`;
+        this._updateViewExtend();
+    }
 
-        if (SchemaExtends.getInstance().isExtendASchema(this._extend)) {
-            this._schemaExtend.classList.add(...['vts-badge-wh-2']);
-        } else {
-            this._schemaExtend.classList.add(...['vts-badge-wh-1']);
-        }
+    protected _updateViewExtend(): void {
+        const isSchema = SchemaExtends.getInstance().isExtendASchema(this._extend.type);
 
-        if (this._extend === 'object2') {
-            this._btnSort.style.display = 'none';
-            this._btnAdd.style.display = 'none';
-            this._columns.style.display = 'none';
-        } else {
+        if (this._extend.type === 'object' || isSchema) {
             this._btnSort.style.display = '';
             this._btnAdd.style.display = '';
             this._columns.style.display = '';
+        } else {
+            this._btnSort.style.display = 'none';
+            this._btnAdd.style.display = 'none';
+            this._columns.style.display = 'none';
         }
-    }
 
-    /**
-     * Set values schema
-     * @param {string} valuesSchema
-     */
-    public setValuesSchema(valuesSchema: string): void {
-        const valuesSchemaName = SchemaExtends.getInstance().getExtendNameBy(valuesSchema);
-        this._valuesSchema = valuesSchema;
-
-        if (this._extend === 'object2') {
-            const span = document.createElement('span');
-            span.classList.add(...['vts-badge-wh-6']);
-            span.textContent = `${valuesSchemaName}`;
-
-            this._schemaExtend.appendChild(span);
-        }
+        const badge = new ExtendTypeBadge(this._extend);
+        this._schemaExtend.innerHTML = '';
+        this._schemaExtend.appendChild(badge.getElement());
     }
 
     /**
@@ -522,6 +493,7 @@ export class SchemaTable extends BaseTable {
             field.updateView();
         }
 
+        this._updateViewExtend();
         this.updateConnection();
     }
 
@@ -535,12 +507,14 @@ export class SchemaTable extends BaseTable {
 
         let connectId = '';
 
-        if (this._extend === 'object2') {
-            if (SchemaExtends.getInstance().isExtendASchema(this._valuesSchema)) {
-                connectId = this._valuesSchema;
+        if (this._extend.type === 'object2') {
+            if (this._extend.values_schema) {
+                if (SchemaExtends.getInstance().isExtendASchema(this._extend.values_schema)) {
+                    connectId = this._extend.values_schema;
+                }
             }
-        } else if (SchemaExtends.getInstance().isExtendASchema(this._extend)) {
-            connectId = this._extend;
+        } else if (SchemaExtends.getInstance().isExtendASchema(this._extend.type)) {
+            connectId = this._extend.type;
         }
 
         if (connectId !== '') {
@@ -603,8 +577,6 @@ export class SchemaTable extends BaseTable {
             unid: this._unid,
             name: this._name,
             extend: this._extend,
-            values_schema: this._valuesSchema,
-            options: this._options,
             pos: this._position,
             fields: fields,
             description: this._description
@@ -618,15 +590,15 @@ export class SchemaTable extends BaseTable {
     public setData(data: JsonSchemaDescription): void {
         this._unid = data.unid;
         this.setName(data.name);
-        this.setExtend(data.extend);
 
-        if (data.values_schema) {
-            this.setValuesSchema(data.values_schema);
+        if (SchemaJsonSchemaDescriptionExtend.validate(data.extend, [])) {
+            this.setExtend(data.extend);
+        } else {
+            this.setExtend(this._extend);
         }
 
         this.addFields(data.fields);
         this.setPosition(data.pos.x, data.pos.y);
-        this._options = data.options ?? {};
         this._description = data.description;
     }
 
@@ -654,7 +626,7 @@ export class SchemaTable extends BaseTable {
      * @return {boolean}
      */
     public isSchemaTableUse(id: string): boolean {
-        if (this._extend === id) {
+        if (this._extend.type === id) {
             return true;
         }
 

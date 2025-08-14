@@ -1,6 +1,7 @@
 import {SchemaNameUtil} from '../../SchemaUtil/SchemaNameUtil.js';
 import {BaseDialog} from '../Base/BaseDialog.js';
-import {JsonSchemaDescriptionOption} from '../JsonData.js';
+import {ExtendType} from '../Base/ExtendType/ExtendType.js';
+import {JsonSchemaDescriptionExtend} from '../JsonData.js';
 
 /**
  * Schema table dialog
@@ -17,31 +18,7 @@ export class SchemaTableDialog extends BaseDialog {
      * Select Extend
      * @protected
      */
-    protected _selectExtend: HTMLSelectElement;
-
-    /**
-     * Row div values schema
-     * @protected
-     */
-    protected _rowDivValuesSchema: HTMLDivElement;
-
-    /**
-     * Select values schema
-     * @protected
-     */
-    protected _selectValuesSchema: HTMLSelectElement;
-
-    /**
-     * Checkbox Ignore additional items
-     * @protected
-     */
-    protected _checkboxIai: HTMLInputElement;
-
-    /**
-     * Checkbox not export
-     * @protected
-     */
-    protected _checkboxNotExport: HTMLInputElement;
+    protected _selectExtend: ExtendType;
 
     /**
      * textarea description
@@ -51,8 +28,9 @@ export class SchemaTableDialog extends BaseDialog {
 
     /**
      * constructor
+     * @param {string} tableUnid
      */
-    public constructor() {
+    public constructor(tableUnid: string) {
         super();
         this.setDialogTitle('Edit Schema');
 
@@ -77,75 +55,9 @@ export class SchemaTableDialog extends BaseDialog {
         labelExtend.textContent = 'Extend';
         this._divBody.appendChild(labelExtend);
 
-        this._selectExtend = document.createElement('select');
-        this._selectExtend.classList.add('dialog-select');
-        this._selectExtend.addEventListener('change', (event) => {
-            const target = event.target as HTMLSelectElement;
+        this._selectExtend = new ExtendType(tableUnid);
 
-            this._visableValuesSchema(target.value === 'object2');
-        });
-
-        this._divBody.appendChild(this._selectExtend);
-
-        // values schema -----------------------------------------------------------------------------------------------
-
-        this._rowDivValuesSchema = document.createElement('div');
-        this._rowDivValuesSchema.classList.add('.dialog-column');
-        this._divBody.appendChild(this._rowDivValuesSchema);
-        this._rowDivValuesSchema.style.display = 'none';
-        this._divBody.appendChild(this._rowDivValuesSchema);
-
-        const labelValuesSchema = document.createElement('div');
-        labelValuesSchema.classList.add('dialog-label');
-        labelValuesSchema.textContent = 'Values Schema';
-        this._rowDivValuesSchema.appendChild(labelValuesSchema);
-
-        this._selectValuesSchema = document.createElement('select');
-        this._selectValuesSchema.classList.add('dialog-select');
-        this._rowDivValuesSchema.appendChild(this._selectValuesSchema);
-
-        // optional ----------------------------------------------------------------------------------------------------
-
-        const wrapper = document.createElement('div');
-        wrapper.classList.add('dialog-row');
-        wrapper.style.display = 'flex';
-        wrapper.style.gap = '24px';
-
-        // ignore additional items -------------------------------------------------------------------------------------
-
-        // --- ignore additional items Checkbox ---
-        const labelIai = document.createElement('label');
-        labelIai.classList.add('dialog-label');
-        labelIai.textContent = 'Ignore additional items';
-        labelIai.style.display = 'flex';
-        labelIai.style.alignItems = 'center';
-        labelIai.style.gap = '6px';
-
-        this._checkboxIai = document.createElement('input');
-        this._checkboxIai.type = 'checkbox';
-        this._checkboxIai.classList.add('dialog-checkbox');
-
-        labelIai.prepend(this._checkboxIai);
-        wrapper.appendChild(labelIai);
-
-        // --- not export Checkbox ---
-        const labelNotExport = document.createElement('label');
-        labelNotExport.classList.add('dialog-label');
-        labelNotExport.textContent = 'Not export';
-        labelNotExport.style.display = 'flex';
-        labelNotExport.style.alignItems = 'center';
-        labelNotExport.style.gap = '6px';
-
-        this._checkboxNotExport = document.createElement('input');
-        this._checkboxNotExport.type = 'checkbox';
-        this._checkboxNotExport.classList.add('dialog-checkbox');
-
-        labelNotExport.prepend(this._checkboxNotExport);
-        wrapper.appendChild(labelNotExport);
-
-        // ---
-
-        this._divBody.appendChild(wrapper);
+        this._divBody.appendChild(this._selectExtend.getElement());
 
         // description -------------------------------------------------------------------------------------------------
 
@@ -159,51 +71,6 @@ export class SchemaTableDialog extends BaseDialog {
         this._textareaDescription.rows = 8;
 
         this._divBody.appendChild(this._textareaDescription);
-    }
-
-    /**
-     * Visable values schema setting
-     * @param {boolean} visable
-     * @protected
-     */
-    protected _visableValuesSchema(visable: boolean): void {
-        if (visable) {
-            this._rowDivValuesSchema.style.display = '';
-        } else {
-            this._rowDivValuesSchema.style.display = 'none';
-        }
-    }
-
-    /**
-     * Set types options
-     * @param {Map<string, string>} options
-     */
-    public setExtendOptions(options: Map<string, string>): void {
-        this._selectExtend.innerHTML = '';
-
-        for (const [typeName, typeValue] of options.entries()) {
-            const option = document.createElement('option');
-            option.value = typeName;
-            option.textContent = typeValue;
-
-            this._selectExtend.appendChild(option);
-        }
-    }
-
-    /**
-     * Set schemas
-     * @param {Map<string, string>} options
-     */
-    public setValuesSchemaOptions(options: Map<string, string>): void {
-        this._selectValuesSchema.innerHTML = '';
-
-        for (const [typeName, typeValue] of options.entries()) {
-            const option = document.createElement('option');
-            option.value = typeName;
-            option.textContent = typeValue;
-
-            this._selectValuesSchema.appendChild(option);
-        }
     }
 
     /**
@@ -224,38 +91,18 @@ export class SchemaTableDialog extends BaseDialog {
 
     /**
      * Return schema extend
-     * @return {string}
+     * @return {JsonSchemaDescriptionExtend}
      */
-    public getSchemaExtend(): string {
-        return this._selectExtend.value;
+    public getSchemaExtend(): JsonSchemaDescriptionExtend {
+        return this._selectExtend.getValue();
     }
 
     /**
-     * Set schema extend
-     * @param {string} extend
+     * Set the schema extend
+     * @param {JsonSchemaDescriptionExtend} extend
      */
-    public setSchemaExtend(extend: string): void {
-        if (extend === 'object2') {
-            this._visableValuesSchema(true);
-        }
-
-        this._selectExtend.value = extend;
-    }
-
-    /**
-     * Return the values schema
-     * @return {string}
-     */
-    public getSchemaValuesSchema(): string {
-        return this._selectValuesSchema.value;
-    }
-
-    /**
-     * Set the values schema
-     * @param {string} valuesSchema
-     */
-    public setSchemaValuesSchema(valuesSchema: string): void {
-        this._selectValuesSchema.value = valuesSchema;
+    public setSchemaExtend(extend: JsonSchemaDescriptionExtend) {
+        this._selectExtend.setValue(extend);
     }
 
     /**
@@ -272,26 +119,6 @@ export class SchemaTableDialog extends BaseDialog {
      */
     public getDescription(): string {
         return this._textareaDescription.value;
-    }
-
-    /**
-     * Set options
-     * @param {JsonSchemaDescriptionOption} option
-     */
-    public setOptions(option: JsonSchemaDescriptionOption): void {
-        this._checkboxIai.checked = option.ignore_additional_items ?? false;
-        this._checkboxNotExport.checked = option.not_export ?? false;
-    }
-
-    /**
-     * Return the options
-     * @return {JsonSchemaDescriptionOption}
-     */
-    public getOptions(): JsonSchemaDescriptionOption {
-        return {
-            ignore_additional_items: this._checkboxIai.checked,
-            not_export: this._checkboxNotExport.checked
-        };
     }
 
 }

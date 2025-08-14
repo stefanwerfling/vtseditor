@@ -79,26 +79,45 @@ export class SchemaTypes {
 
     /**
      * Return the schema types
+     * @param {string[]|null} excludeKey
      * @return {Map<string, string>}
      */
-    public getSchemaTypes(): Map<string, string> {
+    public getSchemaTypes(excludeKey: string[]|null = null): Map<string, string> {
+        if (excludeKey) {
+            return new Map(
+                Array.from(this._mapSchemaTypes.entries()).filter(([key]) => excludeKey.indexOf(key) === -1)
+            );
+        }
+
         return this._mapSchemaTypes;
     }
 
     /**
      * Return the enum types
+     * @param {string[]|null} excludeKey
      * @return {Map<string, string>}
      */
-    public getEnumTypes(): Map<string, string> {
+    public getEnumTypes(excludeKey: string[]|null = null): Map<string, string> {
+        if (excludeKey) {
+            return new Map(
+                Array.from(this._mapEnumTypes.entries()).filter(([key]) => excludeKey.indexOf(key) === -1)
+            );
+        }
+
         return this._mapEnumTypes;
     }
 
     /**
      * Return all types
      * @param {string} excludeKey
+     * @param {boolean} onlySchemas
      */
-    public getTypes(excludeKey: string[]|null = null): Map<string, string> {
-        const allTypes = this._getAllTypes();
+    public getTypes(excludeKey: string[]|null = null, onlySchemas: boolean = false): Map<string, string> {
+        let allTypes = this._getAllTypes();
+
+        if (onlySchemas) {
+            allTypes = this._mapSchemaTypes;
+        }
 
         if (excludeKey) {
             return new Map(

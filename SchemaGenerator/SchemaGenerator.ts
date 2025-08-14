@@ -9,7 +9,7 @@ import {
     SchemaJsonDataFS,
     JsonSchemaFieldType,
     SchemaJsonSchemaFieldTypeArray,
-    SchemaJsonSchemaFieldType
+    SchemaJsonSchemaFieldType, SchemaJsonSchemaDescriptionExtend
 } from '../SchemaEditor/JsonData.js';
 import {SchemaExternLoaderSchemaFile} from '../SchemaExtern/SchemaExternLoader.js';
 import {SchemaDescriptionUtil} from '../SchemaUtil/SchemaDescriptionUtil.js';
@@ -310,6 +310,11 @@ export class SchemaGenerator {
      * @protected
      */
     protected _writeSchema(schemaName: string, schema: JsonSchemaDescription): string {
+        if (!SchemaJsonSchemaDescriptionExtend.validate(schema.extend, [])) {
+            // old format can not support
+            return '';
+        }
+
         let content = '';
 
         if (this._options.code_comment) {
@@ -329,46 +334,72 @@ export class SchemaGenerator {
 
         let strExport = 'export';
 
-        if (schema.options && schema.options.not_export) {
+        if (schema.extend.options && schema.extend.options.not_export) {
             strExport = '';
         }
 
         content += `${strExport} const ${schemaName} = `;
 
-        if (schema.extend === 'object2') {
-            content += 'Vts.object2(';
-            content += this._writeType({
-                type: 'string',
-                optional: false,
-                array: false,
-                types: []
-            });
-            content += `, ${this._writeType({
-                type: schema.values_schema ?? 'unknown',
-                optional: false,
-                array: false,
-                types: []
-            })}`;
+        let isObject = false;
 
-            content += ');';
-        } else {
-            if (schema.extend === 'object') {
+        switch (schema.extend.type) {
+            case 'string':
+            case 'number':
+            case 'boolean':
+            case 'null':
+            case 'unknown':
+            case 'date':
+            case 'datestring':
+                content += `${this._writeType({
+                    type: schema.extend.type ?? 'unknown',
+                    optional: false,
+                    array: false,
+                    types: [],
+                }, SchemaDescriptionUtil.validateDescription(schema.description))}`;
+                content += ';';
+
+                break;
+
+            case 'object2':
+                content += 'Vts.object2(';
+                content += this._writeType({
+                    type: 'string',
+                    optional: false,
+                    array: false,
+                    types: []
+                });
+
+                content += `, ${this._writeType({
+                    type: schema.extend.values_schema ?? 'unknown',
+                    optional: false,
+                    array: false,
+                    types: []
+                })}`;
+
+                content += ');';
+                break;
+
+            case 'object':
+                isObject = true;
                 content += 'Vts.object({\r\n';
-            } else {
-                const extendSchemaName = this._register!.getSchemaNameByUnid(schema.extend);
+                break;
+
+            default:
+                isObject = true;
+                const extendSchemaName = this._register!.getSchemaNameByUnid(schema.extend.type);
 
                 if (extendSchemaName) {
-                    if (!this._fileUsedSchemas.has(schema.extend)) {
-                        this._fileUsedSchemas.set(schema.extend, extendSchemaName);
+                    if (!this._fileUsedSchemas.has(schema.extend.type)) {
+                        this._fileUsedSchemas.set(schema.extend.type, extendSchemaName);
                     }
 
                     content += `${extendSchemaName}.extend({\r\n`;
                 } else {
-                    const extendExternSchemaName = this._externRegister.findSchema(schema.extend);
+                    const extendExternSchemaName = this._externRegister.findSchema(schema.extend.type);
 
                     if (extendExternSchemaName) {
-                        if (!this._fileUsedSchemas.has(schema.extend)) {
-                            this._fileUsedSchemas.set(schema.extend, extendExternSchemaName.schemaName);
+                        if (!this._fileUsedSchemas.has(schema.extend.type)) {
+                            this._fileUsedSchemas.set(schema.extend.type, extendExternSchemaName.schemaName);
                         }
 
                         content += `${extendExternSchemaName.schemaName}.extend({\r\n`;
@@ -376,8 +407,12 @@ export class SchemaGenerator {
                         content += 'Vts.object({\r\n';
                     }
                 }
-            }
+                break;
+        }
 
+        // -------------------------------------------------------------------------------------------------------------
+
+        if (isObject) {
             for (const field of schema.fields) {
                 if (SchemaJsonSchemaFieldType.validate(field.type, [])) {
                     content += `${this._options.code_indent}${field.name}: `;
@@ -396,10 +431,10 @@ export class SchemaGenerator {
 
             content += `${this._options.code_indent}description: '${SchemaDescriptionUtil.validateDescription(schema.description)}',\r\n`;
 
-            if (schema.options) {
+            if (schema.extend.options) {
                 const contentOption: string[] = [];
 
-                if (schema.options.ignore_additional_items) {
+                if (schema.extend.options.ignore_additional_items) {
                     contentOption.push(`${this._options.code_indent}${this._options.code_indent}ignoreAdditionalItems: true`);
                 }
 
@@ -415,6 +450,8 @@ export class SchemaGenerator {
             content += '}';
             content += ');';
         }
+
+        // -------------------------------------------------------------------------------------------------------------
 
         if (this._options.createTypes) {
 

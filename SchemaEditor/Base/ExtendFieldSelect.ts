@@ -1,25 +1,24 @@
-import './TypeFieldSelect.css';
-import {SchemaTypes} from '../Register/SchemaTypes.js';
+import './ExtendFieldSelect.css';
+import {SchemaExtends} from '../Register/SchemaExtends.js';
 import {EditorIcons} from './EditorIcons.js';
 
 /**
- * Type field select category
+ * Extend field select category
  */
-export enum TypeFieldSelectCategory {
+export enum ExtendFieldSelectCategory {
     'vtstype' = 'vtstype',
     'schema' = 'schema',
-    'enum' = 'enum'
 }
 
 /**
- * Type field select event change
+ * Extend field select event change
  */
-export type TypeFieldSelectEventChange = (value: string) => void;
+export type ExtendFieldSelectEventChange = (value: string) => void;
 
 /**
- * TypeSelect
+ * ExtendFieldSelect
  */
-export class TypeFieldSelect {
+export class ExtendFieldSelect {
 
     /**
      * wrapper element
@@ -67,7 +66,7 @@ export class TypeFieldSelect {
      * current seleted category
      * @protected
      */
-    protected _currentCategory: TypeFieldSelectCategory|string = TypeFieldSelectCategory.vtstype;
+    protected _currentCategory: ExtendFieldSelectCategory|string = ExtendFieldSelectCategory.vtstype;
 
     /**
      * Options data
@@ -85,60 +84,52 @@ export class TypeFieldSelect {
      * on change
      * @protected
      */
-    protected _onChange: TypeFieldSelectEventChange|null = null;
+    protected _onChange: ExtendFieldSelectEventChange|null = null;
 
-    /**
+        /**
      * Constructor
-     * @param {string} tableUnid
      */
-    public constructor(tableUnid: string) {
+    public constructor(tableUnid: string, withoutComplexVTS: boolean = false) {
         // wrapper
         this._divSelect = document.createElement('div');
-        this._divSelect.classList.add('typefield-select-wrapper');
+        this._divSelect.classList.add('extendfield-select-wrapper');
 
         // toggle
         this._divToggle = document.createElement('div');
-        this._divToggle.classList.add('typefield-select-toggle');
+        this._divToggle.classList.add('extendfield-select-toggle');
         this._divToggle.textContent = 'Please select...';
 
         this._divSelect.appendChild(this._divToggle);
 
         // main
         this._divMain = document.createElement('div');
-        this._divMain.classList.add('typefield-select');
+        this._divMain.classList.add('extendfield-select');
         this._divSelect.appendChild(this._divMain);
 
         // headers -----------------------------------------------------------------------------------------------------
         this._divHeaders = document.createElement('div');
-        this._divHeaders.classList.add('typefield-select-headers');
+        this._divHeaders.classList.add('extendfield-select-headers');
         this._divMain.appendChild(this._divHeaders);
 
         // header select -----------------------------------------------------------------------------------------------
         const selectType = document.createElement('div');
-        selectType.classList.add(...['typefield-section-header', 'active']);
+        selectType.classList.add(...['extendfield-section-header', 'active']);
         selectType.textContent = `${EditorIcons.vts} VTS Type`;
-        selectType.setAttribute('data-category', TypeFieldSelectCategory.vtstype);
+        selectType.setAttribute('data-category', ExtendFieldSelectCategory.vtstype);
 
         this._divHeaders.appendChild(selectType);
 
         const selectSchema = document.createElement('div');
-        selectSchema.classList.add(...['typefield-section-header']);
+        selectSchema.classList.add(...['extendfield-section-header']);
         selectSchema.textContent = `${EditorIcons.schema} Schema`;
-        selectSchema.setAttribute('data-category', TypeFieldSelectCategory.schema);
+        selectSchema.setAttribute('data-category', ExtendFieldSelectCategory.schema);
 
         this._divHeaders.appendChild(selectSchema);
-
-        const selectEnum = document.createElement('div');
-        selectEnum.classList.add(...['typefield-section-header']);
-        selectEnum.textContent = `${EditorIcons.enum} Enum`;
-        selectEnum.setAttribute('data-category', TypeFieldSelectCategory.enum);
-
-        this._divHeaders.appendChild(selectEnum);
 
         // search box --------------------------------------------------------------------------------------------------
 
         this._divSearch = document.createElement('div');
-        this._divSearch.classList.add('typefield-search-box');
+        this._divSearch.classList.add('extendfield-search-box');
 
         this._divMain.appendChild(this._divSearch);
 
@@ -151,7 +142,7 @@ export class TypeFieldSelect {
         // options -----------------------------------------------------------------------------------------------------
 
         this._divOptions = document.createElement('div');
-        this._divOptions.classList.add('typefield-options');
+        this._divOptions.classList.add('extendfield-options');
 
         this._divMain.appendChild(this._divOptions);
 
@@ -160,45 +151,30 @@ export class TypeFieldSelect {
         this._registerEvents();
 
         // add options
-        this.setOptions(SchemaTypes.getInstance().getVtsTypes(), TypeFieldSelectCategory.vtstype);
-        this.setOptions(SchemaTypes.getInstance().getSchemaTypes([tableUnid]), TypeFieldSelectCategory.schema);
-        this.setOptions(SchemaTypes.getInstance().getEnumTypes([tableUnid]), TypeFieldSelectCategory.enum);
+        if (withoutComplexVTS) {
+            this.setOptions(SchemaExtends.getInstance().getVtsSimpleTypes(), ExtendFieldSelectCategory.vtstype);
+        } else {
+            this.setOptions(SchemaExtends.getInstance().getVtsTypes(), ExtendFieldSelectCategory.vtstype);
+        }
+
+        this.setOptions(SchemaExtends.getInstance().getExtends([tableUnid], true), ExtendFieldSelectCategory.schema);
     }
 
     /**
-     * Register events
-     * @protected
+     * Return the wrapper element
+     * @return {HTMLDivElement}
      */
-    protected _registerEvents(): void {
-        const headers = this._divHeaders.querySelectorAll('.typefield-section-header');
+    public getElement(): HTMLDivElement {
+        return this._divSelect;
+    }
 
-        headers.forEach(header => {
-            header.addEventListener('click', () => {
-                headers.forEach(h => h.classList.remove('active'));
-                header.classList.add('active');
-
-                this._currentCategory = header.getAttribute('data-category') ?? TypeFieldSelectCategory.vtstype;
-                this._inputSearch.value = '';
-
-                this._renderOptions();
-            });
-        });
-
-        this._inputSearch.addEventListener('input', () => {
-            this._renderOptions(this._inputSearch.value);
-        });
-
-        this._divToggle.addEventListener('click', () => {
-            this._divMain.classList.toggle('open');
-            this._renderOptions(this._inputSearch.value);
-        });
-
-        document.addEventListener('click', (e) => {
-            const target = e.target;
-            if (target instanceof HTMLElement && !target.closest('.typefield-select-wrapper')) {
-                this._divMain.classList.remove('open');
-            }
-        });
+    /**
+     * Set options
+     * @param {Map<string, string>} data
+     * @param {ExtendFieldSelectCategory|string} category
+     */
+    public setOptions(data: Map<string, string>, category: ExtendFieldSelectCategory|string): void {
+        this._optionsData.set(category, data);
     }
 
     /**
@@ -218,16 +194,12 @@ export class TypeFieldSelect {
         let icon = EditorIcons.vts;
 
         switch (this._currentCategory) {
-            case TypeFieldSelectCategory.vtstype:
+            case ExtendFieldSelectCategory.vtstype:
                 icon = EditorIcons.vts;
                 break;
 
-            case TypeFieldSelectCategory.schema:
+            case ExtendFieldSelectCategory.schema:
                 icon = EditorIcons.schema;
-                break;
-
-            case TypeFieldSelectCategory.enum:
-                icon = EditorIcons.enum;
                 break;
         }
 
@@ -268,20 +240,47 @@ export class TypeFieldSelect {
     }
 
     /**
-     * Return the wrapper element
-     * @return {HTMLDivElement}
+     * Register events
+     * @protected
      */
-    public getElement(): HTMLDivElement {
-        return this._divSelect;
+    protected _registerEvents(): void {
+        const headers = this._divHeaders.querySelectorAll('.extendfield-section-header');
+
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                headers.forEach(h => h.classList.remove('active'));
+                header.classList.add('active');
+
+                this._currentCategory = header.getAttribute('data-category') ?? ExtendFieldSelectCategory.vtstype;
+                this._inputSearch.value = '';
+
+                this._renderOptions();
+            });
+        });
+
+        this._inputSearch.addEventListener('input', () => {
+            this._renderOptions(this._inputSearch.value);
+        });
+
+        this._divToggle.addEventListener('click', () => {
+            this._divMain.classList.toggle('open');
+            this._renderOptions(this._inputSearch.value);
+        });
+
+        document.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target instanceof HTMLElement && !target.closest('.extendfield-select-wrapper')) {
+                this._divMain.classList.remove('open');
+            }
+        });
     }
 
     /**
-     * Set options
-     * @param {Map<string, string>} data
-     * @param {TypeFieldSelectCategory|string} category
+     * Set event change
+     * @param {ExtendFieldSelectEventChange|null} change
      */
-    public setOptions(data: Map<string, string>, category: TypeFieldSelectCategory|string): void {
-        this._optionsData.set(category, data);
+    public setEventChange(change: ExtendFieldSelectEventChange|null): void {
+        this._onChange = change;
     }
 
     /**
@@ -302,15 +301,14 @@ export class TypeFieldSelect {
                 const title = options.get(id)!;
 
                 let icon = EditorIcons.vts;
+
                 switch (category) {
-                    case TypeFieldSelectCategory.vtstype:
+                    case ExtendFieldSelectCategory.vtstype:
                         icon = EditorIcons.vts;
                         break;
-                    case TypeFieldSelectCategory.schema:
+
+                    case ExtendFieldSelectCategory.schema:
                         icon = EditorIcons.schema;
-                        break;
-                    case TypeFieldSelectCategory.enum:
-                        icon = EditorIcons.enum;
                         break;
                 }
 
@@ -328,13 +326,4 @@ export class TypeFieldSelect {
         this._inputSearch.value = '';
         this._renderOptions();
     }
-
-    /**
-     * Set event change
-     * @param {TypeFieldSelectEventChange|null} change
-     */
-    public setEventChange(change: TypeFieldSelectEventChange|null): void {
-        this._onChange = change;
-    }
-
 }

@@ -7,6 +7,8 @@ import {MultiTypeField} from './MultiTypeField.js';
  */
 export class MultiTypeGroup {
 
+    protected _tableUnid: string;
+
     /**
      * div builder
      * @protected
@@ -51,8 +53,11 @@ export class MultiTypeGroup {
 
     /**
      * Constructor
+     * @param {tableUnid} tableUnid
      */
-    public constructor() {
+    public constructor(tableUnid: string) {
+        this._tableUnid = tableUnid;
+
         this._divBuilder = document.createElement('div');
         this._divBuilder.classList.add('multitype-wrapper');
 
@@ -106,7 +111,7 @@ export class MultiTypeGroup {
      * @param {JsonSchemaFieldType|null} value
      */
     public addField(value: JsonSchemaFieldType|null = null): void {
-        const field = new MultiTypeField('', true);
+        const field = new MultiTypeField(this._tableUnid, '', true);
 
         if (value !== null) {
             field.setValue(value);

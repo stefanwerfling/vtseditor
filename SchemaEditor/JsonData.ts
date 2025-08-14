@@ -100,17 +100,35 @@ export type JsonSchemaDescriptionOption = ExtractSchemaResultType<typeof SchemaJ
 // ---------------------------------------------------------------------------------------------------------------------
 
 /**
+ * Schema json schema description extend
+ */
+export const SchemaJsonSchemaDescriptionExtend = Vts.object({
+    type: Vts.string(),
+    values_schema: Vts.optional(Vts.string()),
+    options: Vts.optional(SchemaJsonSchemaDescriptionOption),
+});
+
+/**
+ * Type of schema json schema description extend
+ */
+export type JsonSchemaDescriptionExtend = ExtractSchemaResultType<typeof SchemaJsonSchemaDescriptionExtend>;
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
  * Schema json schema description
  */
 export const SchemaJsonSchemaDescription = Vts.object({
     unid: Vts.string(),
     name: Vts.string(),
-    extend: Vts.string(),
-    values_schema: Vts.optional(Vts.string()),
-    options: Vts.optional(SchemaJsonSchemaDescriptionOption),
+    extend: Vts.or([SchemaJsonSchemaDescriptionExtend, Vts.string()]),
     pos: SchemaJsonSchemaPositionDescription,
     fields: Vts.array(SchemaJsonSchemaFieldDescription),
     description: Vts.string()
+}, {
+    objectSchema: {
+        ignoreAdditionalItems: true
+    }
 });
 
 /**

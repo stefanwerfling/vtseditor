@@ -119,12 +119,12 @@ export class SchemaTableField {
 
     /**
      * Constructor
-     * @param {string} tableId
+     * @param {string} tableUnid
      * @param {string} unid
      * @param {string} name
      * @param {JsonSchemaFieldType|null} type
      */
-    public constructor(tableId: string, unid: string, name: string, type: JsonSchemaFieldType|null = null) {
+    public constructor(tableUnid: string, unid: string, name: string, type: JsonSchemaFieldType|null = null) {
         this._unid = unid;
 
         this._column = document.createElement('div');
@@ -182,7 +182,7 @@ export class SchemaTableField {
                 return;
             }
 
-            const dialog = new SchemaTableFieldDialog();
+            const dialog = new SchemaTableFieldDialog(tableUnid);
             dialog.setFieldName(this._name);
             dialog.setFieldType(this._type);
             dialog.setDescription(this._description);
