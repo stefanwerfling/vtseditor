@@ -20,11 +20,14 @@
     "express": "^5.1.0",
     "normalize.css": "^8.0.1",
     "vite-plugin-express": "^1.0.3",
+    "vite": "7.0.4",
     "vts": "github:OpenSourcePKG/vts"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
-    "typescript": "^5.8.3",
-    "vite": "7.0.4"
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
