@@ -465,7 +465,7 @@ export class SchemaTable extends BaseTable {
     protected _updateViewExtend(): void {
         const isSchema = SchemaExtends.getInstance().isExtendASchema(this._extend.type);
 
-        if (this._extend.type === 'object' || isSchema) {
+        if ((this._extend.type === 'object' || isSchema) && !this._readOnly) {
             this._btnSort.style.display = '';
             this._btnAdd.style.display = '';
             this._columns.style.display = '';
