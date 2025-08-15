@@ -2,7 +2,11 @@
 
 # VTS & VTS-Editor
 
-[![Discord](https://img.shields.io/discord/1347133593578766369.svg?label=Discord&logo=discord&color=5865F2&logoColor=white)](https://discord.gg/52PQ2mbWQD) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stefanwerfling/vtseditor)
+[![Discord](https://img.shields.io/discord/1347133593578766369.svg?label=Discord&logo=discord&color=5865F2&logoColor=white)](https://discord.gg/52PQ2mbWQD) 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stefanwerfling/vtseditor) 
+![Node Version](https://img.shields.io/badge/Node-%3E%3D%2020-green)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
+![Version](https://img.shields.io/badge/Version-Beta%201.0.1-orange)
 
 <hr>
 
@@ -39,6 +43,7 @@ With the editor, you can:
 * 💾 Export/import schemas as JSON
 * 🔍 Get an overview of schema structure and dependencies at a glance.
 * ⚙️ Automatically generate TypeScript schema and type files
+* ✅ Drag and Drop
 
 This is especially useful for large projects, team collaboration, or when sharing schema definitions with non-developers.
 
@@ -49,8 +54,11 @@ This is especially useful for large projects, team collaboration, or when sharin
 #### Schema with Extend
 <img src="doc/images/screenshot2.png" alt="Screenshot 2" width="450px" />
 
-#### Schema field edit
+#### Schema edit
 <img src="doc/images/screenshot_edit1.png" alt="Screenshot Edit 1" width="450px" />
+
+#### Schema field edit
+<img src="doc/images/screenshot_edit2.png" alt="Screenshot Edit 2" width="450px" />
 
 ### Install
 
@@ -86,6 +94,9 @@ This is especially useful for large projects, team collaboration, or when sharin
   ],
   "server": {
     "port": 5173
+  },
+  "browser": {
+    "open": true
   }
 }
 ```
