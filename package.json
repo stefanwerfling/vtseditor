@@ -1,33 +1,34 @@
 {
-  "name": "vtseditor",
-  "version": "1.0.0",
-  "description": "VTS Editor",
-  "type": "module",
+  "author": "Stefan Werfling",
   "bin": {
     "vtseditor": "./cli/dev.js"
   },
-  "scripts": {
-    "dev": "node ./cli/dev.js"
-  },
-  "keywords": [
-    "vts",
-    "editor"
-  ],
-  "author": "Stefan Werfling",
-  "license": "ISC",
   "dependencies": {
     "@jsplumb/browser-ui": "6.2.10",
     "express": "^5.1.0",
     "normalize.css": "^8.0.1",
-    "vite-plugin-express": "^1.0.3",
+    "open": "^8.4.0",
     "vite": "7.0.4",
+    "vite-plugin-express": "^1.0.3",
     "vts": "github:OpenSourcePKG/vts"
   },
+  "description": "VTS Editor",
   "devDependencies": {
     "@types/express": "^5.0.3",
     "typescript": "^5.8.3"
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "keywords": [
+    "vts",
+    "editor"
+  ],
+  "license": "ISC",
+  "name": "vtseditor",
+  "scripts": {
+    "dev": "node ./cli/dev.js"
+  },
+  "type": "module",
+  "version": "1.0.0"
 }

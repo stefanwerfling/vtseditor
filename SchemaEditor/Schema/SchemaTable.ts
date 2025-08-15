@@ -7,7 +7,7 @@ import {ExtendTypeBadge} from '../Base/ExtendType/ExtendTypeBadge.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../Register/SchemaExtends.js';
 import {
-    JsonSchemaDescription, JsonSchemaDescriptionExtend, JsonSchemaDescriptionOption,
+    JsonSchemaDescription, JsonSchemaDescriptionExtend,
     JsonSchemaFieldDescription, JsonSchemaFieldType,
     SchemaJsonDataFSType, SchemaJsonSchemaDescriptionExtend, SchemaJsonSchemaFieldType
 } from '../JsonData.js';

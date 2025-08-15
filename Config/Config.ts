@@ -31,12 +31,20 @@ export const SchemaConfigServer = Vts.object({
 });
 
 /**
+ * Schema of config browser
+ */
+export const SchemaConfigBrowser = Vts.object({
+    open: Vts.boolean()
+});
+
+/**
  * Schema of Config
  */
 export const SchemaConfig = Vts.object({
     projects: Vts.array(SchemaConfigProject),
     editor: Vts.optional(Vts.null()),
-    server: Vts.optional(SchemaConfigServer)
+    server: Vts.optional(SchemaConfigServer),
+    browser: Vts.optional(SchemaConfigBrowser)
 });
 
 /**
