@@ -30,3 +30,17 @@ export const SchemaPackageExtend = Vts.object({
 })
 
 export type PackageExtend = ExtractSchemaResultType<typeof SchemaPackageExtend>;
+
+/**
+ * Schema own Package
+ */
+export const SchemaOwnPackage = Vts.object({
+    name: Vts.string(),
+    workspaces: Vts.optional(Vts.array(Vts.string()))
+}, {
+    objectSchema: {
+        ignoreAdditionalItems: true
+    }
+});
+
+export type OwnPackage = ExtractSchemaResultType<typeof SchemaOwnPackage>;

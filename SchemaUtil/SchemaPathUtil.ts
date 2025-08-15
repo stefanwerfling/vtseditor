@@ -38,6 +38,19 @@ export class SchemaPathUtil {
     }
 
     /**
+     * Exist a file
+     * @param {string} file
+     * @return {boolean}
+     */
+    public static async fileExist(file: string): Promise<boolean> {
+        try {
+            return (await stat(file)).isFile();
+        } catch (e) {
+            return false;
+        }
+    }
+
+    /**
      * Read files by path
      * @param {string} dir
      * @param {boolean} recursive

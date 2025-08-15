@@ -1,7 +1,7 @@
 import path from 'path';
 import {SchemaFileUtil} from '../SchemaUtil/SchemaFileUtil.js';
 import {SchemaPathUtil} from '../SchemaUtil/SchemaPathUtil.js';
-import {SchemaPackageExtend} from './SchemaExternConfig.js';
+import {SchemaOwnPackage, SchemaPackageExtend} from './SchemaExternConfig.js';
 
 /**
  * Schema extern loader schemafile
@@ -46,10 +46,12 @@ export class SchemaExternLoader {
     }
 
     /**
-     * scan
+     * Scan modules path
+     * @param {string} rootPath
+     * @protected
      */
-    public async scan(): Promise<void> {
-        let nodeModulesPath = path.join(this._rootPath, 'node_modules');
+    protected async _scanModulesPath(rootPath: string): Promise<void> {
+        let nodeModulesPath = path.join(rootPath, 'node_modules');
 
         if (!await SchemaPathUtil.directoryExist(nodeModulesPath)) {
             throw new Error('Node modules directory not found!');
@@ -89,6 +91,44 @@ export class SchemaExternLoader {
                 }
             }
         }
+    }
+
+    /**
+     * Scan project
+     * @param {string} rootPath
+     * @protected
+     */
+    protected async _scanProject(rootPath: string): Promise<void> {
+        const projectPackage = path.join(rootPath, 'package.json');
+
+        if (!await SchemaPathUtil.fileExist(projectPackage)) {
+            throw new Error('Project "package.json" not found!');
+        }
+
+        try {
+            const packetData = await SchemaFileUtil.readJsonFile(projectPackage);
+
+            if (SchemaOwnPackage.validate(packetData, [])) {
+                await this._scanModulesPath(rootPath);
+
+                if (packetData.workspaces) {
+                    for await (const workspace of packetData.workspaces) {
+                        const workspacePath = path.join(rootPath, workspace);
+
+                        await this._scanProject(workspacePath);
+                    }
+                }
+            }
+        } catch (e) {
+            // console.log(`package.json can not read: ${projectPackage}`);
+        }
+    }
+
+    /**
+     * scan
+     */
+    public async scan(): Promise<void> {
+        await this._scanProject(this._rootPath);
     }
 
 }
