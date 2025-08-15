@@ -228,7 +228,7 @@ export class ExtendFieldSelect {
             }
         }
 
-        const headers = this._divHeaders.querySelectorAll('.typefield-section-header');
+        const headers = this._divHeaders.querySelectorAll('.extendfield-section-header');
         headers.forEach(header => {
             const headerCategory = header.getAttribute('data-category');
 
