@@ -12,12 +12,34 @@ export const SchemaConfigProjectCode = Vts.object({
 });
 
 /**
+ * Schema config projekt scripts script
+ */
+export const SchemaConfigProjectScriptsScript = Vts.object({
+    script: Vts.string(),
+    path: Vts.string()
+});
+
+/**
+ * Type config project scripts script
+ */
+export type ConfigProjectScriptsScript = ExtractSchemaResultType<typeof SchemaConfigProjectScriptsScript>;
+
+/**
+ * Schema config project scripts
+ */
+export const SchemaConfigProjectScripts = Vts.object({
+    before_generate: Vts.optional(Vts.array(SchemaConfigProjectScriptsScript)),
+    after_generate: Vts.optional(Vts.array(SchemaConfigProjectScriptsScript))
+});
+
+/**
  * Schema config project
  */
 export const SchemaConfigProject = Vts.object({
     name: Vts.optional(Vts.string()),
     schemaPath: Vts.string(),
     code: Vts.optional(SchemaConfigProjectCode),
+    scripts: Vts.optional(SchemaConfigProjectScripts),
     autoGenerate: Vts.optional(Vts.boolean()),
     destinationPath: Vts.optional(Vts.string()),
     destinationClear: Vts.optional(Vts.boolean()),

@@ -11,6 +11,7 @@ import {SchemaGenerator} from './SchemaGenerator/SchemaGenerator.js';
 import {SchemaProject} from './SchemaProject/SchemaProject.js';
 import {SchemaProjectSave} from './SchemaProject/SchemaProjectSave.js';
 import {ProjectsData, ProjectsResponse} from './SchemaProject/SchemaProjectsResponse.js';
+import {SchemaScript} from './SchemaScript/SchemaScript.js';
 
 
 /**
@@ -47,7 +48,9 @@ function expressMiddleware(): Plugin {
                             destinationPath: path.resolve('schemas', 'src'),
                             destinationClear: false,
                             codeComment: false,
-                            codeIndent: '    '
+                            codeIndent: '    ',
+                            scripts_before_generate: [],
+                            scripts_after_generate: []
                         };
 
                         project.name = aSchemaProject.name ?? project.name;
@@ -70,6 +73,26 @@ function expressMiddleware(): Plugin {
                             project.createIndex = pcode.createIndex ?? project.createIndex;
                             project.codeComment = pcode.codeComment ?? project.codeComment;
                             project.codeIndent = pcode.codeIndent ?? project.codeIndent;
+                        }
+
+                        if (aSchemaProject.scripts) {
+                            if (aSchemaProject.scripts.before_generate) {
+                                for (const script of aSchemaProject.scripts.before_generate) {
+                                    project.scripts_before_generate.push({
+                                        script: script.script,
+                                        path: script.path
+                                    });
+                                }
+                            }
+
+                            if (aSchemaProject.scripts.after_generate) {
+                                for (const script of aSchemaProject.scripts.after_generate) {
+                                    project.scripts_after_generate.push({
+                                        script: script.script,
+                                        path: script.path
+                                    });
+                                }
+                            }
                         }
 
                         console.log(`VTS Project: ${project.name}`);
@@ -148,7 +171,11 @@ function expressMiddleware(): Plugin {
                                         }
                                     }
 
+                                    SchemaScript.run(projectOption.scripts_before_generate).then();
+
                                     gen.generate(schema.fs);
+
+                                    SchemaScript.run(projectOption.scripts_after_generate).then();
                                 } catch (e) {
                                     console.log(e);
                                 }
@@ -162,7 +189,9 @@ function expressMiddleware(): Plugin {
                 res.status(200).json({ success: true });
             });
 
-            app.get('/api/load-schema', (req, res) => {
+            // ---------------------------------------------------------------------------------------------------------
+
+            app.get('/api/load-schema', (_req, res) => {
                 const projectsData: ProjectsData = {
                     projects: [],
                     extern: [],
