@@ -166,7 +166,10 @@ function expressMiddleware(): Plugin {
                 const projectsData: ProjectsData = {
                     projects: [],
                     extern: [],
-                    editor: null
+                    editor: {
+                        // default
+                        controls_width: 300
+                    }
                 };
 
                 // load projects schemas -------------------------------------------------------------------------------

@@ -644,7 +644,7 @@ export class SchemaEditor {
             projects: [],
             extern: [],
             editor: {
-                controls_width: parseInt(this._controls!.style.width , 10) ?? 300
+                controls_width: parseInt(this._controls!.style.width , 10) || 300
             }
         };
 

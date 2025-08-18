@@ -6,7 +6,7 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stefanwerfling/vtseditor) 
 ![Node Version](https://img.shields.io/badge/Node-%3E%3D%2020-green)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
-![Version](https://img.shields.io/badge/Version-Beta%201.0.1-orange)
+![Version](https://img.shields.io/badge/Version-Beta%201.0.2-orange)
 
 <hr>
 
