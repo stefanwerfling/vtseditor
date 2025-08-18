@@ -1,5 +1,6 @@
 import 'normalize.css';
-import './style.css';
+import './main.css';
+
 import {SchemaEditor} from './SchemaEditor/SchemaEditor.js';
 
 const editor = new SchemaEditor();
