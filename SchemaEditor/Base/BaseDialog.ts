@@ -22,10 +22,22 @@ export class BaseDialog {
     protected _dialog: HTMLDialogElement;
 
     /**
+     * Div header
+     * @protected
+     */
+    protected _divHeader: HTMLDivElement;
+
+    /**
      * Div title
      * @protected
      */
     protected _divTitle: HTMLDivElement;
+
+    /**
+     * Button close x
+     * @protected
+     */
+    protected _btnCloseX: HTMLButtonElement;
 
     /**
      * Div body
@@ -51,13 +63,35 @@ export class BaseDialog {
     public constructor() {
         this._dialog = document.createElement('dialog');
 
+        // header ------------------------------------------------------------------------------------------------------
+
+        this._divHeader = document.createElement('div');
+        this._divHeader.classList.add('dialog-header');
+        this._dialog.appendChild(this._divHeader);
+
         // title -------------------------------------------------------------------------------------------------------
 
         this._divTitle = document.createElement('div');
         this._divTitle.classList.add('dialog-title');
-        this._dialog.appendChild(this._divTitle);
+        this._divHeader.appendChild(this._divTitle);
 
-        // body ------------------------------------------------------------------------------------------------------------
+        // close btn ---------------------------------------------------------------------------------------------------
+
+        this._btnCloseX = document.createElement('button');
+        this._btnCloseX.classList.add('dialog-close');
+        this._btnCloseX.ariaLabel = 'Close';
+        this._btnCloseX.innerHTML = '&times;';
+        this._btnCloseX.addEventListener('click', () => {
+            if (this._onClose) {
+                this._onClose();
+            }
+
+            this._close();
+        });
+
+        this._divHeader.appendChild(this._btnCloseX);
+
+        // body --------------------------------------------------------------------------------------------------------
 
         this._divBody = document.createElement('div');
         this._divBody.classList.add('dialog-body');

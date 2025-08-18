@@ -128,7 +128,6 @@ body {
 
 .endpoint {
   position: absolute;
-  transform: translateY(-50%);
   width: 10px;
   height: 10px;
   background: #333;
