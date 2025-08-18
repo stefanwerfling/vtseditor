@@ -113,7 +113,7 @@ export class SchemaGeneratorRegister {
 
             let allowedExport = true;
 
-            if (schema.options && schema.options.not_export) {
+            if (schema.extend.options && schema.extend.options.not_export) {
                 allowedExport = false;
             }
 

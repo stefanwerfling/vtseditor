@@ -46,12 +46,12 @@ export class SchemaGeneratorIndexSort {
 
             visiting.add(schema.unid);
 
-            if (schema.extend && schema.extend !== "object" && isSchemaId(schema.extend)) {
-                visit(schemaMap.get(schema.extend)!);
+            if (schema.extend && schema.extend.type !== "object" && isSchemaId(schema.extend.type)) {
+                visit(schemaMap.get(schema.extend.type)!);
             }
 
-            if (schema.values_schema && isSchemaId(schema.values_schema)) {
-                visit(schemaMap.get(schema.values_schema)!);
+            if (schema.extend.values_schema && isSchemaId(schema.extend.values_schema)) {
+                visit(schemaMap.get(schema.extend.values_schema)!);
             }
 
             for (const field of schema.fields) {

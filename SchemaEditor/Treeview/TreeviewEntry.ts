@@ -4,10 +4,10 @@ import {
     JsonDataFS,
     JsonEnumDescription,
     JsonLinkDescription,
-    JsonSchemaDescription,
+    JsonSchemaDescription, JsonSchemaDescriptionExtend,
     SchemaJsonDataFS,
     SchemaJsonDataFSIcon,
-    SchemaJsonDataFSType
+    SchemaJsonDataFSType, SchemaJsonSchemaDescriptionExtend
 } from '../JsonData.js';
 import {LinkTable} from '../Link/LinkTable.js';
 import {SchemaTable} from '../Schema/SchemaTable.js';
@@ -802,7 +802,13 @@ export class TreeviewEntry {
         // schemas -----------------------------------------------------------------------------------------------------
 
         for (const aSchema of data.schemas) {
-            const schema = new SchemaTable(aSchema.unid, aSchema.name, aSchema.extend);
+            let extend: JsonSchemaDescriptionExtend|null = null;
+
+            if (SchemaJsonSchemaDescriptionExtend.validate(aSchema.extend, [])) {
+                extend = aSchema.extend;
+            }
+
+            const schema = new SchemaTable(aSchema.unid, aSchema.name, extend);
             schema.setData(aSchema);
             this.addSchemaTable(schema);
         }

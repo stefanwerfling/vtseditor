@@ -121,7 +121,7 @@ export type JsonSchemaDescriptionExtend = ExtractSchemaResultType<typeof SchemaJ
 export const SchemaJsonSchemaDescription = Vts.object({
     unid: Vts.string(),
     name: Vts.string(),
-    extend: Vts.or([SchemaJsonSchemaDescriptionExtend, Vts.string()]),
+    extend: SchemaJsonSchemaDescriptionExtend,
     pos: SchemaJsonSchemaPositionDescription,
     fields: Vts.array(SchemaJsonSchemaFieldDescription),
     description: Vts.string()
