@@ -1,13 +1,16 @@
 import {EditorIcons} from '../Base/EditorIcons.js';
 import {EnumTable} from '../Enum/EnumTable.js';
+import {GlobalDragDrop} from '../GlobalDragDrop.js';
 import {
     JsonDataFS,
     JsonEnumDescription,
     JsonLinkDescription,
-    JsonSchemaDescription, JsonSchemaDescriptionExtend,
+    JsonSchemaDescription,
+    JsonSchemaDescriptionExtend,
     SchemaJsonDataFS,
     SchemaJsonDataFSIcon,
-    SchemaJsonDataFSType, SchemaJsonSchemaDescriptionExtend
+    SchemaJsonDataFSType,
+    SchemaJsonSchemaDescriptionExtend
 } from '../JsonData.js';
 import {LinkTable} from '../Link/LinkTable.js';
 import {SchemaTable} from '../Schema/SchemaTable.js';
@@ -346,17 +349,24 @@ export class TreeviewEntry {
             folderLine.addEventListener('dragstart', e => {
                 if (this._readonly) {
                     if (type === SchemaJsonDataFSType.file || type === SchemaJsonDataFSType.folder) {
-                        e.preventDefault();
                         e.stopPropagation();
+                        GlobalDragDrop.dragData = null;
                         return;
                     }
                 }
 
-                e.dataTransfer?.setData('type', this.getType());
-                e.dataTransfer?.setData('id', this.getUnid());
+                const selfType = this.getType();
+                console.log(`dragstart: Type: ${type} SelfType: ${selfType}`);
+
+                GlobalDragDrop.dragData = {
+                    type: selfType,
+                    unid: this.getUnid()
+                };
+
+                e.dataTransfer?.clearData();
                 folderLine.classList.add('dragging');
 
-                if (this.getType() === SchemaJsonDataFSType.schema || this.getType() === SchemaJsonDataFSType.enum) {
+                if (selfType === SchemaJsonDataFSType.schema || selfType === SchemaJsonDataFSType.enum) {
                     const activeEntry = Treeview.getActiveEntry();
 
                     if (activeEntry) {
@@ -374,27 +384,38 @@ export class TreeviewEntry {
 
         folderLine.addEventListener('dragover', e => {
             if (this._readonly) {
-                e.preventDefault();
+                GlobalDragDrop.dragData = null;
                 e.stopPropagation();
                 return;
             }
 
-            const type = e.dataTransfer?.getData('type');
+            e.preventDefault();
 
-            switch (this.getType()) {
-                case SchemaJsonDataFSType.folder:
-                    if (type === SchemaJsonDataFSType.file || type === SchemaJsonDataFSType.folder) {
-                        e.preventDefault();
-                        folderLine.classList.add('drag-over');
-                    }
-                    break;
+            if (GlobalDragDrop.dragData !== null) {
+                const dragType = GlobalDragDrop.dragData.type;
+                const selfType = this.getType();
 
-                case SchemaJsonDataFSType.file:
-                    if (type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum) {
-                        e.preventDefault();
-                        folderLine.classList.add('drag-over');
-                    }
-                    break;
+                console.log(`dragover: Type: ${dragType} SelfType: ${selfType}`);
+
+                switch (selfType) {
+                    case SchemaJsonDataFSType.project:
+                        if (dragType === SchemaJsonDataFSType.folder) {
+                            folderLine.classList.add('drag-over');
+                        }
+                        break;
+
+                    case SchemaJsonDataFSType.folder:
+                        if (dragType === SchemaJsonDataFSType.file || dragType === SchemaJsonDataFSType.folder) {
+                            folderLine.classList.add('drag-over');
+                        }
+                        break;
+
+                    case SchemaJsonDataFSType.file:
+                        if (dragType === SchemaJsonDataFSType.schema || dragType === SchemaJsonDataFSType.enum) {
+                            folderLine.classList.add('drag-over');
+                        }
+                        break;
+                }
             }
         });
 
@@ -418,39 +439,59 @@ export class TreeviewEntry {
 
         folderLine.addEventListener('drop', e => {
             if (this._readonly) {
-                e.preventDefault();
+                GlobalDragDrop.dragData = null;
                 e.stopPropagation();
                 return;
             }
 
-            const type = e.dataTransfer?.getData('type');
+            e.preventDefault();
 
-            switch (this.getType()) {
-                case SchemaJsonDataFSType.folder:
-                    if (type === SchemaJsonDataFSType.file || type === SchemaJsonDataFSType.folder) {
-                        window.dispatchEvent(new CustomEvent('schemaeditor:moveto', {
-                            detail: {
-                                sourceType: type,
-                                destinationType: this.getType(),
-                                sourceId: e.dataTransfer?.getData('id'),
-                                detionationId: this.getUnid()
-                            }
-                        }));
-                    }
-                    break;
+            if (GlobalDragDrop.dragData !== null) {
+                const dragData = GlobalDragDrop.dragData;
+                const selfType = this.getType();
 
-                case SchemaJsonDataFSType.file:
-                    if (type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum) {
-                        window.dispatchEvent(new CustomEvent('schemaeditor:moveto', {
-                            detail: {
-                                sourceType: type,
-                                destinationType: this.getType(),
-                                sourceId: e.dataTransfer?.getData('id'),
-                                detionationId: this.getUnid()
-                            }
-                        }));
-                    }
-                    break;
+                console.log(`drop: Type: ${dragData.type} SelfType: ${selfType}`);
+
+                switch (selfType) {
+                    case SchemaJsonDataFSType.project:
+                        if (dragData.type === SchemaJsonDataFSType.folder) {
+                            window.dispatchEvent(new CustomEvent('schemaeditor:moveto', {
+                                detail: {
+                                    sourceType: dragData.type,
+                                    destinationType: selfType,
+                                    sourceId: dragData.unid,
+                                    detionationId: this.getUnid()
+                                }
+                            }));
+                        }
+                        break;
+
+                    case SchemaJsonDataFSType.folder:
+                        if (dragData.type === SchemaJsonDataFSType.file || dragData.type === SchemaJsonDataFSType.folder) {
+                            window.dispatchEvent(new CustomEvent('schemaeditor:moveto', {
+                                detail: {
+                                    sourceType: dragData.type,
+                                    destinationType: selfType,
+                                    sourceId: dragData.unid,
+                                    detionationId: this.getUnid()
+                                }
+                            }));
+                        }
+                        break;
+
+                    case SchemaJsonDataFSType.file:
+                        if (dragData.type === SchemaJsonDataFSType.schema || dragData.type === SchemaJsonDataFSType.enum) {
+                            window.dispatchEvent(new CustomEvent('schemaeditor:moveto', {
+                                detail: {
+                                    sourceType: dragData.type,
+                                    destinationType: selfType,
+                                    sourceId: dragData.unid,
+                                    detionationId: this.getUnid()
+                                }
+                            }));
+                        }
+                        break;
+                }
             }
 
             folderLine.classList.remove('drag-over');

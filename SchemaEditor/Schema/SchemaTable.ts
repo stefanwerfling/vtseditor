@@ -4,6 +4,7 @@ import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import {ExtendTypeBadge} from '../Base/ExtendType/ExtendTypeBadge.js';
+import {GlobalDragDrop} from '../GlobalDragDrop.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../Register/SchemaExtends.js';
 import {
@@ -228,10 +229,12 @@ export class SchemaTable extends BaseTable {
                 return;
             }
 
-            const type = e.dataTransfer?.getData('type');
+            if (GlobalDragDrop.dragData !== null) {
+                const dragData = GlobalDragDrop.dragData;
 
-            if (type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum) {
-                this._dropArea.classList.add('hover');
+                if (dragData.type === SchemaJsonDataFSType.schema || dragData.type === SchemaJsonDataFSType.enum) {
+                    this._dropArea.classList.add('hover');
+                }
             }
         });
 
@@ -247,13 +250,11 @@ export class SchemaTable extends BaseTable {
                 return;
             }
 
-            const type = e.dataTransfer?.getData('type');
+            if (GlobalDragDrop.dragData !== null) {
+                const dragData = GlobalDragDrop.dragData;
 
-            if (type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum) {
-                const id = e.dataTransfer?.getData('id');
-
-                if (id) {
-                    this._openNewColumnDialog(id);
+                if (dragData.type === SchemaJsonDataFSType.schema || dragData.type === SchemaJsonDataFSType.enum) {
+                    this._openNewColumnDialog(dragData.unid);
                 }
             }
         });
