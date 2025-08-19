@@ -1,6 +1,7 @@
 import {Connection} from '@jsplumb/browser-ui';
 import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
 import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
+import {AlertDialog} from '../Base/AlertDialog.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import {ExtendTypeBadge} from '../Base/ExtendType/ExtendTypeBadge.js';
@@ -366,7 +367,16 @@ export class SchemaTable extends BaseTable {
             const uid = crypto.randomUUID();
 
             if (this.existFieldName(uid, fieldName)) {
-                alert('Please change your Fieldname, it already exist!');
+                tdialog.close();
+                tdialog.show(false);
+
+                const ad = new AlertDialog('Please change your Fieldname, it already exist!');
+                ad.show();
+                ad.setOnClose(() => {
+                    tdialog.close();
+                    tdialog.show();
+                })
+
                 return false;
             }
 
@@ -412,7 +422,7 @@ export class SchemaTable extends BaseTable {
             const fieldName = dialog.getFieldName();
 
             if (this.existFieldName(field1.getId(), fieldName)) {
-                alert('Please change your Fieldname, it already exist!');
+                new AlertDialog('Please change your Fieldname, it already exist!');
                 return false;
             }
 

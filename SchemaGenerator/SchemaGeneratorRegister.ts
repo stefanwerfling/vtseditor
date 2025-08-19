@@ -7,7 +7,16 @@ import {
     SchemaJsonDataFSType
 } from '../SchemaEditor/JsonData.js';
 import path from 'path';
+import {MapVtsAll} from '../SchemaTypes/SchemaTypes.js';
 import {SchemaGeneratorIndexSort} from './SchemaGeneratorIndexSort.js';
+
+/**
+ * IdEntry
+ */
+export type SchemaGeneratorRegisterIdEntry = {
+    schemaName: string;
+    extendable: boolean;
+};
 
 /**
  * Register
@@ -24,7 +33,7 @@ export class SchemaGeneratorRegister {
      * Id register
      * @protected
      */
-    protected _idRegister: Map<string, string> = new Map<string, string>();
+    protected _idRegister: Map<string, SchemaGeneratorRegisterIdEntry> = new Map<string, SchemaGeneratorRegisterIdEntry>();
 
     /**
      * Schema prefix
@@ -99,6 +108,10 @@ export class SchemaGeneratorRegister {
         return `${this._schemaPrefix}${name.trim()}`;
     }
 
+    protected _isVtsType(type: string): boolean {
+        return MapVtsAll.has(type);
+    }
+
     /**
      * create schema register
      * @param {string} file
@@ -125,7 +138,10 @@ export class SchemaGeneratorRegister {
                 }
             }
 
-            this._idRegister.set(schema.unid, schemaName);
+            this._idRegister.set(schema.unid, {
+                schemaName: schemaName,
+                extendable: !this._isVtsType(schema.extend.type)
+            });
         }
     }
 
@@ -138,7 +154,12 @@ export class SchemaGeneratorRegister {
     protected _createEnumRegister(file: string, enums: JsonEnumDescription[]): void {
         for (const aenum of enums) {
             this._fileRegister.set(aenum.name, file);
-            this._idRegister.set(aenum.unid, aenum.name);
+
+            this._idRegister.set(aenum.unid, {
+                schemaName: aenum.name,
+                extendable: false
+            });
+
             this._enumRegister.push(aenum.unid);
         }
     }
@@ -155,9 +176,9 @@ export class SchemaGeneratorRegister {
     /**
      * Return the schema name by unid
      * @param {string} unid
-     * @return {string|undefined}
+     * @return {SchemaGeneratorRegisterIdEntry|undefined}
      */
-    public getSchemaNameByUnid(unid: string): string|undefined {
+    public getSchemaNameByUnid(unid: string): SchemaGeneratorRegisterIdEntry|undefined {
         return this._idRegister.get(unid);
     }
 

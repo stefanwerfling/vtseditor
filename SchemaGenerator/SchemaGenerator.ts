@@ -12,6 +12,14 @@ import {
     SchemaJsonSchemaFieldType, SchemaJsonSchemaDescriptionExtend
 } from '../SchemaEditor/JsonData.js';
 import {SchemaExternLoaderSchemaFile} from '../SchemaExtern/SchemaExternLoader.js';
+import {
+    TypeVtsArray,
+    TypeVtsBoolean, TypeVtsDate, TypeVtsDateString, TypeVtsFalse, TypeVtsNull,
+    TypeVtsNumber, TypeVtsObject, TypeVtsObject2, TypeVtsOr,
+    TypeVtsString, TypeVtsTrue,
+    TypeVtsUndefined,
+    TypeVtsUnknown
+} from '../SchemaTypes/SchemaTypes.js';
 import {SchemaDescriptionUtil} from '../SchemaUtil/SchemaDescriptionUtil.js';
 import {SchemaPathUtil} from '../SchemaUtil/SchemaPathUtil.js';
 import {SchemaGeneratorExternRegister} from './SchemaGeneratorExternRegister.js';
@@ -343,15 +351,15 @@ export class SchemaGenerator {
         let isObject = false;
 
         switch (schema.extend.type) {
-            case 'string':
-            case 'number':
-            case 'boolean':
-            case 'null':
-            case 'unknown':
-            case 'date':
-            case 'datestring':
+            case TypeVtsString:
+            case TypeVtsNumber:
+            case TypeVtsBoolean:
+            case TypeVtsNull:
+            case TypeVtsUnknown:
+            case TypeVtsDate:
+            case TypeVtsDateString:
                 content += `${this._writeType({
-                    type: schema.extend.type ?? 'unknown',
+                    type: schema.extend.type ?? TypeVtsUnknown,
                     optional: false,
                     array: false,
                     types: [],
@@ -360,17 +368,17 @@ export class SchemaGenerator {
 
                 break;
 
-            case 'object2':
+            case TypeVtsObject2:
                 content += 'Vts.object2(';
                 content += this._writeType({
-                    type: 'string',
+                    type: TypeVtsString,
                     optional: false,
                     array: false,
                     types: []
                 });
 
                 content += `, ${this._writeType({
-                    type: schema.extend.values_schema ?? 'unknown',
+                    type: schema.extend.values_schema ?? TypeVtsUnknown,
                     optional: false,
                     array: false,
                     types: []
@@ -379,30 +387,51 @@ export class SchemaGenerator {
                 content += ');';
                 break;
 
-            case 'object':
+            case TypeVtsArray:
+                content += 'Vts.array(';
+                content += `${this._writeType({
+                    type: schema.extend.values_schema ?? TypeVtsUnknown,
+                    optional: false,
+                    array: false,
+                    types: []
+                })}`;
+
+                content += ');';
+                break;
+
+            case TypeVtsObject:
                 isObject = true;
                 content += 'Vts.object({\r\n';
                 break;
 
             default:
-                isObject = true;
-                const extendSchemaName = this._register!.getSchemaNameByUnid(schema.extend.type);
+                const extend = this._register!.getSchemaNameByUnid(schema.extend.type);
 
-                if (extendSchemaName) {
+                isObject = true;
+
+                if (extend) {
                     if (!this._fileUsedSchemas.has(schema.extend.type)) {
-                        this._fileUsedSchemas.set(schema.extend.type, extendSchemaName);
+                        this._fileUsedSchemas.set(schema.extend.type, extend.schemaName);
                     }
 
-                    content += `${extendSchemaName}.extend({\r\n`;
+                    if (extend.extendable) {
+                        content += `${extend}.extend({\r\n`;
+                    } else {
+                        content += 'Vts.object({\r\n';
+                    }
                 } else {
-                    const extendExternSchemaName = this._externRegister.findSchema(schema.extend.type);
+                    const extendExtern = this._externRegister.findSchema(schema.extend.type);
 
-                    if (extendExternSchemaName) {
+                    if (extendExtern) {
                         if (!this._fileUsedSchemas.has(schema.extend.type)) {
-                            this._fileUsedSchemas.set(schema.extend.type, extendExternSchemaName.schemaName);
+                            this._fileUsedSchemas.set(schema.extend.type, extendExtern.schemaEntry.schemaName);
                         }
 
-                        content += `${extendExternSchemaName.schemaName}.extend({\r\n`;
+                        if (extendExtern.schemaEntry.extendable) {
+                            content += `${extendExtern.schemaEntry.schemaName}.extend({\r\n`;
+                        } else {
+                            content += 'Vts.object({\r\n';
+                        }
                     } else {
                         content += 'Vts.object({\r\n';
                     }
@@ -454,7 +483,6 @@ export class SchemaGenerator {
         // -------------------------------------------------------------------------------------------------------------
 
         if (this._options.createTypes) {
-
             content += '\r\n\r\n';
 
             if (this._options.code_comment) {
@@ -496,43 +524,43 @@ export class SchemaGenerator {
         }
 
         switch (type.type) {
-            case 'string':
+            case TypeVtsString:
                 content += `Vts.string(${tdescription})`;
                 break;
 
-            case 'number':
+            case TypeVtsNumber:
                 content += `Vts.number(${tdescription})`;
                 break;
 
-            case 'boolean':
+            case TypeVtsBoolean:
                 content += `Vts.boolean(${tdescription})`;
                 break;
 
-            case 'unknown':
+            case TypeVtsUnknown:
                 content += `Vts.unknown()`;
                 break;
 
-            case 'undefined':
+            case TypeVtsUndefined:
                 content += `Vts.undefined()`;
                 break;
 
-            case 'true':
+            case TypeVtsTrue:
                 content += `Vts.true(${tdescription})`;
                 break;
 
-            case 'false':
+            case TypeVtsFalse:
                 content += `Vts.false(${tdescription})`;
                 break;
 
-            case 'date':
+            case TypeVtsDate:
                 content += `Vts.date(${tdescription})`;
                 break;
 
-            case 'datestring':
+            case TypeVtsDateString:
                 content += `Vts.dateString(${tdescription})`;
                 break;
 
-            case 'or':
+            case TypeVtsOr:
                 const tSubtypes: string[] = [];
 
                 if (SchemaJsonSchemaFieldTypeArray.validate(type.types, [])) {
@@ -546,30 +574,30 @@ export class SchemaGenerator {
 
             default:
                 const isEnum = this._register!.isUnidEnum(type.type);
-                const tschemaName = this._register!.getSchemaNameByUnid(type.type);
+                const tschema = this._register!.getSchemaNameByUnid(type.type);
 
-                if (tschemaName) {
+                if (tschema) {
                     if (!this._fileUsedSchemas.has(type.type)) {
-                        this._fileUsedSchemas.set(type.type, tschemaName);
+                        this._fileUsedSchemas.set(type.type, tschema.schemaName);
                     }
 
                     if (isEnum) {
-                        content += `Vts.enum(${tschemaName})`;
+                        content += `Vts.enum(${tschema.schemaName})`;
                     } else {
-                        content += `${tschemaName}`;
+                        content += `${tschema.schemaName}`;
                     }
                 } else {
-                    const tExternSchemaName = this._externRegister.findSchema(type.type);
+                    const tExtern = this._externRegister.findSchema(type.type);
 
-                    if (tExternSchemaName) {
+                    if (tExtern) {
                         if (!this._fileUsedSchemas.has(type.type)) {
-                            this._fileUsedSchemas.set(type.type, tExternSchemaName.schemaName);
+                            this._fileUsedSchemas.set(type.type, tExtern.schemaEntry.schemaName);
                         }
 
-                        if (tExternSchemaName.isEnum) {
-                            content += `Vts.enum(${tExternSchemaName.schemaName})`;
+                        if (tExtern.isEnum) {
+                            content += `Vts.enum(${tExtern.schemaEntry.schemaName})`;
                         } else {
-                            content += `${tExternSchemaName.schemaName}`;
+                            content += `${tExtern.schemaEntry.schemaName}`;
                         }
                     } else {
                         content += 'Vts.null()';

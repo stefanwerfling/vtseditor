@@ -54,7 +54,7 @@ export class ExtendType {
      * object 2 container
      * @protected
      */
-    protected _divobject2Container: HTMLDivElement;
+    protected _divValueSchemaContainer: HTMLDivElement;
 
     /**
      * Select value Schema
@@ -125,20 +125,20 @@ export class ExtendType {
 
         // --- object2 value
 
-        this._divobject2Container = document.createElement('div');
-        this._divMainField.appendChild(this._divobject2Container);
+        this._divValueSchemaContainer = document.createElement('div');
+        this._divMainField.appendChild(this._divValueSchemaContainer);
 
         const labelSchemaValue = document.createElement('div');
         labelSchemaValue.classList.add('dialog-label');
         labelSchemaValue.textContent = 'Values Schema';
-        this._divobject2Container.appendChild(labelSchemaValue);
+        this._divValueSchemaContainer.appendChild(labelSchemaValue);
 
         this._selectValueSchema = new ExtendFieldSelect(tableUnid, true);
-        this._divobject2Container.appendChild(this._selectValueSchema.getElement());
+        this._divValueSchemaContainer.appendChild(this._selectValueSchema.getElement());
 
         // init
         this._hideObjectOptions();
-        this._hideObject2Options();
+        this._hideValueSchemaOptions();
     }
 
     /**
@@ -148,15 +148,16 @@ export class ExtendType {
      */
     protected _onUpdateOptions(value: string): void {
         this._hideObjectOptions();
-        this._hideObject2Options();
+        this._hideValueSchemaOptions();
 
         switch (value) {
             case 'object':
                 this._showObjectOptions();
                 break;
 
+            case 'array':
             case 'object2':
-                this._showObject2Options();
+                this._showValueSchemaOptions();
                 break;
         }
 
@@ -182,19 +183,19 @@ export class ExtendType {
     }
 
     /**
-     * show object2 options
+     * show value schema options
      * @protected
      */
-    protected _showObject2Options(): void {
-        this._divobject2Container.style.display = '';
+    protected _showValueSchemaOptions(): void {
+        this._divValueSchemaContainer.style.display = '';
     }
 
     /**
-     * hide object2 options
+     * hide value schema options
      * @protected
      */
-    protected _hideObject2Options(): void {
-        this._divobject2Container.style.display = 'none';
+    protected _hideValueSchemaOptions(): void {
+        this._divValueSchemaContainer.style.display = 'none';
     }
 
     /**

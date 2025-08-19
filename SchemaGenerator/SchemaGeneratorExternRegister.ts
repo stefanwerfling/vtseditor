@@ -1,12 +1,12 @@
 import {JsonDataFS} from '../SchemaEditor/JsonData.js';
-import {SchemaGeneratorRegister} from './SchemaGeneratorRegister.js';
+import {SchemaGeneratorRegister, SchemaGeneratorRegisterIdEntry} from './SchemaGeneratorRegister.js';
 
 /**
  * Schema generator extern register info
  */
 export type SchemaGeneratorExternRegisterInfo = {
     packageName: string;
-    schemaName: string;
+    schemaEntry: SchemaGeneratorRegisterIdEntry;
     isEnum: boolean;
 };
 
@@ -38,14 +38,14 @@ export class SchemaGeneratorExternRegister {
      */
     public findSchema(unid: string): SchemaGeneratorExternRegisterInfo|null {
         for (const [packageName, register] of this._externRegister.entries()) {
-            const schemaName = register.getSchemaNameByUnid(unid);
+            const schemaEntry = register.getSchemaNameByUnid(unid);
 
-            if (schemaName) {
+            if (schemaEntry) {
                 const isEnum = register.isUnidEnum(unid);
 
                 return {
                     packageName: packageName,
-                    schemaName: schemaName,
+                    schemaEntry: schemaEntry,
                     isEnum: isEnum
                 };
             }

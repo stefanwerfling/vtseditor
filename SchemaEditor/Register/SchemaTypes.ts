@@ -1,3 +1,5 @@
+import {MapVtsSimple, MapVtsSimple2} from '../../SchemaTypes/SchemaTypes.js';
+
 /**
  * Schema types
  */
@@ -25,7 +27,10 @@ export class SchemaTypes {
      * Map types
      * @protected
      */
-    protected _mapTypes: Map<string, string> = new Map<string, string>();
+    protected _mapTypes: Map<string, string> = new Map<string, string>([
+        ...MapVtsSimple,
+        ...MapVtsSimple2
+    ]);
 
     /**
      * Map schema types
@@ -38,23 +43,6 @@ export class SchemaTypes {
      * @protected
      */
     protected _mapEnumTypes: Map<string, string> = new Map<string, string>();
-
-    /**
-     * Construcotr
-     */
-    public constructor() {
-        this._mapTypes.set('string', 'String');
-        this._mapTypes.set('number', 'Number');
-        this._mapTypes.set('boolean', 'Boolean');
-        this._mapTypes.set('or', 'Or');
-        this._mapTypes.set('null', 'Null');
-        this._mapTypes.set('unknown', 'Unknown');
-        this._mapTypes.set('undefined', 'Undefined');
-        this._mapTypes.set('true', 'True');
-        this._mapTypes.set('false', 'False');
-        this._mapTypes.set('date', 'Date');
-        this._mapTypes.set('datestring', 'DateString');
-    }
 
     /**
      * Return a map with all types

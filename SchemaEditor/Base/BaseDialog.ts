@@ -16,10 +16,22 @@ export type BaseDialogOnConfirm = <T extends BaseDialog>(dialog: T) => boolean;
 export class BaseDialog {
 
     /**
+     * Dialog stack
+     * @protected
+     */
+    protected static _dialogStack: HTMLDialogElement[] = [];
+
+    /**
      * Dialog element
      * @protected
      */
     protected _dialog: HTMLDialogElement;
+
+    /**
+     * Is Modal
+     * @protected
+     */
+    protected _isModal: boolean = false;
 
     /**
      * Div header
@@ -46,6 +58,18 @@ export class BaseDialog {
     protected _divBody: HTMLDivElement;
 
     /**
+     * Button confirm
+     * @protected
+     */
+    protected _btnConfirm: HTMLButtonElement;
+
+    /**
+     * Button cancel
+     * @protected
+     */
+    protected _btnCancel: HTMLButtonElement;
+
+    /**
      * on close
      * @protected
      */
@@ -62,6 +86,12 @@ export class BaseDialog {
      */
     public constructor() {
         this._dialog = document.createElement('dialog');
+
+        const baseZ = 1000;
+        BaseDialog._dialogStack.push(this._dialog);
+
+        this._dialog.style.position = 'fixed';
+        this._dialog.style.zIndex = (baseZ + BaseDialog._dialogStack.length).toString();
 
         // header ------------------------------------------------------------------------------------------------------
 
@@ -102,10 +132,10 @@ export class BaseDialog {
         const btns = document.createElement('div');
         btns.classList.add('dialog-buttons');
 
-        const btnCancel = document.createElement('button');
-        btnCancel.textContent = 'Cancel';
-        btnCancel.classList.add('dialog-button');
-        btnCancel.addEventListener('click', () => {
+        this._btnCancel = document.createElement('button');
+        this._btnCancel.textContent = 'Cancel';
+        this._btnCancel.classList.add('dialog-button');
+        this._btnCancel.addEventListener('click', () => {
             if (this._onClose) {
                 this._onClose();
             }
@@ -113,12 +143,12 @@ export class BaseDialog {
             this._close();
         });
 
-        btns.appendChild(btnCancel);
+        btns.appendChild(this._btnCancel);
 
-        const btnConfirm = document.createElement('button');
-        btnConfirm.textContent = 'Save';
-        btnConfirm.classList.add('dialog-button');
-        btnConfirm.addEventListener('click', () => {
+        this._btnConfirm = document.createElement('button');
+        this._btnConfirm.textContent = 'Save';
+        this._btnConfirm.classList.add('dialog-button');
+        this._btnConfirm.addEventListener('click', () => {
             if (this._onConfirm) {
                 if (this._onConfirm(this)) {
                     this._close();
@@ -129,7 +159,7 @@ export class BaseDialog {
         });
 
 
-        btns.appendChild(btnConfirm);
+        btns.appendChild(this._btnConfirm);
 
         this._dialog.appendChild(btns);
 
@@ -143,6 +173,8 @@ export class BaseDialog {
      * @protected
      */
     protected _close(): void {
+        BaseDialog._dialogStack = BaseDialog._dialogStack.filter(d => d !== this._dialog);
+
         this._dialog.close();
         this._dialog.remove();
     }
@@ -157,9 +189,34 @@ export class BaseDialog {
 
     /**
      * Show the dialog
+     * @param {boolean} modal
      */
-    public show(): void {
-        this._dialog.showModal();
+    public show(modal: boolean = true): void {
+        this._dialog.style.display = '';
+
+        if (modal) {
+            this._isModal = true;
+            this._dialog.showModal();
+        } else {
+            this._dialog.show();
+        }
+    }
+
+    /**
+     * Is modal
+     * @return {boolean}
+     */
+    public isModal(): boolean {
+        return this._isModal;
+    }
+
+    /**
+     * Close
+     */
+    public close(): void {
+        this._isModal = false;
+        this._dialog.close();
+        this._dialog.style.display = 'none';
     }
 
     /**

@@ -28,7 +28,14 @@ export class ExtendTypeBadge {
                 }));
             });
         } else {
-            spanType.classList.add(...['vts-badge-wh-1']);
+            switch (data.type) {
+                case 'array':
+                    spanType.classList.add(...['vts-badge-wh-5']);
+                    break;
+
+                default:
+                    spanType.classList.add(...['vts-badge-wh-1']);
+            }
         }
 
         contentElement.appendChild(spanType);
@@ -37,7 +44,7 @@ export class ExtendTypeBadge {
 
         contentElement = spanType;
 
-        if (data.type === 'object2' && data.values_schema) {
+        if ((data.type === 'object2' || data.type === 'array') && data.values_schema) {
             const extendName2 = SchemaExtends.getInstance().getExtendNameBy(data.values_schema);
             const spanType = document.createElement('span');
             spanType.textContent = `${extendName2}`;

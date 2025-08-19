@@ -1,3 +1,5 @@
+import {MapVtsComplex, MapVtsExtends, MapVtsSimple} from '../../SchemaTypes/SchemaTypes.js';
+
 /**
  * Schema Extend register
  */
@@ -25,34 +27,24 @@ export class SchemaExtends {
      * Map of vts extends
      * @protected
      */
-    protected _mapVtsExtends: Map<string, string> = new Map<string, string>();
+    protected _mapVtsExtends: Map<string, string> = new Map<string, string>([
+        ...MapVtsExtends,
+        ...MapVtsComplex
+    ]);
 
     /**
      * Map of vts simple extends
      * @protected
      */
-    protected _mapVtsSimpleExtends: Map<string, string> = new Map<string, string>();
+    protected _mapVtsSimpleExtends: Map<string, string> = new Map<string, string>([
+        ...MapVtsSimple
+    ]);
 
     /**
      * Map of schema extends
      * @protected
      */
     protected _mapSchemaExtends: Map<string, string> = new Map<string, string>();
-
-    /**
-     * Constructor
-     */
-    public constructor() {
-        this._mapVtsExtends.set('object', 'Object');
-        this._mapVtsExtends.set('object2', 'Object2');
-        this._mapVtsSimpleExtends.set('string', 'String');
-        this._mapVtsSimpleExtends.set('number', 'Number');
-        this._mapVtsSimpleExtends.set('boolean', 'Boolean');
-        this._mapVtsSimpleExtends.set('null', 'Null');
-        this._mapVtsSimpleExtends.set('unknown', 'Unknown');
-        this._mapVtsSimpleExtends.set('date', 'Date');
-        this._mapVtsSimpleExtends.set('datestring', 'DateString');
-    }
 
     /**
      * Return a map with all types
