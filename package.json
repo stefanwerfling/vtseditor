@@ -23,7 +23,10 @@
   },
   "keywords": [
     "vts",
-    "editor"
+    "editor",
+    "ui",
+    "typescript",
+    "npm"
   ],
   "license": "ISC",
   "name": "vtseditor",
@@ -32,9 +35,13 @@
       "optional": true
     }
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefanwerfling/vtseditor.git"
+  },
   "scripts": {
     "dev": "node ./cli/dev.js"
   },
   "type": "module",
-  "version": "1.0.2"
+  "version": "1.0.3"
 }
