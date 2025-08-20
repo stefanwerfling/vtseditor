@@ -69,6 +69,14 @@ export class SchemaExtends {
     }
 
     /**
+     * unset extend
+     * @param {string} uuid
+     */
+    public unsetExtend(uuid: string): void {
+        this._mapSchemaExtends.delete(uuid);
+    }
+
+    /**
      * Return the Vts Types
      * @return {Map<string, string>}
      */

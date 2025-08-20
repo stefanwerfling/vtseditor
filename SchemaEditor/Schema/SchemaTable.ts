@@ -1,6 +1,7 @@
 import {Connection} from '@jsplumb/browser-ui';
 import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
 import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
+import {SchemaTypesUtil} from '../../SchemaUtil/SchemaTypesUtil.js';
 import {AlertDialog} from '../Base/AlertDialog.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
@@ -314,7 +315,11 @@ export class SchemaTable extends BaseTable {
             this.setExtend(dialog1.getSchemaExtend());
             this._description = dialog1.getDescription();
 
-            SchemaExtends.getInstance().setExtend(this._unid, this._name);
+            if (SchemaTypesUtil.isVtsType(this._extend.type, true)) {
+                SchemaExtends.getInstance().unsetExtend(this._unid);
+            } else {
+                SchemaExtends.getInstance().setExtend(this._unid, this._name);
+            }
 
             this.updateView();
 

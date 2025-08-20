@@ -8,6 +8,7 @@ import {
 } from '../SchemaEditor/JsonData.js';
 import path from 'path';
 import {MapVtsAll} from '../SchemaTypes/SchemaTypes.js';
+import {SchemaTypesUtil} from '../SchemaUtil/SchemaTypesUtil.js';
 import {SchemaGeneratorIndexSort} from './SchemaGeneratorIndexSort.js';
 
 /**
@@ -108,10 +109,6 @@ export class SchemaGeneratorRegister {
         return `${this._schemaPrefix}${name.trim()}`;
     }
 
-    protected _isVtsType(type: string): boolean {
-        return MapVtsAll.has(type);
-    }
-
     /**
      * create schema register
      * @param {string} file
@@ -140,7 +137,7 @@ export class SchemaGeneratorRegister {
 
             this._idRegister.set(schema.unid, {
                 schemaName: schemaName,
-                extendable: !this._isVtsType(schema.extend.type)
+                extendable: !SchemaTypesUtil.isVtsType(schema.extend.type)
             });
         }
     }

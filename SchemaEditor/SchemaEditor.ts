@@ -1,6 +1,7 @@
 import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
 import {ProjectSave} from '../SchemaProject/SchemaProjectSave.js';
 import {ProjectsData, SchemaProjectsResponse} from '../SchemaProject/SchemaProjectsResponse.js';
+import {SchemaTypesUtil} from '../SchemaUtil/SchemaTypesUtil.js';
 import {BaseTable} from './Base/BaseTable.js';
 import {EnumTable} from './Enum/EnumTable.js';
 import {JsonDataFS, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js';
@@ -706,7 +707,12 @@ export class SchemaEditor {
         }
 
         for (const schema of data.schemas) {
-            SchemaExtends.getInstance().setExtend(schema.unid, schema.name);
+            if (SchemaTypesUtil.isVtsType(schema.extend.type, true)) {
+                SchemaExtends.getInstance().unsetExtend(schema.unid);
+            } else {
+                SchemaExtends.getInstance().setExtend(schema.unid, schema.name);
+            }
+
             SchemaTypes.getInstance().setType(schema.unid, schema.name);
         }
 
@@ -724,7 +730,7 @@ export class SchemaEditor {
     public setData(data: ProjectsData): void {
         const rootEntry: JsonDataFS = {
             unid: 'root',
-            name: 'root',
+            name: 'Root',
             istoggle: true,
             icon: 'root',
             type: SchemaJsonDataFSType.root,
