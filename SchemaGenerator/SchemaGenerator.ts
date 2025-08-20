@@ -431,7 +431,7 @@ export class SchemaGenerator {
                     }
 
                     if (extend.extendable) {
-                        content += `${extend}.extend({\r\n`;
+                        content += `${extend.schemaName}.extend({\r\n`;
                     } else {
                         content += 'Vts.object({\r\n';
                     }
