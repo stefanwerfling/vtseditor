@@ -136,7 +136,7 @@ export class SchemaGeneratorRegister {
 
             this._idRegister.set(schema.unid, {
                 schemaName: schemaName,
-                extendable: !SchemaTypesUtil.isVtsType(schema.extend.type)
+                extendable: !SchemaTypesUtil.isVtsType(schema.extend.type, true)
             });
         }
     }
