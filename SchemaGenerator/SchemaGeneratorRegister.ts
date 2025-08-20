@@ -7,7 +7,6 @@ import {
     SchemaJsonDataFSType
 } from '../SchemaEditor/JsonData.js';
 import path from 'path';
-import {MapVtsAll} from '../SchemaTypes/SchemaTypes.js';
 import {SchemaTypesUtil} from '../SchemaUtil/SchemaTypesUtil.js';
 import {SchemaGeneratorIndexSort} from './SchemaGeneratorIndexSort.js';
 

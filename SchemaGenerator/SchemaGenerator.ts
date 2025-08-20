@@ -213,6 +213,8 @@ export class SchemaGenerator {
                 return newAliasName;
             };
 
+            const importMap = new Map<string, string[]>();
+
             for (const [schemaUnid, schemaImport] of this._fileUsedSchemas.entries()) {
                 let importNameLine = schemaImport;
 
@@ -234,15 +236,29 @@ export class SchemaGenerator {
                             `./${importPath}.js`
                         );
 
-                        contentHeader += `import {${importNameLine}} from '${relativImportPath}';\r\n`;
+                        if (!importMap.has(relativImportPath)) {
+                            importMap.set(relativImportPath, []);
+                        }
+
+                        importMap.get(relativImportPath)!.push(importNameLine);
                     }
                 } else {
                     const externInfo = this._externRegister.findSchema(schemaUnid);
 
                     if (externInfo) {
-                        contentHeader += `import {${importNameLine}} from '${externInfo.packageName}';\r\n`;
+                        const pkg = externInfo.packageName;
+
+                        if (!importMap.has(pkg)) {
+                            importMap.set(pkg, []);
+                        }
+
+                        importMap.get(pkg)!.push(importNameLine);
                     }
                 }
+            }
+
+            for (const [importSource, names] of importMap.entries()) {
+                contentHeader += `import {${names.join(', ')}} from '${importSource}';\r\n`;
             }
 
             contentHeader += '\r\n';
