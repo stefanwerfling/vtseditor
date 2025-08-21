@@ -6,7 +6,7 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stefanwerfling/vtseditor) 
 ![Node Version](https://img.shields.io/badge/Node-%3E%3D%2020-green)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
-![Version](https://img.shields.io/badge/Version-Beta%201.0.2-orange)
+![Version](https://img.shields.io/badge/Version-Beta%201.0.4-orange)
 
 <hr>
 
@@ -62,7 +62,8 @@ This is especially useful for large projects, team collaboration, or when sharin
 
 ### Install
 
-1. install the vts editor
+1. install the vts editor 
+    ##### Github
 
     a) for your project: 
     ```shell
@@ -74,36 +75,58 @@ This is especially useful for large projects, team collaboration, or when sharin
     npm install -g git+https://github.com/stefanwerfling/vtseditor.git
     ```
 
-2. create your config ```vtseditor.json``` and add your config:
-```json
-{
-  "projects": [
-    {
-      "schemaPath": "./schemas/schema.json",
-      "code": {
-        "schemaPrefix": "Schema",
-        "createTypes": true,
-        "createIndex": true,
-        "codeComment": true,
-        "codeIndent": "    "
-      },
-      "autoGenerate": false,
-      "destinationPath": "./schemas/src",
-      "destinationClear": false
-    }
-  ],
-  "server": {
-    "port": 5173
-  },
-  "browser": {
-    "open": true
-  }
-}
-```
+   ##### npm
+
+    a) for your project: 
+    ```shell
+    npm install --save-dev vtseditor
+    ```
+
+    b) or for global:
+    ```shell
+    npm install -g vtseditor
+    ```
+
+2. create your config ```vtseditor.json``` example:
+   ```json
+   {
+     "projects": [
+       {
+         "schemaPath": "./schemas/schema.json",
+         "code": {
+           "schemaPrefix": "Schema",
+           "createTypes": true,
+           "createIndex": true,
+           "codeComment": true,
+           "codeIndent": "    "
+         },
+         "autoGenerate": false,
+         "destinationPath": "./schemas/src",
+         "destinationClear": false,
+         "scripts": {
+           "before_generate": [],
+           "after_generate": [
+             {
+               "path": "./schemas",
+               "script": "npm run compile"
+             }
+           ]
+         }
+       }
+     ],
+     "server": {
+       "port": 5173
+     },
+     "browser": {
+       "open": true
+     }
+   }
+   ```
+
 3. start the vts editor
-```shell
-npx vtseditor
-```
+    ```shell
+    npx vtseditor
+    ```
 
 4. open the vts editor in your browser: http://localhost:5173
 5. create your schemas, have fun

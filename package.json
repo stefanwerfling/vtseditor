@@ -43,5 +43,5 @@
     "dev": "node ./cli/dev.js"
   },
   "type": "module",
-  "version": "1.0.3"
+  "version": "1.0.4"
 }
