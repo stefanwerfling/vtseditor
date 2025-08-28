@@ -122,6 +122,8 @@ This is especially useful for large projects, team collaboration, or when sharin
      }
    }
    ```
+    Read more by [Config-Description](doc/Config.md).
+
 
 3. start the vts editor
     ```shell
