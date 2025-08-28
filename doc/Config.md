@@ -15,7 +15,7 @@ Configuration is handled via the **`vtseditor.json`** file.
     - [Server](#server)
     - [Browser](#browser)
 3. [Workflow](#workflow)
-4. [Example Workflow](#example-workflow)
+4. [Example Workflow](#example-workflow-with-the-provided-config)
 
 ---
 

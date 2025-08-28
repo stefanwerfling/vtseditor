@@ -526,7 +526,7 @@ export class SchemaTable extends BaseTable {
 
         let connectId = '';
 
-        if (this._extend.type === 'object2') {
+        if (this._extend.type === 'object2' || this._extend.type === 'array') {
             if (this._extend.values_schema) {
                 if (SchemaExtends.getInstance().isExtendASchema(this._extend.values_schema)) {
                     connectId = this._extend.values_schema;
