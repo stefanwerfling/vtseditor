@@ -34,15 +34,34 @@ export class Tooltip {
         this._divInfoContent.classList.add('info-tooltip');
         this._divWrapper.appendChild(this._divInfoContent);
 
-        this._divWrapper.addEventListener('mouseenter', () => {
-            const rect = this._divWrapper.getBoundingClientRect();
+        this._divWrapper.addEventListener('mousemove', (e) => {
+            const dialogParent = this._divWrapper.closest('dialog');
+
+            if (dialogParent) {
+                const rect = dialogParent.getBoundingClientRect();
+                const scrollTop = dialogParent.scrollTop;
+                const scrollLeft = dialogParent.scrollLeft;
+
+                this._divInfoContent.style.left = `${e.clientX - rect.left + scrollLeft - 90 - 14}px`;
+                this._divInfoContent.style.top = `${e.clientY - rect.top + scrollTop + 22}px`;
+            } else {
+                this._divInfoContent.style.left = `${e.clientX - 14}px`;
+                this._divInfoContent.style.top = `${e.clientY + 22}px`;
+            }
+        });
+
+        this._divWrapper.addEventListener('mouseenter', (e) => {
             this._divInfoContent.style.display = 'block';
-            this._divInfoContent.style.left = `${rect.left + rect.width / 2}px`;
-            this._divInfoContent.style.top = `${rect.bottom + 8}px`;
+            this._divInfoContent.style.visibility = 'visible';
+            this._divInfoContent.style.opacity = '1';
+            this._divInfoContent.style.position = 'fixed';
+            this._divInfoContent.style.zIndex = '100000';
         });
 
         this._divWrapper.addEventListener('mouseleave', () => {
             this._divInfoContent.style.display = 'none';
+            this._divInfoContent.style.visibility = 'hidden';
+            this._divInfoContent.style.opacity = '0';
         });
     }
 

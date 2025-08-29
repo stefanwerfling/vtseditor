@@ -455,6 +455,7 @@ export class SchemaTable extends BaseTable {
         this._columns.appendChild(field.getElement());
         this._fields.set(uuid, field);
 
+        field.setReadOnly(this._readOnly);
         field.updateView();
     }
 

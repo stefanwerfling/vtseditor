@@ -1,6 +1,6 @@
 import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
 import {ProjectSave} from '../SchemaProject/SchemaProjectSave.js';
-import {ProjectsData, SchemaProjectsResponse} from '../SchemaProject/SchemaProjectsResponse.js';
+import {EditorInit, ProjectsData, SchemaProjectsResponse} from '../SchemaProject/SchemaProjectsResponse.js';
 import {SchemaTypesUtil} from '../SchemaUtil/SchemaTypesUtil.js';
 import {BaseTable} from './Base/BaseTable.js';
 import {EnumTable} from './Enum/EnumTable.js';
@@ -10,6 +10,7 @@ import {LinkTable} from './Link/LinkTable.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
 import {SchemaExtends} from './Register/SchemaExtends.js';
 import {SchemaTypes} from './Register/SchemaTypes.js';
+import {SchemaCreateDialog} from './SchemaCreateDialog.js';
 import {Treeview} from './Treeview/Treeview.js';
 
 /**
@@ -67,6 +68,12 @@ export class SchemaEditor {
     protected _btnAddEnum: HTMLElement | null = null;
 
     /**
+     * Button for create Schema
+     * @protected
+     */
+    protected _btnCreateSchema: HTMLElement | null = null;
+
+    /**
      * Treeview
      * @protected
      */
@@ -77,6 +84,14 @@ export class SchemaEditor {
      * @protected
      */
     protected _jsPlumbInstance: BrowserJsPlumbInstance | null = null;
+
+    /**
+     * Editor init
+     * @protected
+     */
+    protected _editorInit: EditorInit = {
+        enable_schema_create: false
+    };
 
     /**
      * Add a new Schema
@@ -158,6 +173,19 @@ export class SchemaEditor {
         }
     }
 
+    public _createSchema(): void {
+        if (Treeview.getActiveEntry() === null) {
+            return;
+        }
+
+        const createDialog = new SchemaCreateDialog();
+        createDialog.setOnConfirm((): boolean => {
+            return false;
+        });
+
+        createDialog.show();
+    }
+
     /**
      * Init
      */
@@ -184,6 +212,22 @@ export class SchemaEditor {
         this._btnAddEnum!.addEventListener('click', () => {
             if (Treeview.getActiveEntry() !== null) {
                 this._addEnum();
+            } else {
+                alert('Please select first a File for your Enum!');
+            }
+        });
+
+        // create schema button ----------------------------------------------------------------------------------------
+
+        this._btnCreateSchema = document.getElementById('createSchemaBtn');
+        this._btnCreateSchema!.style.display = 'none';
+        this._btnCreateSchema!.addEventListener('click', () => {
+            if (!this._editorInit.enable_schema_create) {
+                return;
+            }
+
+            if (Treeview.getActiveEntry() !== null) {
+                this._createSchema();
             } else {
                 alert('Please select first a File for your Schema!');
             }
@@ -532,6 +576,10 @@ export class SchemaEditor {
             this._btnAddSchema!.style.display = '';
             this._btnAddEnum!.style.display = '';
 
+            if (this._editorInit.enable_schema_create) {
+                this._btnCreateSchema!.style.display = '';
+            }
+
             // Schemas -------------------------------------------------------------------------------------------------
             const sTables = entry.getSchemaTables();
 
@@ -777,6 +825,10 @@ export class SchemaEditor {
 
             const topbarheader = document.getElementById('topbarheader')!;
             topbarheader!.style.width = `${data.editor.controls_width}px`;
+        }
+
+        if (data.init) {
+            this._editorInit = data.init;
         }
 
         this._treeview?.getRoot().updateView(true);

@@ -60,11 +60,39 @@ export const SchemaConfigBrowser = Vts.object({
 });
 
 /**
+ * Config provider name
+ */
+export enum ConfigProviderName {
+    gemini = 'gemini'
+}
+
+/**
+ * Schema config provider
+ */
+export const SchemaConfigProvider = Vts.object({
+    apiProvider: Vts.or([Vts.enum(ConfigProviderName), Vts.string()]),
+    apiKey: Vts.string(),
+    apiUrl: Vts.string()
+});
+
+/**
+ * Config provider
+ */
+export type ConfigProvider = ExtractSchemaResultType<typeof SchemaConfigProvider>;
+
+/**
+ * Schema config editor
+ */
+export const SchemaConfigEditor = Vts.object({
+    providers: Vts.array(SchemaConfigProvider)
+});
+
+/**
  * Schema of Config
  */
 export const SchemaConfig = Vts.object({
     projects: Vts.array(SchemaConfigProject),
-    editor: Vts.optional(Vts.null()),
+    editor: Vts.optional(SchemaConfigEditor),
     server: Vts.optional(SchemaConfigServer),
     browser: Vts.optional(SchemaConfigBrowser)
 });

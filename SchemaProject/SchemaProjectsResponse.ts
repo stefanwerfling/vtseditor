@@ -13,10 +13,20 @@ export const SchemaExtern = Vts.object({
     fs: SchemaJsonDataFS
 });
 
+export const SchemaEditorInit = Vts.object({
+    enable_schema_create: Vts.boolean()
+});
+
+/**
+ * Editor init
+ */
+export type EditorInit = ExtractSchemaResultType<typeof SchemaEditorInit>;
+
 export const SchemaProjectsData = Vts.object({
     projects: Vts.array(SchemaProject),
     extern: Vts.array(SchemaExtern),
-    editor: Vts.or([SchemaJsonEditorSettings, Vts.null()])
+    editor: Vts.or([SchemaJsonEditorSettings, Vts.null()]),
+    init: Vts.optional(SchemaEditorInit)
 });
 
 /**
@@ -25,7 +35,7 @@ export const SchemaProjectsData = Vts.object({
 export type ProjectsData = ExtractSchemaResultType<typeof SchemaProjectsData>;
 
 export const SchemaProjectsResponse = Vts.object({
-   data: SchemaProjectsData
+    data: SchemaProjectsData
 });
 
 /**

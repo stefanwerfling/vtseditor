@@ -5,6 +5,7 @@
   },
   "dependencies": {
     "@jsplumb/browser-ui": "6.2.10",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "normalize.css": "^8.0.1",
     "open": "^8.4.0",

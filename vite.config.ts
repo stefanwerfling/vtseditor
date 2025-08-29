@@ -3,14 +3,21 @@ import { defineConfig, Plugin } from 'vite';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import dotenv from 'dotenv';
 import {SchemaErrors} from 'vts';
-import {SchemaConfig} from './Config/Config.js';
+import {ConfigProviderName, SchemaConfig} from './Config/Config.js';
 import {JsonData, SchemaJsonData} from './SchemaEditor/JsonData.js';
 import {SchemaExternLoader} from './SchemaExtern/SchemaExternLoader.js';
 import {SchemaGenerator} from './SchemaGenerator/SchemaGenerator.js';
 import {SchemaProject} from './SchemaProject/SchemaProject.js';
+import {
+    ProjectGenerateSchemaResponse,
+    SchemaProjectGenerateSchema
+} from './SchemaProject/SchemaProjectGenerateSchema.js';
 import {SchemaProjectSave} from './SchemaProject/SchemaProjectSave.js';
 import {ProjectsData, ProjectsResponse} from './SchemaProject/SchemaProjectsResponse.js';
+import {ASchemaProvider} from './SchemaProvider/ASchemaProvider.js';
+import {SchemaProviderGemini} from './SchemaProvider/Gemini/SchemaProviderGemini.js';
 import {SchemaScript} from './SchemaScript/SchemaScript.js';
 
 
@@ -24,11 +31,24 @@ function expressMiddleware(): Plugin {
             const app = express();
             app.use(express.json());
 
-            // config load ---------------------------------------------------------------------------------------------
+            // ---------------------------------------------------------------------------------------------------------
 
             const configFile = process.env.VTSEDITOR_CONFIG_FILE;
             const projectRoot = process.env.VTSEDITOR_PROJECT_ROOT ?? process.cwd();
 
+            const envPath = path.resolve(projectRoot, ".env");
+
+            if (fs.existsSync(envPath)) {
+                console.log(`Read Env.`);
+
+                dotenv.config({
+                    quiet: true,
+                    path: envPath
+                });
+            }
+
+            // config load ---------------------------------------------------------------------------------------------
+            const providers: Map<string, ASchemaProvider> = new Map<string, ASchemaProvider>();
             const projects: Map<string, SchemaProject> = new Map<string, SchemaProject>();
 
             if (configFile) {
@@ -37,6 +57,24 @@ function expressMiddleware(): Plugin {
                 const errors: SchemaErrors = [];
 
                 if (SchemaConfig.validate(config, errors)) {
+                    if (config.editor) {
+                        // init providers ------------------------------------------------------------------------------
+
+                        for (const aProvider of config.editor.providers) {
+                            let oprovider: ASchemaProvider|null = null;
+
+                            switch (aProvider.apiProvider) {
+                                case ConfigProviderName.gemini:
+                                    oprovider = new SchemaProviderGemini(aProvider);
+                                    break;
+                            }
+
+                            if (oprovider !== null) {
+                                providers.set(aProvider.apiProvider, oprovider);
+                            }
+                        }
+                    }
+
                     for (const aSchemaProject of config.projects) {
                         const project: SchemaProject = {
                             name: 'Schema project',
@@ -198,6 +236,9 @@ function expressMiddleware(): Plugin {
                     editor: {
                         // default
                         controls_width: 300
+                    },
+                    init: {
+                        enable_schema_create: providers.size > 0
                     }
                 };
 
@@ -274,6 +315,54 @@ function expressMiddleware(): Plugin {
 
                 res.status(200).json(response);
             });
+
+            // ---------------------------------------------------------------------------------------------------------
+
+            app.post('/api/provider/createschema/requestprovider', async (req, res) => {
+                const bodyData = req.body;
+
+                if (SchemaProjectGenerateSchema.validate(bodyData, [])) {
+                    const provider = providers.get(ConfigProviderName.gemini);
+
+                    if (provider) {
+                        const gemini = provider as SchemaProviderGemini;
+
+                        await gemini.generateSchema(bodyData.description);
+
+                        const response: ProjectGenerateSchemaResponse = {
+                            conversation: gemini.getConversation()
+                        };
+
+                        res.status(200).json(response);
+                        return;
+                    }
+                }
+
+                res.status(500).json({
+                    error: 'Error'
+                });
+            });
+
+            // ---------------------------------------------------------------------------------------------------------
+
+            app.get('/api/provider/createschema/load', async (req, res) => {
+                const provider = providers.get(ConfigProviderName.gemini);
+
+                if (provider) {
+                    if (provider) {
+                        const gemini = provider as SchemaProviderGemini;
+
+                        const response: ProjectGenerateSchemaResponse = {
+                            conversation: gemini.getConversation()
+                        };
+
+                        res.status(200).json(response);
+                        return;
+                    }
+                }
+            });
+
+            // ---------------------------------------------------------------------------------------------------------
 
             server.middlewares.use(app);
         }
