@@ -1,9 +1,9 @@
 // vite.config.ts
-import { defineConfig, Plugin } from 'vite';
+import dotenv from 'dotenv';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
+import {defineConfig, Plugin} from 'vite';
 import {SchemaErrors} from 'vts';
 import {ConfigProviderName, SchemaConfig} from './Config/Config.js';
 import {JsonData, SchemaJsonData} from './SchemaEditor/JsonData.js';
@@ -16,10 +16,9 @@ import {
 } from './SchemaProject/SchemaProjectGenerateSchema.js';
 import {SchemaProjectSave} from './SchemaProject/SchemaProjectSave.js';
 import {ProjectsData, ProjectsResponse} from './SchemaProject/SchemaProjectsResponse.js';
-import {ASchemaProvider} from './SchemaProvider/ASchemaProvider.js';
-import {SchemaProviderGemini} from './SchemaProvider/Gemini/SchemaProviderGemini.js';
+import {SchemaProvider} from './SchemaProvider/SchemaProvider.js';
+import {SchemaProviderAIBase} from './SchemaProvider/SchemaProviderAIBase.js';
 import {SchemaScript} from './SchemaScript/SchemaScript.js';
-
 
 /**
  * Express middleware
@@ -48,7 +47,6 @@ function expressMiddleware(): Plugin {
             }
 
             // config load ---------------------------------------------------------------------------------------------
-            const providers: Map<string, ASchemaProvider> = new Map<string, ASchemaProvider>();
             const projects: Map<string, SchemaProject> = new Map<string, SchemaProject>();
 
             if (configFile) {
@@ -61,17 +59,7 @@ function expressMiddleware(): Plugin {
                         // init providers ------------------------------------------------------------------------------
 
                         for (const aProvider of config.editor.providers) {
-                            let oprovider: ASchemaProvider|null = null;
-
-                            switch (aProvider.apiProvider) {
-                                case ConfigProviderName.gemini:
-                                    oprovider = new SchemaProviderGemini(aProvider);
-                                    break;
-                            }
-
-                            if (oprovider !== null) {
-                                providers.set(aProvider.apiProvider, oprovider);
-                            }
+                            SchemaProvider.getInstance().addNewProvider(aProvider);
                         }
                     }
 
@@ -238,7 +226,7 @@ function expressMiddleware(): Plugin {
                         controls_width: 300
                     },
                     init: {
-                        enable_schema_create: providers.size > 0
+                        enable_schema_create: SchemaProvider.getInstance().count() > 0
                     }
                 };
 
@@ -322,15 +310,15 @@ function expressMiddleware(): Plugin {
                 const bodyData = req.body;
 
                 if (SchemaProjectGenerateSchema.validate(bodyData, [])) {
-                    const provider = providers.get(ConfigProviderName.gemini);
+                    const provider = SchemaProvider.getInstance().getProvider(ConfigProviderName.localai);
 
                     if (provider) {
-                        const gemini = provider as SchemaProviderGemini;
+                        const ai = provider as SchemaProviderAIBase;
 
-                        await gemini.generateSchema(bodyData.description);
+                        await ai.generateSchema(bodyData.description);
 
                         const response: ProjectGenerateSchemaResponse = {
-                            conversation: gemini.getConversation()
+                            conversation: ai.getConversation()
                         };
 
                         res.status(200).json(response);
@@ -346,14 +334,14 @@ function expressMiddleware(): Plugin {
             // ---------------------------------------------------------------------------------------------------------
 
             app.get('/api/provider/createschema/load', async (req, res) => {
-                const provider = providers.get(ConfigProviderName.gemini);
+                const provider = SchemaProvider.getInstance().getProvider(ConfigProviderName.localai);
 
                 if (provider) {
                     if (provider) {
-                        const gemini = provider as SchemaProviderGemini;
+                        const ai = provider as SchemaProviderAIBase;
 
                         const response: ProjectGenerateSchemaResponse = {
-                            conversation: gemini.getConversation()
+                            conversation: ai.getConversation()
                         };
 
                         res.status(200).json(response);

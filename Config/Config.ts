@@ -63,7 +63,9 @@ export const SchemaConfigBrowser = Vts.object({
  * Config provider name
  */
 export enum ConfigProviderName {
-    gemini = 'gemini'
+    gemini = 'gemini',
+    localai = 'localai',
+    openai = 'openai'
 }
 
 /**
@@ -72,7 +74,8 @@ export enum ConfigProviderName {
 export const SchemaConfigProvider = Vts.object({
     apiProvider: Vts.or([Vts.enum(ConfigProviderName), Vts.string()]),
     apiKey: Vts.string(),
-    apiUrl: Vts.string()
+    apiUrl: Vts.string(),
+    model: Vts.optional(Vts.string())
 });
 
 /**
