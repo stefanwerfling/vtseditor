@@ -115,11 +115,19 @@ export abstract class SchemaProviderAIBase extends ASchemaProvider {
      * Extract JSON from text
      */
     protected _extractJson(text: string): string {
-        return text
+        let cleaned = text
         .replace(/^```json\s*/i, "")
         .replace(/^```\s*/i, "")
         .replace(/\s*```$/i, "")
         .trim();
+
+        const match = cleaned.match(/\{[\s\S]*}/);
+
+        if (match) {
+            cleaned = match[0].trim();
+        }
+
+        return cleaned;
     }
 
 }

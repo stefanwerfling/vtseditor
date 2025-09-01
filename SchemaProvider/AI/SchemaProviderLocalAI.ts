@@ -40,7 +40,6 @@ export class SchemaProviderLocalAI extends SchemaProviderAIBase {
 
         console.log(`Request duration: ${(end - start).toFixed(2)} ms`);
 
-
         if (!response.ok) {
             throw new Error(`Request failed: ${response.status} ${response.statusText}`);
         }
@@ -48,9 +47,27 @@ export class SchemaProviderLocalAI extends SchemaProviderAIBase {
         const data = await response.json();
         this._lastResponse = data;
 
-        console.log(`Response content: ${data?.choices?.[0]?.message?.content}`);
+        let content = data?.choices?.[0]?.message?.content ?? null;
 
-        return data?.choices?.[0]?.message?.content ?? null;
+        if (content) {
+            content = this._cleanResponse(content);
+        }
+
+        console.log(`Response content: ${content}`);
+
+        return content;
+    }
+
+    protected _cleanResponse(text: string): string {
+        let content = text;
+
+        const idx = content.indexOf('</think>');
+
+        if (idx !== -1) {
+            content = content.slice(idx + '</think>'.length).trim();
+        }
+
+        return content;
     }
 
     protected _getTotalTokens(): number {
