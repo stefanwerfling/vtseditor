@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import {defineConfig, Plugin} from 'vite';
 import {SchemaErrors} from 'vts';
-import {ConfigProviderName, SchemaConfig} from './Config/Config.js';
+import {ConfigAIProviderName, SchemaConfig} from './Config/Config.js';
 import {JsonData, SchemaJsonData} from './SchemaEditor/JsonData.js';
 import {SchemaExternLoader} from './SchemaExtern/SchemaExternLoader.js';
 import {SchemaGenerator} from './SchemaGenerator/SchemaGenerator.js';
@@ -48,6 +48,7 @@ function expressMiddleware(): Plugin {
 
             // config load ---------------------------------------------------------------------------------------------
             const projects: Map<string, SchemaProject> = new Map<string, SchemaProject>();
+            let providerAiName: string|ConfigAIProviderName = ConfigAIProviderName.localai;
 
             if (configFile) {
                 const config = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
@@ -60,6 +61,10 @@ function expressMiddleware(): Plugin {
 
                         for (const aProvider of config.editor.providers) {
                             SchemaProvider.getInstance().addNewProvider(aProvider);
+                        }
+
+                        if (config.editor.aiProvider) {
+                            providerAiName = config.editor.aiProvider;
                         }
                     }
 
@@ -310,7 +315,7 @@ function expressMiddleware(): Plugin {
                 const bodyData = req.body;
 
                 if (SchemaProjectGenerateSchema.validate(bodyData, [])) {
-                    const provider = SchemaProvider.getInstance().getProvider(ConfigProviderName.localai);
+                    const provider = SchemaProvider.getInstance().getProvider(providerAiName);
 
                     if (provider) {
                         const ai = provider as SchemaProviderAIBase;
@@ -334,7 +339,7 @@ function expressMiddleware(): Plugin {
             // ---------------------------------------------------------------------------------------------------------
 
             app.get('/api/provider/createschema/load', async (req, res) => {
-                const provider = SchemaProvider.getInstance().getProvider(ConfigProviderName.localai);
+                const provider = SchemaProvider.getInstance().getProvider(providerAiName);
 
                 if (provider) {
                     if (provider) {

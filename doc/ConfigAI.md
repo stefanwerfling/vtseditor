@@ -12,7 +12,8 @@ Currently supported providers are:
 ## 1. `vtseditor.json` Configuration
 
 The file `vtseditor.json` defines which AI providers are available to the editor.  
-Each provider is listed inside the `providers` array.
+Each provider is listed inside the `providers` array.  
+Additionally, the `aiProvider` field defines which provider is used by default.
 
 ### Example
 
@@ -37,7 +38,8 @@ Each provider is listed inside the `providers` array.
         "apiUrl": "https://api.openai.com/v1/chat/completions",
         "model": "gpt-4o-mini"
       }
-    ]
+    ],
+    "aiProvider": "localai"
   },
   "projects": [
     {
@@ -66,6 +68,7 @@ Each provider is listed inside the `providers` array.
 
 ### Field Explanations
 
+- **`aiProvider`** → Defines the default provider the system will use. It must match one of the `apiProvider` values listed above.
 - **`apiProvider`** → Select which provider to use (`gemini`, `openai`, `localai`).
 - **`apiKey`** → The API key used for authentication.  
   You can use environment variables (recommended) like `$GEMINI_API_KEY`.

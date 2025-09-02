@@ -33,6 +33,15 @@ export const SchemaConfigProjectScripts = Vts.object({
 });
 
 /**
+ * Config provider name
+ */
+export enum ConfigAIProviderName {
+    gemini = 'gemini',
+    localai = 'localai',
+    openai = 'openai'
+}
+
+/**
  * Schema config project
  */
 export const SchemaConfigProject = Vts.object({
@@ -60,19 +69,10 @@ export const SchemaConfigBrowser = Vts.object({
 });
 
 /**
- * Config provider name
- */
-export enum ConfigProviderName {
-    gemini = 'gemini',
-    localai = 'localai',
-    openai = 'openai'
-}
-
-/**
  * Schema config provider
  */
 export const SchemaConfigProvider = Vts.object({
-    apiProvider: Vts.or([Vts.enum(ConfigProviderName), Vts.string()]),
+    apiProvider: Vts.or([Vts.enum(ConfigAIProviderName), Vts.string()]),
     apiKey: Vts.string(),
     apiUrl: Vts.string(),
     model: Vts.optional(Vts.string())
@@ -87,7 +87,8 @@ export type ConfigProvider = ExtractSchemaResultType<typeof SchemaConfigProvider
  * Schema config editor
  */
 export const SchemaConfigEditor = Vts.object({
-    providers: Vts.array(SchemaConfigProvider)
+    providers: Vts.array(SchemaConfigProvider),
+    aiProvider: Vts.optional(Vts.or([Vts.enum(ConfigAIProviderName), Vts.string()]))
 });
 
 /**

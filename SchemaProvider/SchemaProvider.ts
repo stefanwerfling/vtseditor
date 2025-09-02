@@ -1,4 +1,4 @@
-import {ConfigProvider, ConfigProviderName, SchemaConfigProvider} from '../Config/Config.js';
+import {ConfigProvider, ConfigAIProviderName} from '../Config/Config.js';
 import {SchemaProviderGemini} from './AI/SchemaProviderGemini.js';
 import {SchemaProviderLocalAI} from './AI/SchemaProviderLocalAI.js';
 import {SchemaProviderOpenAI} from './AI/SchemaProviderOpenAI.js';
@@ -27,7 +27,7 @@ export class SchemaProvider {
         return this._instance;
     }
 
-    protected _providers: Map<ConfigProviderName|string, ASchemaProvider> = new Map<ConfigProviderName|string, ASchemaProvider>();
+    protected _providers: Map<ConfigAIProviderName|string, ASchemaProvider> = new Map<ConfigAIProviderName|string, ASchemaProvider>();
 
     /**
      * Add a new Provider
@@ -37,15 +37,15 @@ export class SchemaProvider {
         let aProvider: ASchemaProvider|null = null;
 
         switch (config.apiProvider) {
-            case ConfigProviderName.gemini:
+            case ConfigAIProviderName.gemini:
                 aProvider = new SchemaProviderGemini(config);
                 break;
 
-            case ConfigProviderName.localai:
+            case ConfigAIProviderName.localai:
                 aProvider = new SchemaProviderLocalAI(config);
                 break;
 
-            case ConfigProviderName.openai:
+            case ConfigAIProviderName.openai:
                 aProvider = new SchemaProviderOpenAI(config);
                 break;
         }
@@ -57,18 +57,18 @@ export class SchemaProvider {
 
     /**
      * Add a provider
-     * @param {ConfigProviderName|string} key
+     * @param {ConfigAIProviderName|string} key
      * @param {ASchemaProvider} provider
      */
-    public addProvider(key: ConfigProviderName|string, provider: ASchemaProvider): void {
+    public addProvider(key: ConfigAIProviderName|string, provider: ASchemaProvider): void {
         this._providers.set(key, provider);
     }
 
     /**
      * Return a provider
-     * @param {ConfigProviderName|string} key
+     * @param {ConfigAIProviderName|string} key
      */
-    public getProvider(key: ConfigProviderName|string): ASchemaProvider|undefined {
+    public getProvider(key: ConfigAIProviderName|string): ASchemaProvider|undefined {
         return this._providers.get(key);
     }
 
