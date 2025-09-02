@@ -44,6 +44,7 @@ With the editor, you can:
 * 🔍 Get an overview of schema structure and dependencies at a glance.
 * ⚙️ Automatically generate TypeScript schema and type files
 * ✅ Drag and Drop
+* 🧠 AI Provider support
 
 This is especially useful for large projects, team collaboration, or when sharing schema definitions with non-developers.
 
@@ -59,6 +60,40 @@ This is especially useful for large projects, team collaboration, or when sharin
 
 #### Schema field edit
 <img src="doc/images/screenshot_edit2.png" alt="Screenshot Edit 2" width="450px" />
+
+#### AI Schema create
+<img src="doc/images/screenshotai1.jpeg" alt="Screenshot AI Create" width="450px" />
+
+### Output
+The schemas are generated in Typescript and the result is the schema/enum and the type:
+
+```typescript
+// Import section - automatically generated
+import {ExtractSchemaResultType, Vts} from 'vts';
+import {SchemaName1, SchemaName2} from './relative/path.js';
+import {ExternalSchema} from 'external-package';
+
+// Enum definitions (if present)
+export enum StatusEnum {
+    'active' = 'active',
+    'inactive' = 'inactive',
+}
+
+// Schema definitions
+export const UserSchema = Vts.object({
+    id: Vts.string({description: 'User identifier'}),
+    status: Vts.enum(StatusEnum),
+    profile: ProfileSchema,
+}, {
+    description: 'User entity schema',
+    objectSchema: {
+        ignoreAdditionalItems: true
+    }
+});
+
+// TypeScript type definitions (optional)
+export type User = ExtractSchemaResultType<typeof UserSchema>;
+```
 
 ### Install
 
