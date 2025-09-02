@@ -133,6 +133,18 @@ This is especially useful for large projects, team collaboration, or when sharin
 4. open the vts editor in your browser: http://localhost:5173
 5. create your schemas, have fun
 
+### 🧠 Configuring AI Providers in VTS Editor
+
+The **VTS Editor** can connect to different AI providers to help you generate or refine your schemas 🚀.  
+Currently supported providers are:
+
+- **Gemini (Google AI Studio)**
+- **LocalAI (self-hosted)**
+- **OpenAI**
+
+Read more by [Config-AI-Description](doc/ConfigAI.md).
+
+
 ### 🛠️ Contributing
 Contributions welcome! Feel free to submit issues, suggestions, or pull requests.
 
