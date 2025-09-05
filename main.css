@@ -10,13 +10,16 @@ body {
 .topbar {
   display: flex;
   background-color: #ddd;
-  z-index: 10;
+  z-index: 400;
   position: relative;
   flex-shrink: 0;
   gap: 0;
 }
 
 .buttonbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px;
   width: 100%;
 }
@@ -103,6 +106,13 @@ body {
   background-color: #fff;
   overflow: scroll;
   position: relative;
+
+  background-image:
+    linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px),
+    linear-gradient(to right, rgba(0,0,0,0.15) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0,0,0,0.15) 1px, transparent 1px);
+  background-size: 10px 10px, 10px 10px, 50px 50px, 50px 50px;
 }
 
 .table {
@@ -259,8 +269,6 @@ button.add-folder {
   background-color: #f0f0f0;
   outline: 1px dashed #888;
 }
-
-
 
 .jtk-connector.hovered-connection path {
   stroke: #ff6600 !important;
