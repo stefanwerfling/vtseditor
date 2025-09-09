@@ -1,0 +1,62 @@
+.dialog-body-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+/* Error */
+.dialog-body-alert.error {
+  background: #fff4f4;
+  border: 1px solid #f5c2c2;
+  color: #a33;
+}
+
+.dialog-body-alert.error::before {
+  content: "❌";
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Warning */
+.dialog-body-alert.warning {
+  background: #fff8e5;
+  border: 1px solid #f2c48d;
+  color: #8a4b0f;
+}
+
+.dialog-body-alert.warning::before {
+  content: "⚠️";
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Info */
+.dialog-body-alert.info {
+  background: #f0f8ff;
+  border: 1px solid #b6d6f2;
+  color: #245;
+}
+
+.dialog-body-alert.info::before {
+  content: "ℹ️";
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Success */
+.dialog-body-alert.success {
+  background: #f3faf3;
+  border: 1px solid #b6e0b6;
+  color: #225522;
+}
+
+.dialog-body-alert.success::before {
+  content: "✅";
+  font-size: 18px;
+  line-height: 1;
+}

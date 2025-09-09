@@ -58,7 +58,7 @@ export class SchemaCreateDialog extends BaseDialog {
                 }
             }));
 
-            this._close();
+            this.destroy();
         });
 
         this._divBody.appendChild(this._chatContainer.getElement());

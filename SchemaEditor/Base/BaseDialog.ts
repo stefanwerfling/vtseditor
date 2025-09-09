@@ -116,7 +116,7 @@ export class BaseDialog {
                 this._onClose();
             }
 
-            this._close();
+            this.destroy();
         });
 
         this._divHeader.appendChild(this._btnCloseX);
@@ -140,7 +140,7 @@ export class BaseDialog {
                 this._onClose();
             }
 
-            this._close();
+            this.destroy();
         });
 
         btns.appendChild(this._btnCancel);
@@ -151,10 +151,10 @@ export class BaseDialog {
         this._btnConfirm.addEventListener('click', () => {
             if (this._onConfirm) {
                 if (this._onConfirm(this)) {
-                    this._close();
+                    this.destroy();
                 }
             } else {
-                this._close();
+                this.destroy();
             }
         });
 
@@ -166,17 +166,6 @@ export class BaseDialog {
         // -------------------------------------------------------------------------------------------------------------
 
         document.body.appendChild(this._dialog);
-    }
-
-    /**
-     * close dialog
-     * @protected
-     */
-    protected _close(): void {
-        BaseDialog._dialogStack = BaseDialog._dialogStack.filter(d => d !== this._dialog);
-
-        this._dialog.close();
-        this._dialog.remove();
     }
 
     /**
@@ -233,6 +222,17 @@ export class BaseDialog {
      */
     public setOnConfirm(event: BaseDialogOnConfirm): void {
         this._onConfirm = event;
+    }
+
+    /**
+     * Destroy
+     */
+    public destroy(): void {
+        this._isModal = false;
+        this._dialog.close();
+        this._dialog.remove();
+
+        BaseDialog._dialogStack = BaseDialog._dialogStack.filter(d => d !== this._dialog);
     }
 
 }

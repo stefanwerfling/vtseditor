@@ -2,6 +2,7 @@ import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
 import {ProjectSave} from '../SchemaProject/SchemaProjectSave.js';
 import {EditorInit, ProjectsData, SchemaProjectsResponse} from '../SchemaProject/SchemaProjectsResponse.js';
 import {SchemaTypesUtil} from '../SchemaUtil/SchemaTypesUtil.js';
+import {AlertDialog, AlertDialogTypes} from './Base/AlertDialog.js';
 import {BaseTable} from './Base/BaseTable.js';
 import {EnumTable} from './Enum/EnumTable.js';
 import {JsonDataFS, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js';
@@ -201,7 +202,11 @@ export class SchemaEditor {
             if (Treeview.getActiveEntry() !== null) {
                 this._addSchema();
             } else {
-                alert('Please select first a File for your Schema!');
+                AlertDialog.showAlert(
+                    'Add schema',
+                    'Please select first a File for your Schema!',
+                    AlertDialogTypes.error,
+                );
             }
         })
 
@@ -213,7 +218,11 @@ export class SchemaEditor {
             if (Treeview.getActiveEntry() !== null) {
                 this._addEnum();
             } else {
-                alert('Please select first a File for your Enum!');
+                AlertDialog.showAlert(
+                    'Add enum',
+                    'Please select first a File for your Enum!',
+                    AlertDialogTypes.error,
+                );
             }
         });
 
@@ -229,7 +238,11 @@ export class SchemaEditor {
             if (Treeview.getActiveEntry() !== null) {
                 this._createSchema();
             } else {
-                alert('Please select first a File for your Schema!');
+                AlertDialog.showAlert(
+                    'Create schema',
+                    'Please select first a File for your Schema!',
+                    AlertDialogTypes.error,
+                );
             }
         });
 
@@ -274,7 +287,11 @@ export class SchemaEditor {
 
             if (rootEntry) {
                 if (rootEntry.isSchemaTableUse(customEvent.detail.id)) {
-                    alert('Your Schema is used and can not delete!');
+                    AlertDialog.showAlert(
+                        'Delete schema',
+                        'The schema is in use by another schema and cannot be deleted. If this schema is to be deleted, the connections must be deleted.',
+                        AlertDialogTypes.error,
+                    );
                     return;
                 }
 
@@ -299,7 +316,11 @@ export class SchemaEditor {
 
             if (rootEntry) {
                 if (rootEntry.isSchemaTableUse(customEvent.detail.id)) {
-                    alert('Your Enum is used and can not delete!');
+                    AlertDialog.showAlert(
+                        'Delete enum',
+                        'The enum is in use by another schema and cannot be deleted. If this enum is to be deleted, the connections must be deleted.',
+                        AlertDialogTypes.error,
+                    );
                     return;
                 }
 
@@ -361,7 +382,11 @@ export class SchemaEditor {
                                 }));
                             }
                         } else {
-                            alert('Folder/File is not empty, please remove all entries first!');
+                            AlertDialog.showAlert(
+                                'Delete folder/file',
+                                'Folder/File is not empty, please remove all entries first.',
+                                AlertDialogTypes.error,
+                            );
                         }
                     }
                 }
@@ -864,7 +889,11 @@ export class SchemaEditor {
         if (SchemaProjectsResponse.validate(projectResponse, [])) {
             this.setData(projectResponse.data);
         } else {
-            alert('Schema response format is broken!');
+            AlertDialog.showAlert(
+                'Load data',
+                'Schema response format is broken!',
+                AlertDialogTypes.error,
+            );
         }
     }
 

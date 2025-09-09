@@ -2,18 +2,22 @@ import {Connection} from '@jsplumb/browser-ui';
 import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
 import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
 import {SchemaTypesUtil} from '../../SchemaUtil/SchemaTypesUtil.js';
-import {AlertDialog} from '../Base/AlertDialog.js';
+import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import {ExtendTypeBadge} from '../Base/ExtendType/ExtendTypeBadge.js';
 import {GlobalDragDrop} from '../GlobalDragDrop.js';
+import {
+    JsonSchemaDescription,
+    JsonSchemaDescriptionExtend,
+    JsonSchemaFieldDescription,
+    JsonSchemaFieldType,
+    SchemaJsonDataFSType,
+    SchemaJsonSchemaDescriptionExtend,
+    SchemaJsonSchemaFieldType
+} from '../JsonData.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {SchemaExtends} from '../Register/SchemaExtends.js';
-import {
-    JsonSchemaDescription, JsonSchemaDescriptionExtend,
-    JsonSchemaFieldDescription, JsonSchemaFieldType,
-    SchemaJsonDataFSType, SchemaJsonSchemaDescriptionExtend, SchemaJsonSchemaFieldType
-} from '../JsonData.js';
 import {SchemaTypes} from '../Register/SchemaTypes.js';
 import {SchemaTableDialog} from './SchemaTableDialog.js';
 import {SchemaTableField} from './SchemaTableField.js';
@@ -372,15 +376,12 @@ export class SchemaTable extends BaseTable {
             const uid = crypto.randomUUID();
 
             if (this.existFieldName(uid, fieldName)) {
-                tdialog.close();
-                tdialog.show(false);
-
-                const ad = new AlertDialog('Please change your Fieldname, it already exist!');
-                ad.show();
-                ad.setOnClose(() => {
-                    tdialog.close();
-                    tdialog.show();
-                })
+                AlertDialog.showAlert(
+                    'Fieldname',
+                    'Please change your Fieldname, it already exist!',
+                    AlertDialogTypes.info,
+                    tdialog
+                );
 
                 return false;
             }
@@ -427,7 +428,11 @@ export class SchemaTable extends BaseTable {
             const fieldName = dialog.getFieldName();
 
             if (this.existFieldName(field1.getId(), fieldName)) {
-                new AlertDialog('Please change your Fieldname, it already exist!');
+                AlertDialog.showAlert(
+                    'Fieldname',
+                    'Please change your Fieldname, it already exist!',
+                    AlertDialogTypes.info
+                );
                 return false;
             }
 
@@ -647,6 +652,8 @@ export class SchemaTable extends BaseTable {
      */
     public isSchemaTableUse(id: string): boolean {
         if (this._extend.type === id) {
+            return true;
+        } else if (this._extend.values_schema === id) {
             return true;
         }
 
