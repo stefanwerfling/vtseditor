@@ -1,6 +1,7 @@
 import {JsonSchemaFieldType, SchemaJsonSchemaFieldTypeArray} from '../../JsonData.js';
 import {SchemaTypes} from '../../Register/SchemaTypes.js';
 import './MultiTypeFieldBadge.css';
+import {EditorEvents} from '../EditorEvents.js';
 
 /**
  * Badge
@@ -37,7 +38,7 @@ export class MultiTypeFieldBadge {
         if (SchemaTypes.getInstance().isTypeASchema(data.type)) {
             spanType.classList.add(...['vts-badge-wh-2']);
             spanType.addEventListener('click', () => {
-                window.dispatchEvent(new CustomEvent('schemaeditor:showtable', {
+                window.dispatchEvent(new CustomEvent(EditorEvents.showTable, {
                     detail: {
                         tableId: data.type
                     }

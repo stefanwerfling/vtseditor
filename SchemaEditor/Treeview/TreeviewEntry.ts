@@ -1,3 +1,5 @@
+import path from 'path';
+import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import {EnumTable} from '../Enum/EnumTable.js';
 import {GlobalDragDrop} from '../GlobalDragDrop.js';
@@ -16,6 +18,7 @@ import {LinkTable} from '../Link/LinkTable.js';
 import {SchemaTable} from '../Schema/SchemaTable.js';
 import {Treeview} from './Treeview.js';
 import {TreeviewDialog} from './TreeviewDialog.js';
+import {TreeviewSearchResult} from './TreeviewSearchResult.js';
 
 /**
  * Treeview entry
@@ -155,13 +158,13 @@ export class TreeviewEntry {
                 Treeview.setActivEntryTable(null);
                 Treeview.setActivEntry(this);
 
-                window.dispatchEvent(new CustomEvent('schemaeditor:updateview', {}));
+                window.dispatchEvent(new CustomEvent(EditorEvents.updateView, {}));
             }
 
             if (this.getType() === SchemaJsonDataFSType.enum || this.getType() === SchemaJsonDataFSType.schema) {
                 Treeview.setActivEntryTable(this);
 
-                window.dispatchEvent(new CustomEvent('schemaeditor:updateview', {}));
+                window.dispatchEvent(new CustomEvent(EditorEvents.updateView, {}));
             }
         };
 
@@ -244,7 +247,7 @@ export class TreeviewEntry {
 
                     folderLine.classList.remove('folder-line-hover');
 
-                    window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+                    window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
 
                     return true;
                 });
@@ -264,7 +267,7 @@ export class TreeviewEntry {
             btnSorting.textContent = EditorIcons.sort;
             btnSorting.classList.add('add-folder');
             btnSorting.addEventListener('click', () => {
-                window.dispatchEvent(new CustomEvent('schemaeditor:sortingentrys', {}));
+                window.dispatchEvent(new CustomEvent(EditorEvents.sortEntries, {}));
             });
 
             this._divButtons.appendChild(btnSorting);
@@ -300,7 +303,7 @@ export class TreeviewEntry {
 
                     folderLine.classList.remove('folder-line-hover');
 
-                    window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+                    window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
 
                     return true;
                 });
@@ -330,7 +333,7 @@ export class TreeviewEntry {
                     return;
                 }
 
-                window.dispatchEvent(new CustomEvent('schemaeditor:deletefolderfile', {
+                window.dispatchEvent(new CustomEvent(EditorEvents.deleteFolderFile, {
                     detail: {
                         id: this.getUnid()
                     }
@@ -455,7 +458,7 @@ export class TreeviewEntry {
                 switch (selfType) {
                     case SchemaJsonDataFSType.project:
                         if (dragData.type === SchemaJsonDataFSType.folder) {
-                            window.dispatchEvent(new CustomEvent('schemaeditor:moveto', {
+                            window.dispatchEvent(new CustomEvent(EditorEvents.moveTo, {
                                 detail: {
                                     sourceType: dragData.type,
                                     destinationType: selfType,
@@ -468,7 +471,7 @@ export class TreeviewEntry {
 
                     case SchemaJsonDataFSType.folder:
                         if (dragData.type === SchemaJsonDataFSType.file || dragData.type === SchemaJsonDataFSType.folder) {
-                            window.dispatchEvent(new CustomEvent('schemaeditor:moveto', {
+                            window.dispatchEvent(new CustomEvent(EditorEvents.moveTo, {
                                 detail: {
                                     sourceType: dragData.type,
                                     destinationType: selfType,
@@ -481,7 +484,7 @@ export class TreeviewEntry {
 
                     case SchemaJsonDataFSType.file:
                         if (dragData.type === SchemaJsonDataFSType.schema || dragData.type === SchemaJsonDataFSType.enum) {
-                            window.dispatchEvent(new CustomEvent('schemaeditor:moveto', {
+                            window.dispatchEvent(new CustomEvent(EditorEvents.moveTo, {
                                 detail: {
                                     sourceType: dragData.type,
                                     destinationType: selfType,
@@ -625,7 +628,7 @@ export class TreeviewEntry {
 
     /**
      * Set icon
-     * @param icon
+     * @param {SchemaJsonDataFSType|SchemaJsonDataFSIcon|string} icon
      */
     protected _setIcon(icon: SchemaJsonDataFSType|SchemaJsonDataFSIcon|string): void {
         let iconText: string = EditorIcons.unknown;
@@ -1351,6 +1354,49 @@ export class TreeviewEntry {
         }
 
         return null;
+    }
+
+    public search(
+        pattern: string,
+        path: TreeviewEntry[] = [],
+        matcher: (name: string, pattern: string) => boolean = (name, pattern) =>
+            name.toLowerCase().indexOf(pattern.toLowerCase()) > -1
+        ): TreeviewSearchResult[] {
+        const results: TreeviewSearchResult[] = [];
+
+        // schemas -----------------------------------------------------------------------------------------------------
+
+        for (const atable of this._tables) {
+            if (matcher(atable.getName(), pattern)) {
+                results.push({
+                    entry: this,
+                    enum: null,
+                    schema: atable,
+                    path: path
+                });
+            }
+        }
+
+        // enum --------------------------------------------------------------------------------------------------------
+
+        for (const aenum of this._enums) {
+            if (matcher(aenum.getName(), pattern)) {
+                results.push({
+                    entry: this,
+                    enum: aenum,
+                    schema: null,
+                    path: [...path]
+                });
+            }
+        }
+
+        // entrys ------------------------------------------------------------------------------------------------------
+
+        for (const [, entry] of this._list.entries()) {
+            results.push(...entry.search(pattern, [...path, this], matcher));
+        }
+
+        return results;
     }
 
 }

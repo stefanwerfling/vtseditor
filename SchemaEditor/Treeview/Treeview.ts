@@ -1,3 +1,4 @@
+import {EditorEvents} from '../Base/EditorEvents.js';
 import {JsonDataFS} from '../JsonData.js';
 import {TreeviewEntry} from './TreeviewEntry.js';
 
@@ -108,6 +109,11 @@ export class Treeview {
         });
     }
 
+    /**
+     * Move to entry
+     * @param {string} sourceId
+     * @param {string} destinationId
+     */
     public moveToEntry(sourceId: string, destinationId: string): void {
         const parentEntry = this._rootFolder.findEntry(sourceId);
         const destinationEntry = this._rootFolder.getEntryById(destinationId);
@@ -125,12 +131,17 @@ export class Treeview {
 
                 if (entry) {
                     destinationEntry.addEntry(entry);
-                    window.dispatchEvent(new CustomEvent('schemaeditor:sortingentrys', {}));
+                    window.dispatchEvent(new CustomEvent(EditorEvents.sortEntries, {}));
                 }
             }
         }
     }
 
+    /**
+     * Move table to entry
+     * @param {string} sourceTableId
+     * @param {string} destinationId
+     */
     public moveTableToEntry(sourceTableId: string, destinationId: string): void {
         const parentEntry = this._rootFolder.findEntry(sourceTableId);
         const destinationEntry = this._rootFolder.getEntryById(destinationId);
@@ -155,12 +166,17 @@ export class Treeview {
                         destinationEntry.addEntry(entry);
                     }
 
-                    window.dispatchEvent(new CustomEvent('schemaeditor:sortingentrys', {}));
+                    window.dispatchEvent(new CustomEvent(EditorEvents.sortEntries, {}));
                 }
             }
         }
     }
 
+    /**
+     * Move enum to entry
+     * @param {string} sourceEnumId
+     * @param {string} destinationId
+     */
     public moveEnumToEntry(sourceEnumId: string, destinationId: string): void {
         const parentEntry = this._rootFolder.findEntry(sourceEnumId);
         const destinationEntry = this._rootFolder.getEntryById(destinationId);
@@ -185,7 +201,7 @@ export class Treeview {
                         destinationEntry.addEntry(entry);
                     }
 
-                    window.dispatchEvent(new CustomEvent('schemaeditor:sortingentrys', {}));
+                    window.dispatchEvent(new CustomEvent(EditorEvents.sortEntries, {}));
                 }
             }
         }
@@ -242,4 +258,5 @@ export class Treeview {
             parentEntry.removeEntry(unid);
         }
     }
+
 }

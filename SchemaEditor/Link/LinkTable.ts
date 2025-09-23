@@ -1,4 +1,5 @@
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
+import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import {JsonLinkDescription, JsonSchemaPositionDescription} from '../JsonData.js';
 
@@ -8,7 +9,7 @@ import {JsonLinkDescription, JsonSchemaPositionDescription} from '../JsonData.js
  * @constructor
  */
 export const LinkTableOnDelete: BaseTableOnDelete = (table: BaseTable) => {
-    window.dispatchEvent(new CustomEvent('schemaeditor:deletelinktable', {
+    window.dispatchEvent(new CustomEvent(EditorEvents.deleteLinkTable, {
         detail: {
             id: table.getUnid()
         }
@@ -96,7 +97,7 @@ export class LinkTable {
         this._linkObject.setOnPositionMove((table, offsetTop, offsetLeft) => {
             this.setPosition(offsetLeft, offsetTop);
 
-            window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
         });
 
         this._linkObject.getElement().classList.add('vts-link-table');

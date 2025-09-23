@@ -5,6 +5,7 @@ import {
 import {ConversationPartRole} from '../SchemaProvider/SchemaProviderConversationPart.js';
 import {BaseDialog} from './Base/BaseDialog.js';
 import {ChatContainer} from './Base/ChatContainer/ChatContainer.js';
+import {EditorEvents} from './Base/EditorEvents.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
 import {Treeview} from './Treeview/Treeview.js';
 
@@ -51,7 +52,7 @@ export class SchemaCreateDialog extends BaseDialog {
 
             Treeview.getActiveEntry()!.addSchemaTable(newTable);
 
-            window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {
+            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {
                 detail: {
                     updateView: true,
                     updateTreeView: true

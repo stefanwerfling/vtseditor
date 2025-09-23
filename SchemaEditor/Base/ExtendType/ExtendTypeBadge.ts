@@ -1,5 +1,6 @@
 import {JsonSchemaDescriptionExtend} from '../../JsonData.js';
 import {SchemaExtends} from '../../Register/SchemaExtends.js';
+import {EditorEvents} from '../EditorEvents.js';
 
 export class ExtendTypeBadge {
 
@@ -21,7 +22,7 @@ export class ExtendTypeBadge {
         if (SchemaExtends.getInstance().isExtendASchema(data.type)) {
             spanType.classList.add(...['vts-badge-wh-2']);
             spanType.addEventListener('click', () => {
-                window.dispatchEvent(new CustomEvent('schemaeditor:showtable', {
+                window.dispatchEvent(new CustomEvent(EditorEvents.showTable, {
                     detail: {
                         tableId: data.type
                     }
@@ -52,7 +53,7 @@ export class ExtendTypeBadge {
             if (SchemaExtends.getInstance().isExtendASchema(data.values_schema)) {
                 spanType.classList.add(...['vts-badge-wh-6']);
                 spanType.addEventListener('click', () => {
-                    window.dispatchEvent(new CustomEvent('schemaeditor:showtable', {
+                    window.dispatchEvent(new CustomEvent(EditorEvents.showTable, {
                         detail: {
                             tableId: data.values_schema
                         }

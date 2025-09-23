@@ -1,5 +1,6 @@
 import {Connection} from '@jsplumb/browser-ui';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
+import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {
@@ -18,7 +19,7 @@ import {EnumTableValueDialog} from './EnumTableValueDialog.js';
  * @constructor
  */
 export const EnumTableEventOnDelete: BaseTableOnDelete = (table: BaseTable) => {
-    window.dispatchEvent(new CustomEvent('schemaeditor:deleteenumtable', {
+    window.dispatchEvent(new CustomEvent(EditorEvents.deleteEnumTable, {
         detail: {
             id: table.getUnid()
         }
@@ -116,7 +117,7 @@ export class EnumTable extends BaseTable {
                     value: tdialog.getValue()
                 }]);
 
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+                window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
 
                 return true;
             });
@@ -170,14 +171,14 @@ export class EnumTable extends BaseTable {
             this.setName(enumName);
             this.updateView();
 
-            window.dispatchEvent(new CustomEvent('schemaeditor:updatename', {
+            window.dispatchEvent(new CustomEvent(EditorEvents.updateName, {
                 detail: {
                     sourceType: SchemaJsonDataFSType.enum,
                     sourceId: this.getUnid()
                 }
             }));
 
-            window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
 
             return true;
         });
@@ -204,7 +205,7 @@ export class EnumTable extends BaseTable {
                 value1.setValue(dialog.getValue());
                 value1.updateView();
 
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+                window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
 
                 return true;
             });
@@ -217,7 +218,7 @@ export class EnumTable extends BaseTable {
                 field1.remove();
                 this._values.delete(field1.getId());
 
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+                window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
             });
 
             this._columns.appendChild(value.getElement());

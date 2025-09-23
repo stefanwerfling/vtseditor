@@ -4,6 +4,9 @@ import {ProviderConversationJson, SchemaProviderConversationJson} from './Schema
 import {ConversationPartRole, ProviderConversationPart} from './SchemaProviderConversationPart.js';
 import {SchemaProviderConversationPrompt} from './SchemaProviderConversationPrompt.js';
 
+/**
+ * Schema provider ai base
+ */
 export abstract class SchemaProviderAIBase extends ASchemaProvider {
 
     /**
@@ -68,6 +71,8 @@ export abstract class SchemaProviderAIBase extends ASchemaProvider {
 
         if (SchemaProviderConversationJson.validate(returnJsonData, [])) {
             returnJson = returnJsonData;
+        } else {
+            console.log('⛔ KI Schema not validate!');
         }
 
         this._conversation.push({

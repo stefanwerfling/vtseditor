@@ -4,6 +4,8 @@ import {EditorInit, ProjectsData, SchemaProjectsResponse} from '../SchemaProject
 import {SchemaTypesUtil} from '../SchemaUtil/SchemaTypesUtil.js';
 import {AlertDialog, AlertDialogTypes} from './Base/AlertDialog.js';
 import {BaseTable} from './Base/BaseTable.js';
+import {EditorEvents} from './Base/EditorEvents.js';
+import {EditorIcons} from './Base/EditorIcons.js';
 import {EnumTable} from './Enum/EnumTable.js';
 import {JsonDataFS, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js';
 import jsPlumbInstance from './jsPlumbInstance.js';
@@ -12,6 +14,7 @@ import {SchemaTable} from './Schema/SchemaTable.js';
 import {SchemaExtends} from './Register/SchemaExtends.js';
 import {SchemaTypes} from './Register/SchemaTypes.js';
 import {SchemaCreateDialog} from './SchemaCreateDialog.js';
+import {Searchbar, SearchbarResultEntry} from './Search/Searchbar.js';
 import {Treeview} from './Treeview/Treeview.js';
 
 /**
@@ -73,6 +76,12 @@ export class SchemaEditor {
      * @protected
      */
     protected _btnCreateSchema: HTMLElement | null = null;
+
+    /**
+     * Searchbar
+     * @protected
+     */
+    protected _searchbar: Searchbar | null = null;
 
     /**
      * Treeview
@@ -194,6 +203,8 @@ export class SchemaEditor {
         this._jsPlumbInstance = jsPlumbInstance;
         this._container = jsPlumbInstance.getContainer();
 
+        const buttonBar = document.getElementById('buttonbar');
+
         // add schema button -------------------------------------------------------------------------------------------
 
         this._btnAddSchema = document.getElementById('addSchemaBtn');
@@ -246,13 +257,94 @@ export class SchemaEditor {
             }
         });
 
+        // searchbar ---------------------------------------------------------------------------------------------------
+
+        this._searchbar = new Searchbar();
+        this._searchbar!.hide();
+        this._searchbar.setOnSearch((search, searchbar) => {
+            const rootEntry = this._treeview?.getRoot();
+
+            if (rootEntry) {
+                const results = rootEntry?.search(search);
+
+                const items: SearchbarResultEntry[] = [];
+
+                results?.forEach(value => {
+                    let object: SchemaTable|EnumTable|null;
+                    let isSchema = true;
+                    let description = '';
+
+                    object = value.schema ? value.schema : null;
+
+                    if (object === null) {
+                        isSchema = false;
+                        object = value.enum ? value.enum : null;
+                    } else {
+                        description = object.getDescription();
+                    }
+
+                    if (object === null) {
+                        return;
+                    }
+
+                    let path = '';
+
+                    value.path.forEach(pathValue => {
+                        if (path !== '') {
+                            path += ` ${EditorIcons.toggle_close} `;
+                        }
+
+                        switch (pathValue.getType()) {
+                            case SchemaJsonDataFSType.root:
+                                path += `${EditorIcons.root}`;
+                                break;
+
+                            case SchemaJsonDataFSType.project:
+                                path += `${EditorIcons.project}`;
+                                break;
+
+                            case SchemaJsonDataFSType.extern:
+                                path += `${EditorIcons.registry}`;
+                                break;
+
+                            case SchemaJsonDataFSType.folder:
+                                path += `${EditorIcons.folder}`;
+                                break;
+                        }
+
+                        path += `${pathValue.getName()}`;
+                    });
+
+                    items.push({
+                        path: path,
+                        isSchema: isSchema,
+                        objectId: object.getUnid(),
+                        name: object ? object.getName() : 'Unknown',
+                        description: description
+                    });
+                });
+
+                searchbar.showResults(items);
+            }
+        });
+
+        this._searchbar.setOnResultClick(entry => {
+            window.dispatchEvent(new CustomEvent(EditorEvents.selectTable, {
+                detail: {
+                    tableId: entry.objectId
+                }
+            }));
+        });
+
+        buttonBar?.appendChild(this._searchbar.getElement());
+
         // treeview ----------------------------------------------------------------------------------------------------
 
         this._treeview = new Treeview();
 
-        // update events -----------------------------------------------------------------------------------------------
+        // listener update events --------------------------------------------------------------------------------------
 
-        window.addEventListener('schemaeditor:updatedata', (event: Event) => {
+        window.addEventListener(EditorEvents.updateData, (event: Event) => {
             const customEvent = event as CustomEvent<{
                 updateView?: boolean,
                 updateTreeView?: boolean;
@@ -277,11 +369,15 @@ export class SchemaEditor {
             });
         });
 
-        window.addEventListener('schemaeditor:updateview', () => {
+        // listener update view ----------------------------------------------------------------------------------------
+
+        window.addEventListener(EditorEvents.updateView, () => {
             this._updateView();
         });
 
-        window.addEventListener('schemaeditor:deleteschematable', (event: Event) => {
+        // listener delete schema table --------------------------------------------------------------------------------
+
+        window.addEventListener(EditorEvents.deleteSchemaTable, (event: Event) => {
             const customEvent = event as CustomEvent<{ id: string }>;
             const rootEntry = this._treeview?.getRoot();
 
@@ -299,7 +395,7 @@ export class SchemaEditor {
                     if (rootEntry.removeSchemaTable(customEvent.detail.id)) {
                         rootEntry.removeEntry(customEvent.detail.id);
 
-                        window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {
+                        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {
                             detail: {
                                 updateView: true,
                                 updateTreeView: true
@@ -310,7 +406,9 @@ export class SchemaEditor {
             }
         });
 
-        window.addEventListener('schemaeditor:deleteenumtable', (event: Event) => {
+        // listener delete enum table ----------------------------------------------------------------------------------
+
+        window.addEventListener(EditorEvents.deleteEnumTable, (event: Event) => {
             const customEvent = event as CustomEvent<{ id: string }>;
             const rootEntry = this._treeview?.getRoot();
 
@@ -328,7 +426,7 @@ export class SchemaEditor {
                     if (rootEntry.removeEnumTable(customEvent.detail.id)) {
                         rootEntry.removeEntry(customEvent.detail.id);
 
-                        window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {
+                        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {
                             detail: {
                                 updateView: true,
                                 updateTreeView: true
@@ -339,7 +437,9 @@ export class SchemaEditor {
             }
         });
 
-        window.addEventListener('schemaeditor:deletelinktable', (event: Event) => {
+        // listener delete link table ----------------------------------------------------------------------------------
+
+        window.addEventListener(EditorEvents.deleteLinkTable, (event: Event) => {
             const customEvent = event as CustomEvent<{ id: string }>;
             const activEntry = Treeview.getActiveEntry();
 
@@ -348,7 +448,7 @@ export class SchemaEditor {
                     if (confirm('Do you really want to delete link?')) {
                         activEntry.removeLinkTable(customEvent.detail.id);
 
-                        window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {
+                        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {
                             detail: {
                                 updateView: true,
                                 updateTreeView: true
@@ -359,7 +459,9 @@ export class SchemaEditor {
             }
         });
 
-        window.addEventListener('schemaeditor:deletefolderfile', (event: Event) => {
+        // listener delete folder file ---------------------------------------------------------------------------------
+
+        window.addEventListener(EditorEvents.deleteFolderFile, (event: Event) => {
             const customEvent = event as CustomEvent<{ id: string }>;
             const rootEntry = this._treeview?.getRoot();
 
@@ -374,7 +476,7 @@ export class SchemaEditor {
                             if (parentEntry) {
                                 parentEntry.removeEntry(entry.getUnid());
 
-                                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {
+                                window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {
                                     detail: {
                                         updateView: true,
                                         updateTreeView: true
@@ -393,7 +495,9 @@ export class SchemaEditor {
             }
         });
 
-        window.addEventListener('schemaeditor:sortingentrys', () => {
+        // listener sort entries ---------------------------------------------------------------------------------------
+
+        window.addEventListener(EditorEvents.sortEntries, () => {
             const rootEntry = this._treeview?.getRoot();
 
             if (rootEntry) {
@@ -423,7 +527,9 @@ export class SchemaEditor {
             }
         });
 
-        window.addEventListener('schemaeditor:moveto', (event: Event) => {
+        // listener move to --------------------------------------------------------------------------------------------
+
+        window.addEventListener(EditorEvents.moveTo, (event: Event) => {
             const customEvent = event as CustomEvent<SchemaEditorMoveEventDetail>;
             const treeview = this._treeview;
 
@@ -443,11 +549,13 @@ export class SchemaEditor {
                         break;
                 }
 
-                window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+                window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
             }
         });
 
-        window.addEventListener('schemaeditor:updatename', (event: Event) => {
+        // listener update name ----------------------------------------------------------------------------------------
+
+        window.addEventListener(EditorEvents.updateName, (event: Event) => {
             const customEvent = event as CustomEvent<SchemaEditorUpdatenameEventDetail>;
             const treeview = this._treeview;
 
@@ -466,45 +574,91 @@ export class SchemaEditor {
             }
         });
 
-        window.addEventListener('schemaeditor:showtable', (event: Event) => {
+        // listener show table -----------------------------------------------------------------------------------------
+
+        window.addEventListener(EditorEvents.showTable, (event: Event) => {
             const customEvent = event as CustomEvent<SchemaEditorWiggleEventDetail>;
             const treeview = this._treeview;
 
-            if (treeview) {
-                const entry = treeview.getRoot().findEntry(customEvent.detail.tableId);
-                const activeEntry = Treeview.getActiveEntry();
+            if (treeview === null) {
+                console.log(`${EditorEvents.showTable}: Error, treeview is empty!`);
+                return;
+            }
 
-                if (activeEntry) {
-                    const activeEntryId = activeEntry.getUnid();
+            const entry = treeview.getRoot().findEntry(customEvent.detail.tableId);
+            const activeEntry = Treeview.getActiveEntry();
 
-                    if (entry && activeEntryId) {
-                        if (entry.getUnid() === activeEntryId) {
-                            const table = entry.getTableById(customEvent.detail.tableId);
+            if (activeEntry) {
+                const activeEntryId = activeEntry.getUnid();
 
-                            if (table !== null) {
-                                table.runWiggle();
-                                return;
-                            }
+                if (entry && activeEntryId) {
+                    if (entry.getUnid() === activeEntryId) {
+                        const table = entry.getTableById(customEvent.detail.tableId);
 
-                            const aenum =  entry.getEnumById(customEvent.detail.tableId);
+                        if (table !== null) {
+                            table.runWiggle();
+                            return;
+                        }
 
-                            if (aenum !== null) {
-                                aenum.runWiggle();
-                                return;
-                            }
-                        } else if(activeEntry.hasLinkObject(customEvent.detail.tableId)) {
-                            const link = activeEntry.getLinkTableByObjectUnid(customEvent.detail.tableId);
+                        const aenum =  entry.getEnumById(customEvent.detail.tableId);
 
-                            if (link) {
-                                link.getLinkObject()?.runWiggle();
-                            }
-                        } else {
-                            if (confirm('Do you want to add a link object to see the source schema/enum?')) {
-                                this._addLink(customEvent.detail.tableId);
-                            }
+                        if (aenum !== null) {
+                            aenum.runWiggle();
+                            return;
+                        }
+                    } else if(activeEntry.hasLinkObject(customEvent.detail.tableId)) {
+                        const link = activeEntry.getLinkTableByObjectUnid(customEvent.detail.tableId);
+
+                        if (link) {
+                            link.getLinkObject()?.runWiggle();
+                        }
+                    } else {
+                        if (confirm('Do you want to add a link object to see the source schema/enum?')) {
+                            this._addLink(customEvent.detail.tableId);
                         }
                     }
                 }
+            }
+        });
+
+        // listener select table ---------------------------------------------------------------------------------------
+
+        window.addEventListener(EditorEvents.selectTable, (event: Event) => {
+            const customEvent = event as CustomEvent<SchemaEditorWiggleEventDetail>;
+            const treeview = this._treeview;
+
+            if (treeview === null) {
+                console.log(`${EditorEvents.selectTable}: Error, treeview is empty!`);
+                return;
+            }
+
+            const entry = treeview.getRoot().findEntry(customEvent.detail.tableId);
+
+            if (entry === null) {
+                AlertDialog.showAlert(
+                    'Search',
+                    'Selected schema/enum not found in tree!',
+                    AlertDialogTypes.error,
+                );
+                return;
+            }
+
+            const tableEntry = entry.getEntryById(customEvent.detail.tableId);
+
+            if (tableEntry === null) {
+                AlertDialog.showAlert(
+                    'Search',
+                    'Selected schema/enum not found in tree!',
+                    AlertDialogTypes.error,
+                );
+                return;
+            }
+
+            if (tableEntry.getType() === SchemaJsonDataFSType.enum || tableEntry.getType() === SchemaJsonDataFSType.schema) {
+                Treeview.setActivEntry(null);
+                Treeview.setActivEntryTable(tableEntry);
+
+                window.dispatchEvent(new CustomEvent(EditorEvents.updateView, {}));
             }
         });
 
@@ -600,6 +754,7 @@ export class SchemaEditor {
         if (entry) {
             this._btnAddSchema!.style.display = '';
             this._btnAddEnum!.style.display = '';
+            this._searchbar!.show();
 
             if (this._editorInit.enable_schema_create) {
                 this._btnCreateSchema!.style.display = '';

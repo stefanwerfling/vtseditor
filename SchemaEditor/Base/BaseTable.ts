@@ -2,6 +2,7 @@ import {Connection} from '@jsplumb/browser-ui';
 import {JsonSchemaPositionDescription} from '../JsonData.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import './BaseTable.css';
+import {EditorEvents} from './EditorEvents.js';
 import {Wiggle} from './Wiggle.js';
 
 /**
@@ -174,7 +175,7 @@ export class BaseTable {
                     this._position.y = this._table.offsetTop;
                     this._position.x = this._table.offsetLeft;
 
-                    window.dispatchEvent(new CustomEvent('schemaeditor:updatedata', {}));
+                    window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
                 }
             }
         });
