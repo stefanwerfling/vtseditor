@@ -585,7 +585,7 @@ export class SchemaGenerator {
                     }
                 }
 
-                content += `Vts.or([${tSubtypes.join(', ')}])`;
+                content += `Vts.or([${tSubtypes.join(', ')}], ${tdescription !== '' ? tdescription : '{}' })`;
                 break;
 
             default:
