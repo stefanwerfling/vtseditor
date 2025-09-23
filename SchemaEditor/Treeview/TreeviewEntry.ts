@@ -1,4 +1,3 @@
-import path from 'path';
 import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import {EnumTable} from '../Enum/EnumTable.js';
