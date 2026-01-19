@@ -75,7 +75,12 @@ export class SchemaExternLoader {
                             for (const aexport of vtseditor.exports) {
                                 const schemaFilePath = path.join(packageJsonPath, aexport.schemaFile);
 
-                                this._list.set(crypto.randomUUID(), {
+                                if (this._list.has(packetData.name)) {
+                                    console.log(`Duplicate node_module schema, jump next: ${packetData.name}`);
+                                    continue;
+                                }
+
+                                this._list.set(packetData.name, {
                                     name: packetData.name,
                                     path: packageJsonPath,
                                     schemaFile: schemaFilePath,
