@@ -92,7 +92,7 @@ export class SchemaExternLoader {
                         }
                     }
                 } catch (e) {
-                    // console.log(`package.json can not read: ${packageFile}`);
+                    //console.log(`package.json can not read: ${packageFile}`);
                 }
             }
         }

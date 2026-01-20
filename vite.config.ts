@@ -295,6 +295,8 @@ function expressMiddleware(): Plugin {
                                     fs: schemaData.fs
                                 });
                             }
+                        } else {
+                            console.log(`File not found: ${externSource.schemaFile}`);
                         }
                     } catch (e) {
                         console.log('Error: ');
