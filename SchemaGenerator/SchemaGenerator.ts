@@ -9,7 +9,7 @@ import {
     SchemaJsonDataFS,
     JsonSchemaFieldType,
     SchemaJsonSchemaFieldTypeArray,
-    SchemaJsonSchemaFieldType, SchemaJsonSchemaDescriptionExtend, JsonSchemaFieldTypeArray
+    SchemaJsonSchemaFieldType, SchemaJsonSchemaDescriptionExtend
 } from '../SchemaEditor/JsonData.js';
 import {SchemaExternLoaderSchemaFile} from '../SchemaExtern/SchemaExternLoader.js';
 import {

@@ -2,7 +2,7 @@ import './ExtendType.css';
 import {
     JsonSchemaDescriptionExtend,
     JsonSchemaDescriptionExtendValue,
-    SchemaJsonSchemaDescriptionExtend, SchemaJsonSchemaFieldTypeArray
+    SchemaJsonSchemaDescriptionExtend
 } from '../../JsonData.js';
 import {SchemaExtends} from '../../Register/SchemaExtends.js';
 import {ExtendFieldSelect} from '../ExtendFieldSelect.js';
