@@ -94,7 +94,7 @@ export class SchemaTableDialog extends BaseDialog {
      * @return {JsonSchemaDescriptionExtend}
      */
     public getSchemaExtend(): JsonSchemaDescriptionExtend {
-        return this._selectExtend.getValue();
+        return this._selectExtend.getValueExtend();
     }
 
     /**

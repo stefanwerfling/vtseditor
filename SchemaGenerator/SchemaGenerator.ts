@@ -9,7 +9,7 @@ import {
     SchemaJsonDataFS,
     JsonSchemaFieldType,
     SchemaJsonSchemaFieldTypeArray,
-    SchemaJsonSchemaFieldType, SchemaJsonSchemaDescriptionExtend
+    SchemaJsonSchemaFieldType, SchemaJsonSchemaDescriptionExtend, JsonSchemaFieldTypeArray
 } from '../SchemaEditor/JsonData.js';
 import {SchemaExternLoaderSchemaFile} from '../SchemaExtern/SchemaExternLoader.js';
 import {
@@ -365,6 +365,8 @@ export class SchemaGenerator {
         content += `${strExport} const ${schemaName} = `;
 
         let isObject = false;
+        let isOr = false;
+        let isEnum = false;
 
         switch (schema.extend.type) {
             case TypeVtsString:
@@ -394,7 +396,7 @@ export class SchemaGenerator {
                 });
 
                 content += `, ${this._writeType({
-                    type: schema.extend.values_schema ?? TypeVtsUnknown,
+                    type: schema.extend.value ?? TypeVtsUnknown,
                     optional: false,
                     array: false,
                     types: []
@@ -406,7 +408,7 @@ export class SchemaGenerator {
             case TypeVtsArray:
                 content += 'Vts.array(';
                 content += `${this._writeType({
-                    type: schema.extend.values_schema ?? TypeVtsUnknown,
+                    type: schema.extend.value ?? TypeVtsUnknown,
                     optional: false,
                     array: false,
                     types: []
@@ -420,9 +422,16 @@ export class SchemaGenerator {
                 content += 'Vts.object({\r\n';
                 break;
 
+            case TypeVtsOr:
+                isOr = true;
+                break;
+
             default:
+                // in file ---------------------------------------------------------------------------------------------
+
                 const extend = this._register!.getSchemaNameByUnid(schema.extend.type);
 
+                isEnum = this._register!.isUnidEnum(schema.extend.type);
                 isObject = true;
 
                 if (extend) {
@@ -432,10 +441,14 @@ export class SchemaGenerator {
 
                     if (extend.extendable) {
                         content += `${extend.schemaName}.extend({\r\n`;
+                    } else if (isEnum) {
+                        content += `Vts.enum(${extend.schemaName}`;
                     } else {
                         content += 'Vts.object({\r\n';
                     }
                 } else {
+                    // extern file -------------------------------------------------------------------------------------
+
                     const extendExtern = this._externRegister.findSchema(schema.extend.type);
 
                     if (extendExtern) {
@@ -445,6 +458,8 @@ export class SchemaGenerator {
 
                         if (extendExtern.schemaEntry.extendable) {
                             content += `${extendExtern.schemaEntry.schemaName}.extend({\r\n`;
+                        } else if(extendExtern.isEnum) {
+                            content += `Vts.enum(${extendExtern.schemaEntry.schemaName}`;
                         } else {
                             content += 'Vts.object({\r\n';
                         }
@@ -456,24 +471,60 @@ export class SchemaGenerator {
         }
 
         // -------------------------------------------------------------------------------------------------------------
+        let isClose = false;
+        // -------------------------------------------------------------------------------------------------------------
 
         if (isObject) {
-            for (const field of schema.fields) {
-                if (SchemaJsonSchemaFieldType.validate(field.type, [])) {
-                    content += `${this._options.code_indent}${field.name}: `;
+            if (!isEnum) {
+                for (const field of schema.fields) {
+                    if (SchemaJsonSchemaFieldType.validate(field.type, [])) {
+                        content += `${this._options.code_indent}${field.name}: `;
 
-                    content += this._writeType(
-                        field.type,
-                        SchemaDescriptionUtil.validateDescription(field.description)
-                    );
+                        content += this._writeType(
+                            field.type,
+                            SchemaDescriptionUtil.validateDescription(field.description)
+                        );
 
-                    content += ',\r\n';
+                        content += ',\r\n';
+                    }
                 }
+
+                content += '}';
             }
 
-            content += '}';
             content += ', {\r\n';
+            isClose = true;
+        }
 
+        // -------------------------------------------------------------------------------------------------------------
+
+        if (isOr) {
+            if (schema.extend.or_values) {
+                content += this._writeType(
+                    {
+                        type: TypeVtsOr,
+                        types: schema.extend.or_values.map((r): JsonSchemaFieldType => {
+                            return {
+                                type: r.type,
+                                types: [],
+                                array: false,
+                                optional: false
+                            };
+                        }),
+                        array: false,
+                        optional: false
+                    },
+                    SchemaDescriptionUtil.validateDescription(schema.description)
+                );
+            }
+
+            isClose = false;
+            content += ';';
+        }
+
+        // add close ---------------------------------------------------------------------------------------------------
+
+        if (isClose) {
             content += `${this._options.code_indent}description: '${SchemaDescriptionUtil.validateDescription(schema.description)}',\r\n`;
 
             if (schema.extend.options) {

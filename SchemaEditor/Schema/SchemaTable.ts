@@ -493,6 +493,10 @@ export class SchemaTable extends BaseTable {
         this._updateViewExtend();
     }
 
+    /**
+     * update view extend
+     * @protected
+     */
     protected _updateViewExtend(): void {
         const isSchema = SchemaExtends.getInstance().isExtendASchema(this._extend.type);
 
@@ -539,19 +543,31 @@ export class SchemaTable extends BaseTable {
             jsPlumbInstance.deleteConnection(this._connection);
         }
 
-        let connectId = '';
+        let connectIds: string[] = [];
 
         if (this._extend.type === 'object2' || this._extend.type === 'array') {
-            if (this._extend.values_schema) {
-                if (SchemaExtends.getInstance().isExtendASchema(this._extend.values_schema)) {
-                    connectId = this._extend.values_schema;
+            if (this._extend.value) {
+                if (SchemaExtends.getInstance().isExtendASchema(this._extend.value)) {
+                    connectIds.push(this._extend.value);
+                } else if (SchemaTypes.getInstance().getEnumTypes().has(this._extend.value)) {
+                    connectIds.push(this._extend.value);
+                }
+            }
+        } else if (this._extend.type === 'or' && this._extend.or_values) {
+            for (const orValue of this._extend.or_values) {
+                if (SchemaExtends.getInstance().isExtendASchema(orValue.type)) {
+                    connectIds.push(orValue.type);
+                } else if(SchemaTypes.getInstance().getEnumTypes().has(orValue.type)) {
+                    connectIds.push(orValue.type);
                 }
             }
         } else if (SchemaExtends.getInstance().isExtendASchema(this._extend.type)) {
-            connectId = this._extend.type;
+            connectIds.push(this._extend.type);
+        } else if(SchemaTypes.getInstance().getEnumTypes().has(this._extend.type)) {
+            connectIds.push(this._extend.type);
         }
 
-        if (connectId !== '') {
+        for (const connectId of connectIds) {
             console.log(`Create connection for ${this._unid}`);
 
             this._connection = jsPlumbInstance.connect({
@@ -662,7 +678,7 @@ export class SchemaTable extends BaseTable {
     public isSchemaTableUse(id: string): boolean {
         if (this._extend.type === id) {
             return true;
-        } else if (this._extend.values_schema === id) {
+        } else if (this._extend.value === id) {
             return true;
         }
 
@@ -690,6 +706,11 @@ export class SchemaTable extends BaseTable {
         super.remove();
     }
 
+    /**
+     * Set connection hover by element
+     * @param {boolean} hover
+     * @protected
+     */
     protected override _setConnectionHoverByElement(hover: boolean) {
         const connections = jsPlumbInstance.getConnections() as Connection[];
 

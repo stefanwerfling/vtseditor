@@ -20,7 +20,8 @@ export const MapVtsExtends: Map<string, string> = new Map<string, string>([
 
 export const MapVtsComplex: Map<string, string> = new Map<string, string>([
     [TypeVtsObject2, 'Object2'],
-    [TypeVtsArray, 'Array']
+    [TypeVtsArray, 'Array'],
+    [TypeVtsOr, 'Or']
 ]);
 
 export const MapVtsSimple: Map<string, string> = new Map<string, string>([

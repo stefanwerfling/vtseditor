@@ -50,8 +50,8 @@ export class SchemaGeneratorIndexSort {
                 visit(schemaMap.get(schema.extend.type)!);
             }
 
-            if (schema.extend.values_schema && isSchemaId(schema.extend.values_schema)) {
-                visit(schemaMap.get(schema.extend.values_schema)!);
+            if (schema.extend.value && isSchemaId(schema.extend.value)) {
+                visit(schemaMap.get(schema.extend.value)!);
             }
 
             for (const field of schema.fields) {

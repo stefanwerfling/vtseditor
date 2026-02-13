@@ -268,6 +268,10 @@ export class EnumTable extends BaseTable {
         };
     }
 
+    /**
+     * Set data
+     * @param {JsonEnumDescription} data
+     */
     public setData(data: JsonEnumDescription): void {
         this._unid = data.unid;
         this.setName(data.name);
@@ -284,6 +288,11 @@ export class EnumTable extends BaseTable {
         this.setOnDelete(EnumTableEventOnDelete);
     }
 
+    /**
+     * Set connection hover by element
+     * @param {boolean} hover
+     * @protected
+     */
     protected override _setConnectionHoverByElement(hover: boolean): void {
         const connections = jsPlumbInstance.getConnections() as Connection[];
 

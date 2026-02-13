@@ -1,13 +1,14 @@
 import './ExtendFieldSelect.css';
 import {SchemaExtends} from '../Register/SchemaExtends.js';
+import {SchemaTypes} from '../Register/SchemaTypes.js';
 import {EditorIcons} from './EditorIcons.js';
-
 /**
  * Extend field select category
  */
 export enum ExtendFieldSelectCategory {
     'vtstype' = 'vtstype',
     'schema' = 'schema',
+    'enum' = 'enum'
 }
 
 /**
@@ -126,6 +127,13 @@ export class ExtendFieldSelect {
 
         this._divHeaders.appendChild(selectSchema);
 
+        const selectEnum = document.createElement('div');
+        selectEnum.classList.add(...['extendfield-section-header']);
+        selectEnum.textContent = `${EditorIcons.enum} Enum`;
+        selectEnum.setAttribute('data-category', ExtendFieldSelectCategory.enum);
+
+        this._divHeaders.appendChild(selectEnum);
+
         // search box --------------------------------------------------------------------------------------------------
 
         this._divSearch = document.createElement('div');
@@ -158,6 +166,7 @@ export class ExtendFieldSelect {
         }
 
         this.setOptions(SchemaExtends.getInstance().getExtends([tableUnid], true), ExtendFieldSelectCategory.schema);
+        this.setOptions(SchemaTypes.getInstance().getEnumTypes([tableUnid]), ExtendFieldSelectCategory.enum);
     }
 
     /**
@@ -200,6 +209,10 @@ export class ExtendFieldSelect {
 
             case ExtendFieldSelectCategory.schema:
                 icon = EditorIcons.schema;
+                break;
+
+            case ExtendFieldSelectCategory.enum:
+                icon = EditorIcons.enum;
                 break;
         }
 
@@ -309,6 +322,10 @@ export class ExtendFieldSelect {
 
                     case ExtendFieldSelectCategory.schema:
                         icon = EditorIcons.schema;
+                        break;
+
+                    case ExtendFieldSelectCategory.enum:
+                        icon = EditorIcons.enum;
                         break;
                 }
 

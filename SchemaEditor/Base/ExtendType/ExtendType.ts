@@ -1,7 +1,17 @@
 import './ExtendType.css';
-import {JsonSchemaDescriptionExtend} from '../../JsonData.js';
+import {
+    JsonSchemaDescriptionExtend,
+    JsonSchemaDescriptionExtendValue,
+    SchemaJsonSchemaDescriptionExtend, SchemaJsonSchemaFieldTypeArray
+} from '../../JsonData.js';
 import {SchemaExtends} from '../../Register/SchemaExtends.js';
 import {ExtendFieldSelect} from '../ExtendFieldSelect.js';
+import {ExtendTypeGroup} from './ExtendTypeGroup.js';
+
+/**
+ * extend type on delete
+ */
+export type ExtendTypeOnDelete = (unid: string) => void;
 
 /**
  * Extend Type
@@ -13,6 +23,12 @@ export class ExtendType {
      * @protected
      */
     protected _unid: string = '';
+
+    /**
+     * Table unid
+     * @protected
+     */
+    protected _tableUnid: string;
 
     /**
      * div main field
@@ -63,12 +79,25 @@ export class ExtendType {
     protected _selectValueSchema: ExtendFieldSelect;
 
     /**
+     * multi extend group
+     * @protected
+     */
+    protected _multiExtendGroup: ExtendTypeGroup|null = null;
+
+    /**
+     * on delete
+     * @protected
+     */
+    protected _onDelete: ExtendTypeOnDelete|null = null;
+
+    /**
      * constructor
      * @param {string} tableUnid
      * @param {string} unid
      */
     public constructor(tableUnid: string, unid: string = '') {
         this._unid = unid === '' ? crypto.randomUUID() : unid;
+        this._tableUnid = tableUnid;
         this._divMainField = document.createElement('div');
         this._divMainField.classList.add('extendtype-container');
 
@@ -139,6 +168,30 @@ export class ExtendType {
         // init
         this._hideObjectOptions();
         this._hideValueSchemaOptions();
+        this._hideMultiType();
+    }
+
+    /**
+     * show multi type
+     * @protected
+     */
+    protected _showMultiType(): void {
+        if (this._multiExtendGroup === null) {
+            this._multiExtendGroup = new ExtendTypeGroup(this._tableUnid);
+            this._divMainField.appendChild(this._multiExtendGroup.getElement());
+        }
+
+        this._multiExtendGroup.getElement().style.display = '';
+    }
+
+    /**
+     * hide multi type
+     * @protected
+     */
+    protected _hideMultiType(): void {
+        if (this._multiExtendGroup !== null) {
+            this._multiExtendGroup.getElement().style.display = 'none';
+        }
     }
 
     /**
@@ -149,6 +202,7 @@ export class ExtendType {
     protected _onUpdateOptions(value: string): void {
         this._hideObjectOptions();
         this._hideValueSchemaOptions();
+        this._hideMultiType();
 
         switch (value) {
             case 'object':
@@ -158,6 +212,10 @@ export class ExtendType {
             case 'array':
             case 'object2':
                 this._showValueSchemaOptions();
+                break;
+
+            case 'or':
+                this._showMultiType();
                 break;
         }
 
@@ -215,17 +273,37 @@ export class ExtendType {
     }
 
     /**
+     * Set on delete
+     * @param {ExtendTypeOnDelete|null} ondelete
+     */
+    public setOnDelete(ondelete: ExtendTypeOnDelete|null): void {
+        this._onDelete = ondelete;
+    }
+
+    /**
      * Return the value
      * @return {JsonSchemaDescriptionExtend}
      */
-    public getValue(): JsonSchemaDescriptionExtend {
+    public getValueExtend(): JsonSchemaDescriptionExtend {
         return {
             type: this._select.getValue() ?? 'object',
             options: {
                 not_export: this._checkboxNotExport.checked,
                 ignore_additional_items: this._checkboxIai.checked
             },
-            values_schema: this._selectValueSchema.getValue() ?? undefined
+            value: this._selectValueSchema.getValue() ?? undefined,
+            or_values: this._multiExtendGroup?.getValues()
+        };
+    }
+
+    /**
+     * Return the value
+     * @return {JsonSchemaDescriptionExtendValue}
+     */
+    public getValue(): JsonSchemaDescriptionExtendValue {
+        return {
+            type: this._select.getValue() ?? 'object',
+            value: this._selectValueSchema.getValue() ?? undefined
         };
     }
 
@@ -233,11 +311,29 @@ export class ExtendType {
      * Set the value
      * @param {JsonSchemaDescriptionExtend} value
      */
-    public setValue(value: JsonSchemaDescriptionExtend): void {
+    public setValue(value: JsonSchemaDescriptionExtend|JsonSchemaDescriptionExtendValue): void {
+        this._hideMultiType();
+
+        if (SchemaJsonSchemaDescriptionExtend.validate(value, [])) {
+            this._checkboxNotExport.checked = value.options?.not_export ?? false;
+            this._checkboxIai.checked = value.options?.ignore_additional_items ?? false;
+
+            if (value.type === 'or') {
+                this._showMultiType();
+
+                if (this._multiExtendGroup && value.or_values) {
+                    this._multiExtendGroup.setValues(value.or_values);
+                }
+            }
+        }
+
+        // update trasnfare to value
+        if (value.values_schema) {
+            value.value = value.values_schema;
+        }
+
         this._select.setValue(value.type);
-        this._checkboxNotExport.checked = value.options?.not_export ?? false;
-        this._checkboxIai.checked = value.options?.ignore_additional_items ?? false;
-        this._selectValueSchema.setValue(value.values_schema ?? '');
+        this._selectValueSchema.setValue(value.value ?? '');
         this._onUpdateOptions(value.type);
     }
 

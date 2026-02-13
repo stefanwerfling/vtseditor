@@ -1,11 +1,10 @@
-import './MultiType.css';
-import {JsonSchemaFieldType, JsonSchemaFieldTypeArray} from '../../JsonData.js';
-import {MultiTypeField} from './MultiTypeField.js';
+import {JsonSchemaDescriptionExtendValue} from '../../JsonData.js';
+import {ExtendType} from './ExtendType.js';
 
 /**
- * Multi type field
+ * Extend type group
  */
-export class MultiTypeGroup {
+export class ExtendTypeGroup {
 
     /**
      * table unid
@@ -53,7 +52,7 @@ export class MultiTypeGroup {
      * fields
      * @protected
      */
-    protected _fields: Map<string, MultiTypeField> = new Map<string, MultiTypeField>();
+    protected _fields: Map<string, ExtendType> = new Map<string, ExtendType>();
 
     /**
      * Constructor
@@ -111,24 +110,23 @@ export class MultiTypeGroup {
     }
 
     /**
-     * Add field
-     * @param {JsonSchemaFieldType|null} value
+     * Return the main element
+     * @return {HTMLDivElement}
      */
-    public addField(value: JsonSchemaFieldType|null = null): void {
-        const field = new MultiTypeField(this._tableUnid, '', true);
+    public getElement(): HTMLDivElement {
+        return this._divBuilder;
+    }
 
-        if (value !== null) {
-            field.setValue(value);
+    /**
+     * Update label info
+     * @protected
+     */
+    protected _updateLabelInfo(): void {
+        if (this._fields.size <= 1) {
+            this._labelInfo.textContent = 'SINGLE';
+        } else {
+            this._labelInfo.textContent = 'OR';
         }
-
-        field.setOnDelete(unid => {
-            this.deleteField(unid);
-        });
-
-        this._divFieldList.appendChild(field.getElement());
-
-        this._fields.set(field.getUnid(), field);
-        this._updateLabelInfo();
     }
 
     /**
@@ -145,31 +143,32 @@ export class MultiTypeGroup {
     }
 
     /**
-     * Update label info
-     * @protected
+     * Add field
+     * @param {JsonSchemaDescriptionExtendValue|null} value
      */
-    protected _updateLabelInfo(): void {
-        if (this._fields.size <= 1) {
-            this._labelInfo.textContent = 'SINGLE';
-        } else {
-            this._labelInfo.textContent = 'OR';
-        }
-    }
+    public addField(value: JsonSchemaDescriptionExtendValue|null = null): void {
+        const field = new ExtendType(this._tableUnid, '');
 
-    /**
-     * Return the main element
-     * @return {HTMLDivElement}
-     */
-    public getElement(): HTMLDivElement {
-        return this._divBuilder;
+        if (value !== null) {
+            field.setValue(value);
+        }
+
+        field.setOnDelete(unid => {
+            this.deleteField(unid);
+        });
+
+        this._divFieldList.appendChild(field.getElement());
+
+        this._fields.set(field.getUnid(), field);
+        this._updateLabelInfo();
     }
 
     /**
      * Return a list of FieldType
-     * @return {JsonSchemaFieldTypeArray}
+     * @return {JsonSchemaDescriptionExtendValue[]}
      */
-    public getValues(): JsonSchemaFieldTypeArray {
-        const list: JsonSchemaFieldTypeArray = [];
+    public getValues(): JsonSchemaDescriptionExtendValue[] {
+        const list: JsonSchemaDescriptionExtendValue[] = [];
 
         for (const [, entry] of this._fields.entries()) {
             list.push(entry.getValue());
@@ -180,12 +179,11 @@ export class MultiTypeGroup {
 
     /**
      * Set type values by list
-     * @param {JsonSchemaFieldTypeArray} values
+     * @param {JsonSchemaDescriptionExtendValue[]} values
      */
-    public setValues(values: JsonSchemaFieldTypeArray): void {
+    public setValues(values: JsonSchemaDescriptionExtendValue[]): void {
         for (const value of values) {
             this.addField(value);
         }
     }
-
 }

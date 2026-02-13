@@ -302,13 +302,16 @@ export class TypeFieldSelect {
                 const title = options.get(id)!;
 
                 let icon = EditorIcons.vts;
+
                 switch (category) {
                     case TypeFieldSelectCategory.vtstype:
                         icon = EditorIcons.vts;
                         break;
+
                     case TypeFieldSelectCategory.schema:
                         icon = EditorIcons.schema;
                         break;
+
                     case TypeFieldSelectCategory.enum:
                         icon = EditorIcons.enum;
                         break;
