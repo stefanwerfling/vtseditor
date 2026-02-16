@@ -126,6 +126,9 @@ export class BaseTable {
 
         const targetpoint = document.createElement('div');
         targetpoint.id = `targetpoint-${this._unid}`;
+        targetpoint.style.position = 'absolute';
+        targetpoint.style.left = '0px';
+
         this._headline.appendChild(targetpoint);
 
         // -------------------------------------------------------------------------------------------------------------

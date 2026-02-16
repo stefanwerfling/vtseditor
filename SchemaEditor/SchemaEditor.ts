@@ -674,7 +674,6 @@ export class SchemaEditor {
         const resizer = document.getElementById('resizer')!;
         const resizerTop = document.getElementById('resizer-topbar')!;
         this._controls = document.getElementById('controls')!;
-        const topbarheader = document.getElementById('topbarheader')!;
 
         let isResizing = false;
 
