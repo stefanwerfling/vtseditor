@@ -13,8 +13,14 @@ export const SchemaProjectGenerateSchema = Vts.object({
  */
 export type ProjectGenerateSchema = ExtractSchemaResultType<typeof SchemaProjectGenerateSchema>;
 
+/**
+ * Schema project generate schema response
+ */
 export const SchemaProjectGenerateSchemaResponse = Vts.object({
     conversation: Vts.array(SchemaProviderConversationPart)
 });
 
+/**
+ * Type of project generate schema response
+ */
 export type ProjectGenerateSchemaResponse = ExtractSchemaResultType<typeof SchemaProjectGenerateSchemaResponse>;

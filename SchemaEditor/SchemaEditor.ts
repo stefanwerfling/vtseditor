@@ -1,7 +1,6 @@
 import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
 import {ProjectSave} from '../SchemaProject/SchemaProjectSave.js';
 import {EditorInit, ProjectsData, SchemaProjectsResponse} from '../SchemaProject/SchemaProjectsResponse.js';
-import {SchemaTypesUtil} from '../SchemaUtil/SchemaTypesUtil.js';
 import {AlertDialog, AlertDialogTypes} from './Base/AlertDialog.js';
 import {BaseTable} from './Base/BaseTable.js';
 import {EditorEvents} from './Base/EditorEvents.js';
@@ -11,7 +10,6 @@ import {JsonDataFS, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js'
 import jsPlumbInstance from './jsPlumbInstance.js';
 import {LinkTable} from './Link/LinkTable.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
-import {SchemaExtends} from './Register/SchemaExtends.js';
 import {SchemaTypes} from './Register/SchemaTypes.js';
 import {SchemaCreateDialog} from './SchemaCreateDialog.js';
 import {Searchbar, SearchbarResultEntry} from './Search/Searchbar.js';
@@ -119,8 +117,6 @@ export class SchemaEditor {
         this._container!.appendChild(table.getElement());
         this._jsPlumbInstance!.revalidate(table.getElement());
 
-        SchemaExtends.getInstance().setExtend(table.getUnid(), table.getName());
-
         table.openEditDialog();
     }
 
@@ -183,6 +179,9 @@ export class SchemaEditor {
         }
     }
 
+    /**
+     * create schema
+     */
     public _createSchema(): void {
         if (Treeview.getActiveEntry() === null) {
             return;
@@ -935,12 +934,6 @@ export class SchemaEditor {
         }
 
         for (const schema of data.schemas) {
-            if (SchemaTypesUtil.isVtsType(schema.extend.type, true)) {
-                SchemaExtends.getInstance().unsetExtend(schema.unid);
-            } else {
-                SchemaExtends.getInstance().setExtend(schema.unid, schema.name);
-            }
-
             SchemaTypes.getInstance().setType(schema.unid, schema.name);
         }
 

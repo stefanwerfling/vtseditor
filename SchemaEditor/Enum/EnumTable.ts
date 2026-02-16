@@ -294,9 +294,7 @@ export class EnumTable extends BaseTable {
      * @protected
      */
     protected override _setConnectionHoverByElement(hover: boolean): void {
-        const connections = jsPlumbInstance.getConnections() as Connection[];
-
-        connections.forEach(conn => {
+        this._getConnections().forEach(conn => {
             if (!conn.source || !conn.target) {
                 return;
             }

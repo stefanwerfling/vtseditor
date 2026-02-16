@@ -1,5 +1,4 @@
 import './ExtendFieldSelect.css';
-import {SchemaExtends} from '../Register/SchemaExtends.js';
 import {SchemaTypes} from '../Register/SchemaTypes.js';
 import {EditorIcons} from './EditorIcons.js';
 /**
@@ -160,12 +159,12 @@ export class ExtendFieldSelect {
 
         // add options
         if (withoutComplexVTS) {
-            this.setOptions(SchemaExtends.getInstance().getVtsSimpleTypes(), ExtendFieldSelectCategory.vtstype);
+            this.setOptions(SchemaTypes.getInstance().getExtendVtsSimpleTypes(), ExtendFieldSelectCategory.vtstype);
         } else {
-            this.setOptions(SchemaExtends.getInstance().getVtsTypes(), ExtendFieldSelectCategory.vtstype);
+            this.setOptions(SchemaTypes.getInstance().getExtendVtsTypes(), ExtendFieldSelectCategory.vtstype);
         }
 
-        this.setOptions(SchemaExtends.getInstance().getExtends([tableUnid], true), ExtendFieldSelectCategory.schema);
+        this.setOptions(SchemaTypes.getInstance().getSchemaTypes([tableUnid]), ExtendFieldSelectCategory.schema);
         this.setOptions(SchemaTypes.getInstance().getEnumTypes([tableUnid]), ExtendFieldSelectCategory.enum);
     }
 

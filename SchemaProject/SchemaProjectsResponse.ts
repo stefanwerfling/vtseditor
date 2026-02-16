@@ -22,6 +22,9 @@ export const SchemaEditorInit = Vts.object({
  */
 export type EditorInit = ExtractSchemaResultType<typeof SchemaEditorInit>;
 
+/**
+ * Schema projects data
+ */
 export const SchemaProjectsData = Vts.object({
     projects: Vts.array(SchemaProject),
     extern: Vts.array(SchemaExtern),
@@ -34,6 +37,9 @@ export const SchemaProjectsData = Vts.object({
  */
 export type ProjectsData = ExtractSchemaResultType<typeof SchemaProjectsData>;
 
+/**
+ * Schema project response
+ */
 export const SchemaProjectsResponse = Vts.object({
     data: SchemaProjectsData
 });

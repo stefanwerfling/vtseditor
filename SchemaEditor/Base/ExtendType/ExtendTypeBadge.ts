@@ -3,9 +3,13 @@ import {
     JsonSchemaDescriptionExtendValue,
     SchemaJsonSchemaDescriptionExtend
 } from '../../JsonData.js';
-import {SchemaExtends} from '../../Register/SchemaExtends.js';
 import {SchemaTypes} from '../../Register/SchemaTypes.js';
 import {EditorEvents} from '../EditorEvents.js';
+
+/**
+ * Extend type badge data
+ */
+type ExtendTypeBadgeData = JsonSchemaDescriptionExtend|JsonSchemaDescriptionExtendValue;
 
 /**
  * Extend type badge
@@ -20,13 +24,15 @@ export class ExtendTypeBadge {
 
     /**
      * Constructor
-     * @param {JsonSchemaDescriptionExtend|JsonSchemaDescriptionExtendValue} data
+     * @param {ExtendTypeBadgeData} data
+     * @param {boolean} isAlternating
      */
-    public constructor(data: JsonSchemaDescriptionExtend|JsonSchemaDescriptionExtendValue) {
+    public constructor(data: ExtendTypeBadgeData, isAlternating: boolean = false) {
         this._mainSpan = document.createElement('span');
+        this._mainSpan.classList.add('extendtype-span-short');
         let contentElement = this._mainSpan;
 
-        let extendName = SchemaExtends.getInstance().getExtendNameBy(data.type);
+        let extendName = SchemaTypes.getInstance().getExtendNameBy(data.type);
 
         let isEnum = false;
 
@@ -36,9 +42,10 @@ export class ExtendTypeBadge {
         }
 
         const spanType = document.createElement('span');
+        spanType.classList.add('extendtype-span-short');
         spanType.textContent = `${extendName}`;
 
-        if (SchemaExtends.getInstance().isExtendASchema(data.type) || isEnum) {
+        if (SchemaTypes.getInstance().isTypeASchema(data.type) || isEnum) {
             spanType.classList.add(...['vts-badge-wh-2']);
             spanType.addEventListener('click', () => {
                 window.dispatchEvent(new CustomEvent(EditorEvents.showTable, {
@@ -54,7 +61,11 @@ export class ExtendTypeBadge {
                     break;
 
                 default:
-                    spanType.classList.add(...['vts-badge-wh-1']);
+                    if (isAlternating) {
+                        spanType.classList.add(...['vts-badge-wh-3']);
+                    } else {
+                        spanType.classList.add(...['vts-badge-wh-1']);
+                    }
             }
         }
 
@@ -66,7 +77,7 @@ export class ExtendTypeBadge {
 
         if ((data.type === 'object2' || data.type === 'array') && data.value) {
             const spanType = this._createSubBadgeSpan(data.value);
-
+            spanType.classList.add('extendtype-span-short');
             contentElement.appendChild(spanType);
         }
 
@@ -75,7 +86,7 @@ export class ExtendTypeBadge {
         if (SchemaJsonSchemaDescriptionExtend.validate(data, [])) {
             if (data.type === 'or' && data.or_values) {
                 for (const aData of data.or_values) {
-                    const badge = new ExtendTypeBadge(aData);
+                    const badge = new ExtendTypeBadge(aData, !isAlternating);
 
                     contentElement.appendChild(badge.getElement());
                 }
@@ -91,7 +102,7 @@ export class ExtendTypeBadge {
      * @protected
      */
     protected _createSubBadgeSpan(value: string): HTMLSpanElement {
-        let extendName2 = SchemaExtends.getInstance().getExtendNameBy(value);
+        let extendName2 = SchemaTypes.getInstance().getTypeNameBy(value);
         let isEnum2 = false;
 
         if (extendName2 === null && SchemaTypes.getInstance().getEnumTypes().has(value)) {
@@ -102,7 +113,7 @@ export class ExtendTypeBadge {
         const spanType = document.createElement('span');
         spanType.textContent = `${extendName2}`;
 
-        if (SchemaExtends.getInstance().isExtendASchema(value) || isEnum2) {
+        if (SchemaTypes.getInstance().isTypeASchema(value) || isEnum2) {
             if (isEnum2) {
                 spanType.classList.add(...['vts-badge-wh-2']);
             } else {

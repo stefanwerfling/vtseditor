@@ -183,13 +183,11 @@ export class BaseTable {
 
     /**
      * Set connection Hover by element
-     * @param hover
+     * @param {boolean} hover
      * @protected
      */
     protected _setConnectionHoverByElement(hover: boolean) {
-        const connections = jsPlumbInstance.getConnections() as Connection[];
-
-        connections.forEach(conn => {
+        this._getConnections().forEach(conn => {
             if (!conn.source || !conn.target) {
                 return;
             }
@@ -351,4 +349,12 @@ export class BaseTable {
         // overwrite
     }
 
+    /**
+     * return all connections
+     * @return {Connection[]}
+     * @protected
+     */
+    protected _getConnections(): Connection[] {
+        return jsPlumbInstance.getConnections() as Connection[];
+    }
 }

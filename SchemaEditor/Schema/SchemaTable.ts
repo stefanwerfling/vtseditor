@@ -1,7 +1,6 @@
 import {Connection} from '@jsplumb/browser-ui';
 import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
 import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
-import {SchemaTypesUtil} from '../../SchemaUtil/SchemaTypesUtil.js';
 import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
@@ -18,7 +17,6 @@ import {
     SchemaJsonSchemaFieldType
 } from '../JsonData.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
-import {SchemaExtends} from '../Register/SchemaExtends.js';
 import {SchemaTypes} from '../Register/SchemaTypes.js';
 import {SchemaTableDialog} from './SchemaTableDialog.js';
 import {SchemaTableField} from './SchemaTableField.js';
@@ -309,7 +307,7 @@ export class SchemaTable extends BaseTable {
         dialog.setOnConfirm(tdialog => {
             const dialog1 = tdialog as unknown as SchemaTableDialog;
             const schemaName = dialog1.getSchemaName();
-            const tId = SchemaExtends.getInstance().getExtendIdByName(schemaName);
+            const tId = SchemaTypes.getInstance().getExtendIdByName(schemaName);
 
             if (tId !== null && tId !== this._unid) {
                 alert('The Schemaname is already exist, please change your name!');
@@ -319,12 +317,6 @@ export class SchemaTable extends BaseTable {
             this.setName(schemaName);
             this.setExtend(dialog1.getSchemaExtend());
             this._description = dialog1.getDescription();
-
-            if (SchemaTypesUtil.isVtsType(this._extend.type, true)) {
-                SchemaExtends.getInstance().unsetExtend(this._unid);
-            } else {
-                SchemaExtends.getInstance().setExtend(this._unid, this._name);
-            }
 
             this.updateView();
 
@@ -498,7 +490,7 @@ export class SchemaTable extends BaseTable {
      * @protected
      */
     protected _updateViewExtend(): void {
-        const isSchema = SchemaExtends.getInstance().isExtendASchema(this._extend.type);
+        const isSchema = SchemaTypes.getInstance().isTypeASchema(this._extend.type);
 
         if (this._extend.type === 'object' || isSchema) {
             if (!this._readOnly) {
@@ -547,7 +539,7 @@ export class SchemaTable extends BaseTable {
 
         if (this._extend.type === 'object2' || this._extend.type === 'array') {
             if (this._extend.value) {
-                if (SchemaExtends.getInstance().isExtendASchema(this._extend.value)) {
+                if (SchemaTypes.getInstance().isTypeASchema(this._extend.value)) {
                     connectIds.push(this._extend.value);
                 } else if (SchemaTypes.getInstance().getEnumTypes().has(this._extend.value)) {
                     connectIds.push(this._extend.value);
@@ -555,13 +547,13 @@ export class SchemaTable extends BaseTable {
             }
         } else if (this._extend.type === 'or' && this._extend.or_values) {
             for (const orValue of this._extend.or_values) {
-                if (SchemaExtends.getInstance().isExtendASchema(orValue.type)) {
+                if (SchemaTypes.getInstance().isTypeASchema(orValue.type)) {
                     connectIds.push(orValue.type);
                 } else if(SchemaTypes.getInstance().getEnumTypes().has(orValue.type)) {
                     connectIds.push(orValue.type);
                 }
             }
-        } else if (SchemaExtends.getInstance().isExtendASchema(this._extend.type)) {
+        } else if (SchemaTypes.getInstance().isTypeASchema(this._extend.type)) {
             connectIds.push(this._extend.type);
         } else if(SchemaTypes.getInstance().getEnumTypes().has(this._extend.type)) {
             connectIds.push(this._extend.type);
@@ -712,9 +704,7 @@ export class SchemaTable extends BaseTable {
      * @protected
      */
     protected override _setConnectionHoverByElement(hover: boolean) {
-        const connections = jsPlumbInstance.getConnections() as Connection[];
-
-        connections.forEach(conn => {
+        this._getConnections().forEach(conn => {
             if (!conn.source || !conn.target) {
                 return;
             }

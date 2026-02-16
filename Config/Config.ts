@@ -58,7 +58,8 @@ export const SchemaConfigProject = Vts.object({
  * Schema of config server
  */
 export const SchemaConfigServer = Vts.object({
-    port: Vts.number()
+    port: Vts.number(),
+    limit: Vts.optional(Vts.string())
 });
 
 /**

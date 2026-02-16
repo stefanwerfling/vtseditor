@@ -29,8 +29,8 @@ function expressMiddleware(): Plugin {
         configureServer(server) {
             const app = express();
 
-            app.use(express.json({ limit: "50mb" }));
-            app.use(express.urlencoded({ limit: "50mb", extended: true }));
+            app.use(express.json({ limit: '50mb' }));
+            app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
             // ---------------------------------------------------------------------------------------------------------
 
@@ -58,6 +58,15 @@ function expressMiddleware(): Plugin {
                 const errors: SchemaErrors = [];
 
                 if (SchemaConfig.validate(config, errors)) {
+                    if (config.server) {
+                        if (config.server.limit) {
+                            app.use(express.json({ limit: `${config.server.limit}` }));
+                            app.use(express.urlencoded({ limit: `${config.server.limit}`, extended: true }));
+
+                            console.log(`Set new Server limit: ${config.server.limit}`);
+                        }
+                    }
+
                     if (config.editor) {
                         // init providers ------------------------------------------------------------------------------
 

@@ -4,7 +4,7 @@ import {
     JsonSchemaDescriptionExtendValue,
     SchemaJsonSchemaDescriptionExtend
 } from '../../JsonData.js';
-import {SchemaExtends} from '../../Register/SchemaExtends.js';
+import {SchemaTypes} from '../../Register/SchemaTypes.js';
 import {ExtendFieldSelect} from '../ExtendFieldSelect.js';
 import {ExtendTypeGroup} from './ExtendTypeGroup.js';
 
@@ -29,6 +29,12 @@ export class ExtendType {
      * @protected
      */
     protected _tableUnid: string;
+
+    /**
+     * with options
+     * @protected
+     */
+    protected _withOptions: boolean;
 
     /**
      * div main field
@@ -94,10 +100,13 @@ export class ExtendType {
      * constructor
      * @param {string} tableUnid
      * @param {string} unid
+     * @param {boolean} withOptions
      */
-    public constructor(tableUnid: string, unid: string = '') {
+    public constructor(tableUnid: string, unid: string = '', withOptions: boolean= true) {
         this._unid = unid === '' ? crypto.randomUUID() : unid;
         this._tableUnid = tableUnid;
+        this._withOptions = withOptions;
+
         this._divMainField = document.createElement('div');
         this._divMainField.classList.add('extendtype-container');
 
@@ -119,7 +128,7 @@ export class ExtendType {
 
         // optional ----------------------------------------------------------------------------------------------------
         this._divOptionContainer.classList.add('dialog-row');
-        this._divOptionContainer.style.display = 'flex';
+        this._divOptionContainer.style.display = this._withOptions ? 'flex' : 'none';
         this._divOptionContainer.style.gap = '24px';
 
         // --- ignore additional items Checkbox ---
@@ -219,7 +228,7 @@ export class ExtendType {
                 break;
         }
 
-        if (SchemaExtends.getInstance().isExtendASchema(value)) {
+        if (SchemaTypes.getInstance().isTypeASchema(value)) {
             this._showObjectOptions();
         }
     }
@@ -229,7 +238,9 @@ export class ExtendType {
      * @protected
      */
     protected _showObjectOptions(): void {
-        this._labelIai.style.display = 'flex';
+        if (this._withOptions) {
+            this._labelIai.style.display = 'flex';
+        }
     }
 
     /**
@@ -245,7 +256,9 @@ export class ExtendType {
      * @protected
      */
     protected _showValueSchemaOptions(): void {
-        this._divValueSchemaContainer.style.display = '';
+        if (this._withOptions) {
+            this._divValueSchemaContainer.style.display = '';
+        }
     }
 
     /**

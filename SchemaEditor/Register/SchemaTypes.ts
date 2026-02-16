@@ -1,4 +1,4 @@
-import {MapVtsSimple, MapVtsSimple2} from '../../SchemaTypes/SchemaTypes.js';
+import {MapVtsComplex, MapVtsExtends, MapVtsSimple, MapVtsSimple2} from '../../SchemaTypes/SchemaTypes.js';
 
 /**
  * Schema types
@@ -30,6 +30,23 @@ export class SchemaTypes {
     protected _mapTypes: Map<string, string> = new Map<string, string>([
         ...MapVtsSimple,
         ...MapVtsSimple2
+    ]);
+
+    /**
+     * Map of vts extends
+     * @protected
+     */
+    protected _mapVtsExtends: Map<string, string> = new Map<string, string>([
+        ...MapVtsExtends,
+        ...MapVtsComplex
+    ]);
+
+    /**
+     * Map of vts simple extends
+     * @protected
+     */
+    protected _mapVtsSimpleExtends: Map<string, string> = new Map<string, string>([
+        ...MapVtsSimple
     ]);
 
     /**
@@ -156,6 +173,66 @@ export class SchemaTypes {
         const allTypes = this._getAllTypes();
 
         return allTypes.get(type) ?? null;
+    }
+
+    /**
+     * Return a map with all types
+     * @return {Map<string, string>}
+     * @protected
+     */
+    protected _getAllExtends(): Map<string, string> {
+        return new Map<string, string>([
+            ...this._mapVtsExtends,
+            ...this._mapVtsSimpleExtends,
+            ...this._mapSchemaTypes,
+            ...this._mapEnumTypes
+        ]);
+    }
+
+    /**
+     * Get extend id by name
+     * @param {string} name
+     * @return {string|null}
+     */
+    public getExtendIdByName(name: string): string|null {
+        const allExtends = this._getAllExtends();
+
+        for (const [id, tname] of allExtends.entries()) {
+            if (name === tname) {
+                return id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Return the name
+     * @param {string} extend
+     * @return {string|null}
+     */
+    public getExtendNameBy(extend: string): string|null {
+        const allExtends = this._getAllExtends();
+        return allExtends.get(extend) ?? null;
+    }
+
+    /**
+     * Return the extend Vts simple Types
+     * @return {Map<string, string>}
+     */
+    public getExtendVtsSimpleTypes(): Map<string, string> {
+        return this._mapVtsSimpleExtends;
+    }
+
+    /**
+     * Return the Vts Types
+     * @return {Map<string, string>}
+     */
+    public getExtendVtsTypes(): Map<string, string> {
+        return new Map<string, string>([
+            ...this._mapVtsExtends,
+            ...this._mapVtsSimpleExtends
+        ]);
     }
 
 }

@@ -147,7 +147,7 @@ export class ExtendTypeGroup {
      * @param {JsonSchemaDescriptionExtendValue|null} value
      */
     public addField(value: JsonSchemaDescriptionExtendValue|null = null): void {
-        const field = new ExtendType(this._tableUnid, '');
+        const field = new ExtendType(this._tableUnid, '', false);
 
         if (value !== null) {
             field.setValue(value);
