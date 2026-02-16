@@ -6,7 +6,7 @@ import {BaseTable} from './Base/BaseTable.js';
 import {EditorEvents} from './Base/EditorEvents.js';
 import {EditorIcons} from './Base/EditorIcons.js';
 import {EnumTable} from './Enum/EnumTable.js';
-import {JsonDataFS, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js';
+import {JsonDataFS, JsonEditorSettings, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js';
 import jsPlumbInstance from './jsPlumbInstance.js';
 import {LinkTable} from './Link/LinkTable.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
@@ -99,6 +99,14 @@ export class SchemaEditor {
      */
     protected _editorInit: EditorInit = {
         enable_schema_create: false
+    };
+
+    /**
+     * Editor settings
+     * @protected
+     */
+    protected _editorSettings: JsonEditorSettings = {
+        controls_width: 300
     };
 
     /**
@@ -665,9 +673,8 @@ export class SchemaEditor {
 
         const resizer = document.getElementById('resizer')!;
         const resizerTop = document.getElementById('resizer-topbar')!;
-        const controls = document.getElementById('controls')!;
+        this._controls = document.getElementById('controls')!;
         const topbarheader = document.getElementById('topbarheader')!;
-        this._controls = controls;
 
         let isResizing = false;
 
@@ -689,12 +696,16 @@ export class SchemaEditor {
             const newWidth = e.clientX;
 
             if (newWidth > 150 && newWidth < window.innerWidth - 100) {
-                controls.style.width = `${newWidth}px`;
-                topbarheader.style.width = `${newWidth}px`;
+                this._editorSettings.controls_width = newWidth;
+                this._updateResizer();
             }
         });
 
         document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                this.saveEditorSettings().then();
+            }
+
             isResizing = false;
             document.body.style.cursor = 'default';
         });
@@ -702,6 +713,19 @@ export class SchemaEditor {
         // load data ---------------------------------------------------------------------------------------------------
 
         this.loadData().then();
+    }
+
+    /**
+     * Update resizer
+     * @protected
+     */
+    protected _updateResizer(): void {
+        if (this._controls) {
+            const topbarheader = document.getElementById('topbarheader')!;
+
+            this._controls.style.width = `${this._editorSettings.controls_width}px`;
+            topbarheader.style.width = `${this._editorSettings.controls_width}px`;
+        }
     }
 
     /**
@@ -852,6 +876,8 @@ export class SchemaEditor {
         if (entryTable) {
             entryTable.setActiveName();
         }
+
+        this._updateResizer();
     }
 
     /**
@@ -871,9 +897,7 @@ export class SchemaEditor {
         const data: ProjectsData = {
             projects: [],
             extern: [],
-            editor: {
-                controls_width: parseInt(this._controls!.style.width , 10) || 300
-            }
+            editor: this._editorSettings
         };
 
         if (this._treeview) {
@@ -994,10 +1018,8 @@ export class SchemaEditor {
         this._treeview?.setData(rootEntry);
 
         if (data.editor) {
-            this._controls!.style.width = `${data.editor.controls_width}px`;
-
-            const topbarheader = document.getElementById('topbarheader')!;
-            topbarheader!.style.width = `${data.editor.controls_width}px`;
+            this._editorSettings = data.editor;
+            this._updateResizer();
         }
 
         if (data.init) {
@@ -1013,12 +1035,23 @@ export class SchemaEditor {
     public async saveData(): Promise<void> {
         const save: ProjectSave = {
             data: this.getData()
-        }
+        };
 
         await fetch('/api/save-schema', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(save)
+        });
+    }
+
+    /**
+     * save editor settings
+     */
+    public async saveEditorSettings(): Promise<void> {
+        await fetch('/api/save-editor-setting', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(this._editorSettings)
         });
     }
 

@@ -6,7 +6,7 @@ import path from 'path';
 import {defineConfig, Plugin} from 'vite';
 import {SchemaErrors} from 'vts';
 import {ConfigAIProviderName, SchemaConfig} from './Config/Config.js';
-import {JsonData, SchemaJsonData} from './SchemaEditor/JsonData.js';
+import {JsonData, SchemaJsonData, SchemaJsonEditorSettings} from './SchemaEditor/JsonData.js';
 import {SchemaExternLoader} from './SchemaExtern/SchemaExternLoader.js';
 import {SchemaGenerator} from './SchemaGenerator/SchemaGenerator.js';
 import {SchemaProject} from './SchemaProject/SchemaProject.js';
@@ -163,6 +163,45 @@ function expressMiddleware(): Plugin {
 
             // ---------------------------------------------------------------------------------------------------------
 
+            app.post('/api/save-editor-setting', (req, res) => {
+                const bodyData = req.body;
+
+                if (SchemaJsonEditorSettings.validate(bodyData, [])) {
+                    let hasError = false;
+
+                    for (const project of projects.values()) {
+                        const content = fs.readFileSync(project.schemaPath, 'utf-8');
+                        const schemaData = JSON.parse(content);
+
+                        if (SchemaJsonData.validate(schemaData, [])) {
+                            const schema: JsonData = {
+                                fs: schemaData.fs,
+                                editor: bodyData
+                            };
+
+                            fs.mkdirSync(path.dirname(project.schemaPath), { recursive: true });
+                            fs.writeFileSync(project.schemaPath, JSON.stringify(schema, null, 2), 'utf-8');
+
+                            console.log(`Save editor setting for Project: ${project.schemaPath}`);
+                        } else {
+                            console.error(`Save editor setting corrupted schema file: ${project.schemaPath}`);
+                            hasError = true;
+                        }
+                    }
+
+                    if (hasError) {
+                        res.status(500).json({ success: false, msg: '`Save editor setting corrupted schema file.'});
+                        return;
+                    }
+
+                    res.status(200).json({ success: true });
+                } else {
+                    res.status(500).json({ success: false, msg: 'Bad request body schema!'});
+                }
+            });
+
+            // ---------------------------------------------------------------------------------------------------------
+
             app.post('/api/save-schema', (req, res) => {
                 const bodyData = req.body;
 
@@ -261,9 +300,7 @@ function expressMiddleware(): Plugin {
                                     fs: schemaData.fs
                                 });
 
-                                if (projectsData.editor === null) {
-                                    projectsData.editor = schemaData.editor;
-                                }
+                                projectsData.editor = schemaData.editor;
                             }
                         } else {
                             projectsData.projects.push({
