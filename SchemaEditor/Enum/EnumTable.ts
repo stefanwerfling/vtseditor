@@ -1,4 +1,5 @@
 import {Connection} from '@jsplumb/browser-ui';
+import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
@@ -84,7 +85,11 @@ export class EnumTable extends BaseTable {
         this._btnEdit.title = 'Edit Enum';
         this._btnEdit.addEventListener('click', () => {
             if (this._readOnly) {
-                alert('Enum can not edit by readonly!');
+                AlertDialog.showAlert(
+                    'Edit enum ',
+                    'Enum can not edit by readonly!',
+                    AlertDialogTypes.error,
+                );
                 return;
             }
 
@@ -106,10 +111,14 @@ export class EnumTable extends BaseTable {
                 const name = tdialog.getName();
                 const uid = crypto.randomUUID();
 
-                /*if (this.existFieldName(uid, fieldName)) {
-                    alert('Please change your Fieldname, it already exist!');
+                if (this.existEnumEntryName(name)) {
+                    AlertDialog.showAlert(
+                        'Add enum value',
+                        `Please change your Entryname "${name}", it already exist!`,
+                        AlertDialogTypes.error,
+                    );
                     return false;
-                }*/
+                }
 
                 this.setValues([{
                     unid: uid,
@@ -135,6 +144,21 @@ export class EnumTable extends BaseTable {
         // -------------------------------------------------------------------------------------------------------------
 
         this._initJsPlumb();
+    }
+
+    /**
+     * exist enum entry name
+     * @param {string} name
+     * @return {boolean}
+     */
+    public existEnumEntryName(name: string): boolean {
+        for (const entry of this._values.values()) {
+            if (entry.getName() === name) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -194,14 +218,18 @@ export class EnumTable extends BaseTable {
             const value = new EnumTableValue(this._unid, uuid, valueDesc.name, valueDesc.value);
             value.setData(valueDesc);
             value.setOnSave((value1, dialog) => {
-                //const fieldName = dialog.getFieldName();
+                const name = dialog.getName();
 
-                /*if (this.existValuedName(value1.getId(), fieldName)) {
-                    alert('Please change your Fieldname, it already exist!');
+                if (this.existEnumEntryName(name)) {
+                    AlertDialog.showAlert(
+                        'Save enum value',
+                        `Please change your Entryname "${name}", it already exist!`,
+                        AlertDialogTypes.error,
+                    );
                     return false;
-                }*/
+                }
 
-                value1.setName(dialog.getName());
+                value1.setName(name);
                 value1.setValue(dialog.getValue());
                 value1.updateView();
 
