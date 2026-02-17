@@ -1,4 +1,5 @@
 import {JsonSchemaDescription, SchemaJsonSchemaFieldTypeArray} from '../SchemaEditor/JsonData.js';
+import {TypeVtsObject, TypeVtsOr, TypeVtsString} from '../SchemaTypes/SchemaTypes.js';
 
 /**
  * Schema generator index sort
@@ -46,29 +47,59 @@ export class SchemaGeneratorIndexSort {
 
             visiting.add(schema.unid);
 
-            if (schema.extend && schema.extend.type !== "object" && isSchemaId(schema.extend.type)) {
-                visit(schemaMap.get(schema.extend.type)!);
+            /**
+             * Extend dependencies
+             */
+
+            if (schema.extend) {
+                const ext = schema.extend;
+
+                if (ext.type === TypeVtsOr) {
+                    if (!ext.or_values || ext.or_values.length === 0) {
+                        throw new Error(
+                            `Schema '${schema.unid}' has type 'or' but no or_values defined`
+                        );
+                    }
+
+                    for (const orVal of ext.or_values) {
+                        if (isSchemaId(orVal.type)) {
+                            visit(schemaMap.get(orVal.type)!);
+                        }
+
+                        if (orVal.value && isSchemaId(orVal.value)) {
+                            visit(schemaMap.get(orVal.value)!);
+                        }
+                    }
+                } else {
+                    if (ext.type !== TypeVtsObject && isSchemaId(ext.type)) {
+                        visit(schemaMap.get(ext.type)!);
+                    }
+
+                    if (ext.value && isSchemaId(ext.value)) {
+                        visit(schemaMap.get(ext.value)!);
+                    }
+                }
             }
 
-            if (schema.extend.value && isSchemaId(schema.extend.value)) {
-                visit(schemaMap.get(schema.extend.value)!);
-            }
+            /**
+             * Fields dependencies
+             */
 
             for (const field of schema.fields) {
                 const fieldType = field.type;
 
-                if (typeof fieldType === "string") {
+                if (typeof fieldType === 'string') {
                     continue;
                 }
 
-                if (typeof fieldType === "object" && fieldType !== null) {
+                if (typeof fieldType === 'object' && fieldType !== null) {
                     if (isSchemaId(fieldType.type)) {
                         visit(schemaMap.get(fieldType.type)!);
                     }
 
                     if (SchemaJsonSchemaFieldTypeArray.validate(fieldType.types, [])) {
                         for (const t of fieldType.types) {
-                            if (typeof t === "string") {
+                            if (typeof t === TypeVtsString) {
                                 continue;
                             }
 

@@ -202,7 +202,7 @@ function expressMiddleware(): Plugin {
 
             // ---------------------------------------------------------------------------------------------------------
 
-            app.post('/api/save-schema', (req, res) => {
+            app.post('/api/save-schema', async(req, res): Promise<void> => {
                 const bodyData = req.body;
 
                 if (SchemaProjectSave.validate(bodyData, [])) {
@@ -252,11 +252,11 @@ function expressMiddleware(): Plugin {
                                         }
                                     }
 
-                                    SchemaScript.run(projectOption.scripts_before_generate).then();
+                                    await SchemaScript.run(projectOption.scripts_before_generate);
 
                                     gen.generate(schema.fs);
 
-                                    SchemaScript.run(projectOption.scripts_after_generate).then();
+                                    await SchemaScript.run(projectOption.scripts_after_generate);
                                 } catch (e) {
                                     console.log(e);
                                 }

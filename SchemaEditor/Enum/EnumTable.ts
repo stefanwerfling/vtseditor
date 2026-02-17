@@ -1,4 +1,3 @@
-import {Connection} from '@jsplumb/browser-ui';
 import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
