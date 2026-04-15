@@ -1,5 +1,4 @@
 import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
-import * as sea from 'node:sea';
 import {ProjectSave} from '../SchemaProject/SchemaProjectSave.js';
 import {EditorInit, ProjectsData, SchemaProjectsResponse} from '../SchemaProject/SchemaProjectsResponse.js';
 import {AlertDialog, AlertDialogTypes} from './Base/AlertDialog.js';
