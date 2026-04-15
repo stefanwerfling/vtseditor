@@ -5,6 +5,7 @@
   },
   "dependencies": {
     "@jsplumb/browser-ui": "6.2.10",
+    "@toon-format/toon": "^2.1.0",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "normalize.css": "^8.0.1",
@@ -44,5 +45,5 @@
     "dev": "node ./cli/dev.js"
   },
   "type": "module",
-  "version": "1.0.6"
+  "version": "1.0.7"
 }

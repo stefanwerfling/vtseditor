@@ -1086,6 +1086,8 @@ export class SchemaEditor {
             return;
         }
 
+        this._updateTopbarHeader(search);
+
         const rootEntry = this._treeview?.getRoot();
 
         if (!rootEntry) {
@@ -1122,4 +1124,18 @@ export class SchemaEditor {
         }));
     }
 
+    private _updateTopbarHeader(schemaName: string | null): void {
+        const schemaEl = document.getElementById('topbar-schema');
+
+        if (!schemaEl) {
+            return;
+        }
+
+        if (!schemaName) {
+            schemaEl.textContent = '';
+            return;
+        }
+
+        schemaEl.textContent = `Schema: ${schemaName}`;
+    }
 }
