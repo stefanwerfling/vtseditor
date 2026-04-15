@@ -1,4 +1,5 @@
 import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
+import * as sea from 'node:sea';
 import {ProjectSave} from '../SchemaProject/SchemaProjectSave.js';
 import {EditorInit, ProjectsData, SchemaProjectsResponse} from '../SchemaProject/SchemaProjectsResponse.js';
 import {AlertDialog, AlertDialogTypes} from './Base/AlertDialog.js';
@@ -38,6 +39,13 @@ type SchemaEditorUpdatenameEventDetail = {
  */
 type SchemaEditorWiggleEventDetail = {
     tableId: string;
+};
+
+/**
+ * SchemaEditor invoke event detail
+ */
+type SchemaEditorInvokeEventDetail = {
+    schema: string;
 };
 
 /**
@@ -669,6 +677,15 @@ export class SchemaEditor {
             }
         });
 
+        // listener invoke schema --------------------------------------------------------------------------------------
+
+        window.addEventListener(EditorEvents.invokeSchema, (event: Event) => {
+            const customEvent = event as CustomEvent<SchemaEditorInvokeEventDetail>;
+            const schemaName = customEvent.detail.schema;
+
+            this._selectSchemaByName(schemaName);
+        });
+
         // resizer -----------------------------------------------------------------------------------------------------
 
         const resizer = document.getElementById('resizer')!;
@@ -1086,6 +1103,10 @@ export class SchemaEditor {
             return;
         }
 
+        this._selectSchemaByName(search);
+    }
+
+    private _selectSchemaByName(search: string): void {
         this._updateTopbarHeader(search);
 
         const rootEntry = this._treeview?.getRoot();
