@@ -1068,6 +1068,7 @@ export class SchemaEditor {
 
         if (SchemaProjectsResponse.validate(projectResponse, [])) {
             this.setData(projectResponse.data);
+            this._selectSchemaFromUrl();
         } else {
             AlertDialog.showAlert(
                 'Load data',
@@ -1075,6 +1076,50 @@ export class SchemaEditor {
                 AlertDialogTypes.error,
             );
         }
+    }
+
+    private _selectSchemaFromUrl(): void {
+        const params = new URLSearchParams(window.location.search);
+        const search = params.get('schema');
+
+        if (!search) {
+            return;
+        }
+
+        const rootEntry = this._treeview?.getRoot();
+
+        if (!rootEntry) {
+            return;
+        }
+
+        const results = rootEntry.search(search);
+
+        if (!results || results.length === 0) {
+            console.warn(`Schema "${search}" not found`);
+            return;
+        }
+
+        let match = results.find(r => {
+            const obj = r.schema ?? r.enum;
+            return obj?.getName() === search;
+        });
+
+        if (!match) {
+            match = results[0];
+        }
+
+        const object = match.schema ?? match.enum;
+
+        if (!object) {
+            return;
+        }
+
+        // Event dispatchen
+        window.dispatchEvent(new CustomEvent(EditorEvents.selectTable, {
+            detail: {
+                tableId: object.getUnid()
+            }
+        }));
     }
 
 }

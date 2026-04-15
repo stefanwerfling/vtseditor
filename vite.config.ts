@@ -388,7 +388,7 @@ function expressMiddleware(): Plugin {
 
             // ---------------------------------------------------------------------------------------------------------
 
-            app.get('/api/provider/createschema/load', async (req, res) => {
+            app.get('/api/provider/createschema/load', async (_req, res) => {
                 const provider = SchemaProvider.getInstance().getProvider(providerAiName);
 
                 if (provider) {
