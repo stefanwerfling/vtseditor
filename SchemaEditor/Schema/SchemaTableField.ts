@@ -1,12 +1,18 @@
 import {Connection} from '@jsplumb/browser-ui';
 import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
-import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
+import {ContextMenu} from '../Base/ContextMenu.js';
+import {EditorIcons} from '../Base/EditorIcons.js';
 import {MultiTypeFieldBadge} from '../Base/MultiType/MultiTypeFieldBadge.js';
 import {Tooltip} from '../Base/Tooltip.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import {JsonSchemaFieldDescription, JsonSchemaFieldType, SchemaJsonSchemaFieldType} from '../JsonData.js';
 import {SchemaTypes} from '../Register/SchemaTypes.js';
 import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';
+
+/**
+ * Drag data MIME type used for in-editor field reordering.
+ */
+const SCHEMA_FIELD_DRAG_TYPE = 'application/x-vts-field';
 
 /**
  * On Save
@@ -17,6 +23,11 @@ export type SchemaTableFieldOnSave = (field: SchemaTableField,  dialog: SchemaTa
  * On Delete
  */
 export type SchemaTableFieldOnDelete = (field: SchemaTableField) => void;
+
+/**
+ * On Reorder — fired when a drop inside this table should move a field.
+ */
+export type SchemaTableFieldOnReorder = (sourceId: string, targetId: string, position: 'before'|'after') => void;
 
 /**
  * Schema table field
@@ -65,6 +76,12 @@ export class SchemaTableField {
     protected _column: HTMLDivElement;
 
     /**
+     * Drag handle (grip icon used to initiate a reorder drag)
+     * @protected
+     */
+    protected _dragHandle: HTMLDivElement;
+
+    /**
      * Span content name
      * @protected
      */
@@ -77,16 +94,10 @@ export class SchemaTableField {
     protected _contentType: HTMLSpanElement;
 
     /**
-     * Button delete
+     * Context menu (Edit / Delete)
      * @protected
      */
-    protected _btnDelete: HTMLDivElement;
-
-    /**
-     * Button edit
-     * @protected
-     */
-    protected _btnEdit: HTMLDivElement;
+    protected _contextMenu: ContextMenu;
 
     /**
      * info icon wrapper
@@ -119,6 +130,12 @@ export class SchemaTableField {
     protected _onDelete: SchemaTableFieldOnDelete|null = null;
 
     /**
+     * On Reorder
+     * @protected
+     */
+    protected _onReorder: SchemaTableFieldOnReorder|null = null;
+
+    /**
      * Constructor
      * @param {string} tableUnid
      * @param {string} unid
@@ -130,28 +147,96 @@ export class SchemaTableField {
 
         this._column = document.createElement('div');
         this._column.classList.add('vts-schema-table-column');
-        this._column.style.backgroundColor = '#ffffff';
 
-        // delete button -----------------------------------------------------------------------------------------------
+        // drag handle -------------------------------------------------------------------------------------------------
 
-        this._btnDelete = document.createElement('div');
-        this._btnDelete.classList.add(...['vts-schema-table-column-delete', 'vts-schema-delete']);
-        this._btnDelete.addEventListener('click', () => {
+        this._dragHandle = document.createElement('div');
+        this._dragHandle.classList.add('vts-schema-column-drag-handle');
+        this._dragHandle.title = 'Drag to reorder';
+        // two columns of dots — visually reads as a grip handle
+        this._dragHandle.innerHTML = '<span></span><span></span><span></span><span></span><span></span><span></span>';
+
+        this._dragHandle.addEventListener('mousedown', e => {
             if (this._readOnly) {
-                AlertDialog.showAlert('Field', 'Field can not delete by readonly!', AlertDialogTypes.warning);
                 return;
             }
 
-            if (this._onDelete) {
-                this._onDelete(this);
+            this._column.draggable = true;
+            // keep jsPlumb from starting a table drag on the same mousedown
+            e.stopPropagation();
+        });
+
+        this._column.appendChild(this._dragHandle);
+
+        // mouseup resets draggable when the user clicked the handle but did not drag
+        this._column.addEventListener('mouseup', () => {
+            if (this._column.draggable) {
+                this._column.draggable = false;
             }
         });
 
-        this._column.appendChild(this._btnDelete);
+        // drag events for reordering ----------------------------------------------------------------------------------
+
+        this._column.addEventListener('dragstart', e => {
+            if (!this._column.draggable) {
+                return;
+            }
+
+            e.stopPropagation();
+            e.dataTransfer!.effectAllowed = 'move';
+            e.dataTransfer!.setData(SCHEMA_FIELD_DRAG_TYPE, this._unid);
+            this._column.classList.add('dragging-field');
+        });
+
+        this._column.addEventListener('dragend', () => {
+            this._column.draggable = false;
+            this._column.classList.remove('dragging-field');
+            this._column.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+        });
+
+        this._column.addEventListener('dragover', e => {
+            if (!e.dataTransfer || !e.dataTransfer.types.includes(SCHEMA_FIELD_DRAG_TYPE)) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+
+            const rect = this._column.getBoundingClientRect();
+            const isAbove = e.clientY < rect.top + rect.height / 2;
+
+            this._column.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+            this._column.classList.add(isAbove ? 'drop-indicator-top' : 'drop-indicator-bottom');
+        });
+
+        this._column.addEventListener('dragleave', () => {
+            this._column.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+        });
+
+        this._column.addEventListener('drop', e => {
+            if (!e.dataTransfer || !e.dataTransfer.types.includes(SCHEMA_FIELD_DRAG_TYPE)) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const sourceId = e.dataTransfer.getData(SCHEMA_FIELD_DRAG_TYPE);
+            const rect = this._column.getBoundingClientRect();
+            const isAbove = e.clientY < rect.top + rect.height / 2;
+
+            this._column.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+
+            if (sourceId && sourceId !== this._unid && this._onReorder) {
+                this._onReorder(sourceId, this._unid, isAbove ? 'before' : 'after');
+            }
+        });
 
         // content -----------------------------------------------------------------------------------------------------
 
         const content = document.createElement('div');
+        content.classList.add('vts-schema-column-content');
         this._column.appendChild(content);
 
         this._contentName = document.createElement('span');
@@ -170,38 +255,49 @@ export class SchemaTableField {
         // Buttons -----------------------------------------------------------------------------------------------------
 
         const elBtn = document.createElement('div');
-        elBtn.classList.add(...['vts-schema-column-buttons']);
+        elBtn.classList.add('vts-schema-column-buttons');
         this._column.appendChild(elBtn);
 
-        // edit button -------------------------------------------------------------------------------------------------
+        // context menu (Edit / Delete) --------------------------------------------------------------------------------
 
-        this._btnEdit = document.createElement('div');
-        this._btnEdit.classList.add(...['vts-schema-table-column-edit', 'vts-schema-edit']);
-        this._btnEdit.addEventListener('click', () => {
-            if (this._readOnly) {
-                AlertDialog.showAlert('Field', 'Field can not edit by readonly!', AlertDialogTypes.warning);
-                return;
+        this._contextMenu = new ContextMenu();
+
+        this._contextMenu.addItem({
+            icon: EditorIcons.edit,
+            label: 'Edit field',
+            onClick: () => {
+                const dialog = new SchemaTableFieldDialog(tableUnid);
+                dialog.setFieldName(this._name);
+                dialog.setFieldType(this._type);
+                dialog.setDescription(this._description);
+                dialog.show();
+
+                dialog.setOnConfirm(dialog1 => {
+                    const tdialog = dialog1 as unknown as SchemaTableFieldDialog;
+
+                    if (this._onSave) {
+                        return this._onSave(this, tdialog);
+                    }
+
+                    return true;
+                });
             }
-
-            const dialog = new SchemaTableFieldDialog(tableUnid);
-            dialog.setFieldName(this._name);
-            dialog.setFieldType(this._type);
-            dialog.setDescription(this._description);
-            dialog.show();
-
-            dialog.setOnConfirm(dialog1 => {
-                const tdialog = dialog1 as unknown as SchemaTableFieldDialog;
-
-                if (this._onSave) {
-                    return this._onSave(this, tdialog);
-                }
-
-                // close dialog
-                return true;
-            });
         });
 
-        elBtn.appendChild(this._btnEdit);
+        this._contextMenu.addSeparator();
+
+        this._contextMenu.addItem({
+            icon: EditorIcons.delete,
+            label: 'Delete field',
+            danger: true,
+            onClick: () => {
+                if (this._onDelete) {
+                    this._onDelete(this);
+                }
+            }
+        });
+
+        elBtn.appendChild(this._contextMenu.getTriggerElement());
 
         // for connection
         this._endpoint = document.createElement('div');
@@ -259,10 +355,8 @@ export class SchemaTableField {
             this._type = type;
 
             if (this._type.optional) {
-                this._column.style.backgroundColor = '#cbeae1';
                 this._column.classList.add('optional');
             } else {
-                this._column.style.backgroundColor = '#ffffff';
                 this._column.classList.remove('optional');
             }
 
@@ -380,12 +474,12 @@ export class SchemaTableField {
     public setReadOnly(readonly: boolean): void {
         this._readOnly = readonly;
 
+        this._contextMenu.setTriggerVisible(!readonly);
+
         if (readonly) {
-            this._btnDelete.style.display = 'none';
-            this._btnEdit.style.display = 'none';
+            this._dragHandle.style.display = 'none';
         } else {
-            this._btnDelete.style.display = '';
-            this._btnEdit.style.display = '';
+            this._dragHandle.style.display = '';
         }
     }
 
@@ -430,6 +524,14 @@ export class SchemaTableField {
     }
 
     /**
+     * Set on reorder
+     * @param {SchemaTableFieldOnReorder|null} onReorder
+     */
+    public setOnReorder(onReorder: SchemaTableFieldOnReorder|null): void {
+        this._onReorder = onReorder;
+    }
+
+    /**
      * Remove
      */
     public remove(): void {
@@ -437,6 +539,8 @@ export class SchemaTableField {
             jsPlumbInstance.deleteConnection(this._connection);
         }
 
+        this._contextMenu.destroy();
+        this._tooltip.destroy();
         this._column.remove();
     }
 }

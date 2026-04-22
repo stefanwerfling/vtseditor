@@ -1,6 +1,13 @@
 import {SchemaNameUtil} from '../../SchemaUtil/SchemaNameUtil.js';
+import {ContextMenu} from '../Base/ContextMenu.js';
+import {EditorIcons} from '../Base/EditorIcons.js';
 import {JsonEnumValueDescription} from '../JsonData.js';
 import {EnumTableValueDialog} from './EnumTableValueDialog.js';
+
+/**
+ * Drag data MIME type used for in-editor enum value reordering.
+ */
+const ENUM_VALUE_DRAG_TYPE = 'application/x-vts-enum-value';
 
 /**
  * On Save
@@ -11,6 +18,11 @@ export type EnumTableValueOnSave = (value: EnumTableValue,  dialog: EnumTableVal
  * On Delete
  */
 export type EnumTableValueOnDelete = (value: EnumTableValue) => void;
+
+/**
+ * On Reorder
+ */
+export type EnumTableValueOnReorder = (sourceId: string, targetId: string, position: 'before'|'after') => void;
 
 /**
  * Enum table value
@@ -60,16 +72,16 @@ export class EnumTableValue {
     protected _column: HTMLDivElement;
 
     /**
-     * button delete
+     * Drag handle
      * @protected
      */
-    protected _btnDelete: HTMLDivElement;
+    protected _dragHandle: HTMLDivElement;
 
     /**
-     * button edit
+     * Context menu (Edit / Delete)
      * @protected
      */
-    protected _btnEdit: HTMLDivElement;
+    protected _contextMenu: ContextMenu;
 
     /**
      * On Save
@@ -84,6 +96,12 @@ export class EnumTableValue {
     protected _onDelete: EnumTableValueOnDelete|null = null;
 
     /**
+     * On Reorder
+     * @protected
+     */
+    protected _onReorder: EnumTableValueOnReorder|null = null;
+
+    /**
      * Constructor
      * @param {string} tableId
      * @param {string} id
@@ -95,23 +113,93 @@ export class EnumTableValue {
 
         this._column = document.createElement('div');
         this._column.classList.add('vts-schema-table-column');
-        this._column.style.backgroundColor = '#ffffff';
 
-        // delete button -----------------------------------------------------------------------------------------------
+        // drag handle -------------------------------------------------------------------------------------------------
 
-        this._btnDelete = document.createElement('div');
-        this._btnDelete.classList.add(...['vts-schema-table-column-delete', 'vts-schema-delete']);
-        this._btnDelete.addEventListener('click', () => {
-            if (this._onDelete) {
-                this._onDelete(this);
+        this._dragHandle = document.createElement('div');
+        this._dragHandle.classList.add('vts-schema-column-drag-handle');
+        this._dragHandle.title = 'Drag to reorder';
+        this._dragHandle.innerHTML = '<span></span><span></span><span></span><span></span><span></span><span></span>';
+
+        this._dragHandle.addEventListener('mousedown', e => {
+            if (this._readOnly) {
+                return;
+            }
+
+            this._column.draggable = true;
+            e.stopPropagation();
+        });
+
+        this._column.appendChild(this._dragHandle);
+
+        this._column.addEventListener('mouseup', () => {
+            if (this._column.draggable) {
+                this._column.draggable = false;
             }
         });
 
-        this._column.appendChild(this._btnDelete);
+        // drag events for reordering ----------------------------------------------------------------------------------
+
+        this._column.addEventListener('dragstart', e => {
+            if (!this._column.draggable) {
+                return;
+            }
+
+            e.stopPropagation();
+            e.dataTransfer!.effectAllowed = 'move';
+            e.dataTransfer!.setData(ENUM_VALUE_DRAG_TYPE, this._id);
+            this._column.classList.add('dragging-field');
+        });
+
+        this._column.addEventListener('dragend', () => {
+            this._column.draggable = false;
+            this._column.classList.remove('dragging-field');
+            this._column.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+        });
+
+        this._column.addEventListener('dragover', e => {
+            if (!e.dataTransfer || !e.dataTransfer.types.includes(ENUM_VALUE_DRAG_TYPE)) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+
+            const rect = this._column.getBoundingClientRect();
+            const isAbove = e.clientY < rect.top + rect.height / 2;
+
+            this._column.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+            this._column.classList.add(isAbove ? 'drop-indicator-top' : 'drop-indicator-bottom');
+        });
+
+        this._column.addEventListener('dragleave', () => {
+            this._column.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+        });
+
+        this._column.addEventListener('drop', e => {
+            if (!e.dataTransfer || !e.dataTransfer.types.includes(ENUM_VALUE_DRAG_TYPE)) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const sourceId = e.dataTransfer.getData(ENUM_VALUE_DRAG_TYPE);
+            const rect = this._column.getBoundingClientRect();
+            const isAbove = e.clientY < rect.top + rect.height / 2;
+
+            this._column.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+
+            if (sourceId && sourceId !== this._id && this._onReorder) {
+                this._onReorder(sourceId, this._id, isAbove ? 'before' : 'after');
+            }
+        });
 
         // content -----------------------------------------------------------------------------------------------------
 
         const content = document.createElement('div');
+        content.classList.add('vts-schema-column-content');
         this._column.appendChild(content);
 
         this._contentName = document.createElement('span');
@@ -124,33 +212,48 @@ export class EnumTableValue {
         // Buttons -----------------------------------------------------------------------------------------------------
 
         const elBtn = document.createElement('div');
-        elBtn.classList.add(...['vts-schema-column-buttons']);
+        elBtn.classList.add('vts-schema-column-buttons');
         this._column.appendChild(elBtn);
 
-        // edit button -------------------------------------------------------------------------------------------------
+        // context menu (Edit / Delete) --------------------------------------------------------------------------------
 
-        this._btnEdit = document.createElement('div');
-        this._btnEdit.classList.add(...['vts-schema-table-column-edit', 'vts-schema-edit']);
-        this._btnEdit.addEventListener('click', () => {
-            const dialog = new EnumTableValueDialog();
+        this._contextMenu = new ContextMenu();
 
-            dialog.setName(this._name);
-            dialog.setValue(this._value);
-            dialog.show();
+        this._contextMenu.addItem({
+            icon: EditorIcons.edit,
+            label: 'Edit value',
+            onClick: () => {
+                const dialog = new EnumTableValueDialog();
+                dialog.setName(this._name);
+                dialog.setValue(this._value);
+                dialog.show();
 
-            dialog.setOnConfirm(dialog1 => {
-                const tdialog = dialog1 as unknown as EnumTableValueDialog;
+                dialog.setOnConfirm(dialog1 => {
+                    const tdialog = dialog1 as unknown as EnumTableValueDialog;
 
-                if (this._onSave) {
-                    return this._onSave(this, tdialog);
-                }
+                    if (this._onSave) {
+                        return this._onSave(this, tdialog);
+                    }
 
-                // close dialog
-                return true;
-            });
+                    return true;
+                });
+            }
         });
 
-        elBtn.appendChild(this._btnEdit);
+        this._contextMenu.addSeparator();
+
+        this._contextMenu.addItem({
+            icon: EditorIcons.delete,
+            label: 'Delete value',
+            danger: true,
+            onClick: () => {
+                if (this._onDelete) {
+                    this._onDelete(this);
+                }
+            }
+        });
+
+        elBtn.appendChild(this._contextMenu.getTriggerElement());
     }
 
     /**
@@ -194,12 +297,12 @@ export class EnumTableValue {
     public setReadOnly(readonly: boolean): void {
         this._readOnly = readonly;
 
+        this._contextMenu.setTriggerVisible(!readonly);
+
         if (readonly) {
-            this._btnDelete.style.display = 'none';
-            this._btnEdit.style.display = 'none';
+            this._dragHandle.style.display = 'none';
         } else {
-            this._btnDelete.style.display = '';
-            this._btnEdit.style.display = '';
+            this._dragHandle.style.display = '';
         }
     }
 
@@ -250,9 +353,18 @@ export class EnumTableValue {
     }
 
     /**
+     * Set on reorder
+     * @param {EnumTableValueOnReorder|null} onReorder
+     */
+    public setOnReorder(onReorder: EnumTableValueOnReorder|null): void {
+        this._onReorder = onReorder;
+    }
+
+    /**
      * Remove
      */
     public remove(): void {
+        this._contextMenu.destroy();
         this._column.remove();
     }
 

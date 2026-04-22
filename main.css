@@ -205,14 +205,16 @@ body {
   border-radius: var(--radius-sm);
 }
 
+/* jsPlumb anchor: kept sized so jsPlumb can compute the connection
+   position correctly, but visually invisible — the connection line
+   renders its own arrow so a decorative dot adds nothing but noise. */
 .endpoint {
   position: absolute;
   width: 10px;
   height: 10px;
-  background: #333;
-  border-radius: 50%;
   right: -6px;
-  cursor: crosshair;
+  background: transparent;
+  pointer-events: none;
 }
 
 #addTableBtn {

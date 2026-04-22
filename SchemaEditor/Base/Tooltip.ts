@@ -1,98 +1,172 @@
 import './Tooltip.css';
-import {EditorIcons} from './EditorIcons.js';
 
 /**
- * Tooltip
+ * Tooltip — a small info icon that shows a panel with descriptive text
+ * when hovered. The panel is appended to document.body so it is not
+ * clipped by overflow: hidden on parent cards or by jsPlumb transforms
+ * applied during table drags.
+ *
+ * Call destroy() when the owning component is removed, otherwise the
+ * panel stays orphaned in the DOM.
  */
 export class Tooltip {
 
     /**
-     * div wrapper
+     * Wrapper element containing the icon (lives next to the field name)
      * @protected
      */
-    protected _divWrapper: HTMLDivElement;
+    protected _divWrapper: HTMLSpanElement;
 
     /**
-     * div info content
+     * The info icon itself
+     * @protected
+     */
+    protected _iconInfo: HTMLSpanElement;
+
+    /**
+     * Floating panel appended to document.body
      * @protected
      */
     protected _divInfoContent: HTMLDivElement;
 
     /**
+     * Bound reposition listener so we can add/remove it
+     * @protected
+     */
+    protected _onReposition: () => void;
+
+    /**
      * Constructor
      */
     public constructor() {
-        this._divWrapper = document.createElement('div');
-        this._divWrapper.classList.add(...['info-tooltip-icon-wrapper']);
+        this._divWrapper = document.createElement('span');
+        this._divWrapper.classList.add('info-tooltip-icon-wrapper');
 
-        const iconInfo = document.createElement('span');
-        iconInfo.classList.add('info-tooltip-icon');
-        iconInfo.textContent = EditorIcons.info;
-        this._divWrapper.appendChild(iconInfo);
+        this._iconInfo = document.createElement('span');
+        this._iconInfo.classList.add('info-tooltip-icon');
+        this._iconInfo.textContent = 'i';
+        this._divWrapper.appendChild(this._iconInfo);
 
         this._divInfoContent = document.createElement('div');
         this._divInfoContent.classList.add('info-tooltip');
-        this._divWrapper.appendChild(this._divInfoContent);
+        document.body.appendChild(this._divInfoContent);
 
-        this._divWrapper.addEventListener('mousemove', (e) => {
-            const dialogParent = this._divWrapper.closest('dialog');
-
-            if (dialogParent) {
-                const rect = dialogParent.getBoundingClientRect();
-                const scrollTop = dialogParent.scrollTop;
-                const scrollLeft = dialogParent.scrollLeft;
-
-                this._divInfoContent.style.left = `${e.clientX - rect.left + scrollLeft - 90 - 14}px`;
-                this._divInfoContent.style.top = `${e.clientY - rect.top + scrollTop + 22}px`;
-            } else {
-                this._divInfoContent.style.left = `${e.clientX - 14}px`;
-                this._divInfoContent.style.top = `${e.clientY + 22}px`;
+        this._onReposition = () => {
+            if (this._divInfoContent.classList.contains('visible')) {
+                this._position();
             }
-        });
+        };
 
-        this._divWrapper.addEventListener('mouseenter', (e) => {
-            this._divInfoContent.style.display = 'block';
-            this._divInfoContent.style.visibility = 'visible';
-            this._divInfoContent.style.opacity = '1';
-            this._divInfoContent.style.position = 'fixed';
-            this._divInfoContent.style.zIndex = '100000';
+        this._divWrapper.addEventListener('mouseenter', () => {
+            this._position();
+            this._divInfoContent.classList.add('visible');
+
+            window.addEventListener('scroll', this._onReposition, true);
+            window.addEventListener('resize', this._onReposition);
         });
 
         this._divWrapper.addEventListener('mouseleave', () => {
-            this._divInfoContent.style.display = 'none';
-            this._divInfoContent.style.visibility = 'hidden';
-            this._divInfoContent.style.opacity = '0';
+            this._divInfoContent.classList.remove('visible');
+
+            window.removeEventListener('scroll', this._onReposition, true);
+            window.removeEventListener('resize', this._onReposition);
         });
     }
 
     /**
-     * Return the element
-     * @return {HTMLDivElement}
+     * Return the wrapper element (the icon) — append this where the
+     * tooltip should be reachable from.
+     * @return {HTMLElement}
      */
-    public getElement(): HTMLDivElement {
+    public getElement(): HTMLElement {
         return this._divWrapper;
     }
 
     /**
-     * Show
+     * Show the icon.
      */
     public show(): void {
         this._divWrapper.style.display = '';
     }
 
     /**
-     * Hide
+     * Hide the icon (and the panel if it is currently visible).
      */
     public hide(): void {
         this._divWrapper.style.display = 'none';
+        this._divInfoContent.classList.remove('visible');
     }
 
     /**
-     * Set the content
+     * Set the tooltip content.
      * @param {string} content
      */
     public setContent(content: string): void {
         this._divInfoContent.textContent = content;
+    }
+
+    /**
+     * Destroy — removes the floating panel from document.body.
+     * Call from the owning component's remove() method.
+     */
+    public destroy(): void {
+        window.removeEventListener('scroll', this._onReposition, true);
+        window.removeEventListener('resize', this._onReposition);
+        this._divInfoContent.remove();
+        this._divWrapper.remove();
+    }
+
+    /**
+     * Position the panel relative to the icon. Tries below first; if
+     * it would overflow the viewport, flips above. Clamps horizontally
+     * and exposes the arrow's X offset via the --arrow-x custom
+     * property so the pointer stays aligned with the icon center.
+     * @protected
+     */
+    protected _position(): void {
+        // make the panel measurable without flashing it on screen
+        const wasVisible = this._divInfoContent.classList.contains('visible');
+        this._divInfoContent.style.visibility = 'hidden';
+        this._divInfoContent.classList.remove('visible');
+        this._divInfoContent.classList.remove('above');
+
+        const iconRect = this._divWrapper.getBoundingClientRect();
+        const panelRect = this._divInfoContent.getBoundingClientRect();
+        const margin = 8;
+
+        const iconCenterX = iconRect.left + iconRect.width / 2;
+        let top = iconRect.bottom + margin;
+        let left = iconCenterX - panelRect.width / 2;
+        let above = false;
+
+        if (top + panelRect.height > window.innerHeight - margin) {
+            top = iconRect.top - panelRect.height - margin;
+            above = true;
+        }
+
+        if (left < margin) {
+            left = margin;
+        }
+
+        if (left + panelRect.width > window.innerWidth - margin) {
+            left = window.innerWidth - panelRect.width - margin;
+        }
+
+        const arrowX = iconCenterX - left;
+
+        this._divInfoContent.style.top = `${top}px`;
+        this._divInfoContent.style.left = `${left}px`;
+        this._divInfoContent.style.setProperty('--arrow-x', `${arrowX}px`);
+
+        if (above) {
+            this._divInfoContent.classList.add('above');
+        }
+
+        if (wasVisible) {
+            this._divInfoContent.classList.add('visible');
+        }
+
+        this._divInfoContent.style.visibility = '';
     }
 
 }

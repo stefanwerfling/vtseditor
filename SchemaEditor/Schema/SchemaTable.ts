@@ -4,6 +4,7 @@ import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
 import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {ConfirmDialog} from '../Base/ConfirmDialog.js';
+import {ContextMenu} from '../Base/ContextMenu.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import {ExtendTypeBadge} from '../Base/ExtendType/ExtendTypeBadge.js';
@@ -72,22 +73,22 @@ export class SchemaTable extends BaseTable {
     protected _btnLineRight: HTMLDivElement;
 
     /**
-     * Button edit
+     * Context menu (Add field / Sort / Edit / Delete)
      * @protected
      */
-    protected _btnEdit: HTMLDivElement;
+    protected _contextMenu: ContextMenu;
 
     /**
-     * Button sort
+     * Add field menu item (hidden when extend is not object/schema)
      * @protected
      */
-    protected _btnSort: HTMLDivElement;
+    protected _miAddField: HTMLButtonElement;
 
     /**
-     * Button add
+     * Sort fields menu item (hidden when extend is not object/schema)
      * @protected
      */
-    protected _btnAdd: HTMLDivElement;
+    protected _miSortFields: HTMLButtonElement;
 
     /**
      * fields
@@ -141,68 +142,67 @@ export class SchemaTable extends BaseTable {
         this._schemaExtend = document.createElement('span');
         this._headline.appendChild(this._schemaExtend);
 
+        // front-placed delete from BaseTable is replaced by the context
+        // menu entry, so hide the inherited button
+        this._btnDelete.style.display = 'none';
+
         // Buttons -----------------------------------------------------------------------------------------------------
 
         this._btnLineRight = document.createElement('div');
-        this._btnLineRight.classList.add(...['vts-schema-buttons']);
+        this._btnLineRight.classList.add('vts-schema-buttons');
         this._headline.appendChild(this._btnLineRight);
 
-        // Button edit -------------------------------------------------------------------------------------------------
+        // Context menu (Add / Sort / Edit / Delete) -------------------------------------------------------------------
 
-        this._btnEdit = document.createElement('div');
-        this._btnEdit.classList.add(...['vts-schema-edit-name', 'vts-schema-edit']);
-        this._btnEdit.title = 'Edit Schema';
-        this._btnEdit.addEventListener('click', () => {
-            if (this._readOnly) {
-                AlertDialog.showAlert('Schema', 'Schema is readonly!', AlertDialogTypes.warning);
-                return;
+        this._contextMenu = new ContextMenu();
+
+        this._miAddField = this._contextMenu.addItem({
+            icon: EditorIcons.add,
+            label: 'Add field',
+            onClick: () => {
+                this._openNewColumnDialog();
             }
-
-            this.openEditDialog();
         });
 
-        this._btnLineRight.appendChild(this._btnEdit);
-
-        // Button sorting ----------------------------------------------------------------------------------------------
-
-        this._btnSort = document.createElement('div');
-        this._btnSort.classList.add(...['vts-schema-sort-name']);
-        this._btnSort.title = 'Sorting';
-        this._btnSort.addEventListener('click', () => {
-            if (this._readOnly) {
-                AlertDialog.showAlert('Schema', 'Schema is readonly!', AlertDialogTypes.warning);
-                return;
+        this._miSortFields = this._contextMenu.addItem({
+            icon: EditorIcons.sort,
+            label: 'Sort fields by name',
+            onClick: () => {
+                ConfirmDialog.showConfirm(
+                    'Sort fields',
+                    'Do you want to sort the fields by name?',
+                    () => {
+                        this.sortingFields();
+                        this.updateView();
+                        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                    },
+                    AlertDialogTypes.info
+                );
             }
-
-            ConfirmDialog.showConfirm(
-                'Sort fields',
-                'Do you want to sort the fields by name?',
-                () => {
-                    this.sortingFields();
-                    this.updateView();
-                    window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
-                },
-                AlertDialogTypes.info
-            );
         });
 
-        this._btnLineRight.appendChild(this._btnSort);
-
-        // Button add --------------------------------------------------------------------------------------------------
-
-        this._btnAdd = document.createElement('div');
-        this._btnAdd.classList.add(...['vts-schema-new-column', 'vts-schema-add']);
-        this._btnAdd.title = 'Add Field';
-        this._btnAdd.addEventListener('click', () => {
-            if (this._readOnly) {
-                AlertDialog.showAlert('Schema', 'Schema is readonly!', AlertDialogTypes.warning);
-                return;
+        this._contextMenu.addItem({
+            icon: EditorIcons.edit,
+            label: 'Edit schema',
+            onClick: () => {
+                this.openEditDialog();
             }
-
-            this._openNewColumnDialog();
         });
 
-        this._btnLineRight.appendChild(this._btnAdd);
+        this._contextMenu.addSeparator();
+
+        this._contextMenu.addItem({
+            icon: EditorIcons.delete,
+            label: 'Delete schema',
+            danger: true,
+            onClick: () => {
+                if (this._onDelete) {
+                    this._onDelete(this);
+                }
+            }
+        });
+
+        this._btnLineRight.appendChild(this._contextMenu.getTriggerElement());
 
         // for connection
         const endpoint = document.createElement('div');
@@ -282,15 +282,15 @@ export class SchemaTable extends BaseTable {
             field.setReadOnly(readonly);
         }
 
+        // BaseTable.setReadOnly toggles the inherited _btnDelete — it is
+        // replaced by the context menu here, so keep it hidden.
+        this._btnDelete.style.display = 'none';
+
+        this._contextMenu.setTriggerVisible(!readonly);
+
         if (readonly) {
-            this._btnEdit.style.display = 'none';
-            this._btnAdd.style.display = 'none';
-            this._btnSort.style.display = 'none';
             this._dropArea.style.display = 'none';
         } else {
-            this._btnEdit.style.display = '';
-            this._btnAdd.style.display = '';
-            this._btnSort.style.display = '';
             this._dropArea.style.display = '';
         }
     }
@@ -462,11 +462,62 @@ export class SchemaTable extends BaseTable {
             );
         });
 
+        field.setOnReorder((sourceId, targetId, position) => {
+            this.moveField(sourceId, targetId, position);
+        });
+
         this._columns.appendChild(field.getElement());
         this._fields.set(uuid, field);
 
         field.setReadOnly(this._readOnly);
         field.updateView();
+    }
+
+    /**
+     * Move a field before or after another field (drag & drop reorder).
+     * @param {string} sourceId
+     * @param {string} targetId
+     * @param {'before'|'after'} position
+     */
+    public moveField(sourceId: string, targetId: string, position: 'before'|'after'): void {
+        if (sourceId === targetId) {
+            return;
+        }
+
+        const sourceField = this._fields.get(sourceId);
+        const targetField = this._fields.get(targetId);
+
+        if (!sourceField || !targetField) {
+            return;
+        }
+
+        const sourceEl = sourceField.getElement();
+        const targetEl = targetField.getElement();
+
+        sourceEl.remove();
+
+        if (position === 'before') {
+            targetEl.parentElement!.insertBefore(sourceEl, targetEl);
+        } else {
+            targetEl.parentElement!.insertBefore(sourceEl, targetEl.nextSibling);
+        }
+
+        // rebuild the map in the new DOM order so getData() emits fields in the right order
+        const reordered = new Map<string, SchemaTableField>();
+
+        for (const child of Array.from(this._columns.children)) {
+            for (const [id, field] of this._fields.entries()) {
+                if (field.getElement() === child) {
+                    reordered.set(id, field);
+                    break;
+                }
+            }
+        }
+
+        this._fields = reordered;
+
+        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+        jsPlumbInstance.repaintEverything();
     }
 
     /**
@@ -503,19 +554,11 @@ export class SchemaTable extends BaseTable {
      */
     protected _updateViewExtend(): void {
         const isSchema = SchemaTypes.getInstance().isTypeASchema(this._extend.type);
+        const allowsFields = this._extend.type === 'object' || isSchema;
 
-        if (this._extend.type === 'object' || isSchema) {
-            if (!this._readOnly) {
-                this._btnSort.style.display = '';
-                this._btnAdd.style.display = '';
-            }
-
-            this._columns.style.display = '';
-        } else {
-            this._btnSort.style.display = 'none';
-            this._btnAdd.style.display = 'none';
-            this._columns.style.display = 'none';
-        }
+        this._miAddField.style.display = allowsFields ? '' : 'none';
+        this._miSortFields.style.display = allowsFields ? '' : 'none';
+        this._columns.style.display = allowsFields ? '' : 'none';
 
         const badge = new ExtendTypeBadge(this._extend);
         this._schemaExtend.innerHTML = '';
@@ -707,6 +750,7 @@ export class SchemaTable extends BaseTable {
         }
 
         this._fields.clear();
+        this._contextMenu.destroy();
         super.remove();
     }
 
@@ -764,7 +808,7 @@ export class SchemaTable extends BaseTable {
         }
 
         this._fields = new Map(
-            sortedFields.map(field => [field.getName(), field])
+            sortedFields.map(field => [field.getId(), field])
         );
     }
 

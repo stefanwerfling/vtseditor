@@ -1,6 +1,7 @@
 import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {ConfirmDialog} from '../Base/ConfirmDialog.js';
+import {ContextMenu} from '../Base/ContextMenu.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
@@ -45,16 +46,10 @@ export class EnumTable extends BaseTable {
     protected _values: Map<string, EnumTableValue> = new Map<string, EnumTableValue>();
 
     /**
-     * button edit
+     * Context menu (Add / Edit / Delete)
      * @protected
      */
-    protected _btnEdit: HTMLDivElement;
-
-    /**
-     * Button add
-     * @protected
-     */
-    protected _btnAdd: HTMLDivElement;
+    protected _contextMenu: ContextMenu;
 
     /**
      * Constructor
@@ -72,67 +67,50 @@ export class EnumTable extends BaseTable {
 
         this.getIconElement().textContent = EditorIcons.enum;
 
+        // front-placed delete from BaseTable is replaced by the context
+        // menu entry, so hide the inherited button
+        this._btnDelete.style.display = 'none';
+
         // Buttons -----------------------------------------------------------------------------------------------------
 
         const elBtn = document.createElement('div');
-        elBtn.classList.add(...['vts-schema-buttons']);
+        elBtn.classList.add('vts-schema-buttons');
         this._headline.appendChild(elBtn);
 
-        // Button edit -------------------------------------------------------------------------------------------------
+        // Context menu (Add / Edit / Delete) --------------------------------------------------------------------------
 
-        this._btnEdit = document.createElement('div');
-        this._btnEdit.classList.add(...['vts-schema-edit-name', 'vts-schema-edit']);
-        this._btnEdit.title = 'Edit Enum';
-        this._btnEdit.addEventListener('click', () => {
-            if (this._readOnly) {
-                AlertDialog.showAlert(
-                    'Edit enum ',
-                    'Enum can not edit by readonly!',
-                    AlertDialogTypes.error,
-                );
-                return;
+        this._contextMenu = new ContextMenu();
+
+        this._contextMenu.addItem({
+            icon: EditorIcons.add,
+            label: 'Add value',
+            onClick: () => {
+                this._openAddValueDialog();
             }
-
-            this.openEditDialog();
         });
 
-        elBtn.appendChild(this._btnEdit);
+        this._contextMenu.addItem({
+            icon: EditorIcons.edit,
+            label: 'Edit enum',
+            onClick: () => {
+                this.openEditDialog();
+            }
+        });
 
-        // Button add --------------------------------------------------------------------------------------------------
+        this._contextMenu.addSeparator();
 
-        this._btnAdd = document.createElement('div');
-        this._btnAdd.classList.add(...['vts-schema-new-column', 'vts-schema-add']);
-        this._btnAdd.title = 'Add Value';
-        this._btnAdd.addEventListener('click', () => {
-            const dialog = new EnumTableValueDialog();
-            dialog.show();
-            dialog.setOnConfirm(dialog1 => {
-                const tdialog = dialog1 as unknown as EnumTableValueDialog;
-                const name = tdialog.getName();
-                const uid = crypto.randomUUID();
-
-                if (this.existEnumEntryName(name)) {
-                    AlertDialog.showAlert(
-                        'Add enum value',
-                        `Please change your Entryname "${name}", it already exist!`,
-                        AlertDialogTypes.error,
-                    );
-                    return false;
+        this._contextMenu.addItem({
+            icon: EditorIcons.delete,
+            label: 'Delete enum',
+            danger: true,
+            onClick: () => {
+                if (this._onDelete) {
+                    this._onDelete(this);
                 }
-
-                this.setValues([{
-                    unid: uid,
-                    name: name,
-                    value: tdialog.getValue()
-                }]);
-
-                window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
-
-                return true;
-            });
+            }
         });
 
-        elBtn.appendChild(this._btnAdd);
+        elBtn.appendChild(this._contextMenu.getTriggerElement());
 
         // columns -----------------------------------------------------------------------------------------------------
 
@@ -172,13 +150,43 @@ export class EnumTable extends BaseTable {
             value.setReadOnly(readonly);
         }
 
-        if (readonly) {
-            this._btnEdit.style.display = 'none';
-            this._btnAdd.style.display = 'none';
-        } else {
-            this._btnEdit.style.display = '';
-            this._btnAdd.style.display = '';
-        }
+        // keep the inherited delete button hidden — replaced by context menu
+        this._btnDelete.style.display = 'none';
+
+        this._contextMenu.setTriggerVisible(!readonly);
+    }
+
+    /**
+     * Open the dialog to add a new value
+     * @protected
+     */
+    protected _openAddValueDialog(): void {
+        const dialog = new EnumTableValueDialog();
+        dialog.show();
+        dialog.setOnConfirm(dialog1 => {
+            const tdialog = dialog1 as unknown as EnumTableValueDialog;
+            const name = tdialog.getName();
+            const uid = crypto.randomUUID();
+
+            if (this.existEnumEntryName(name)) {
+                AlertDialog.showAlert(
+                    'Add enum value',
+                    `Please change your Entryname "${name}", it already exist!`,
+                    AlertDialogTypes.error,
+                );
+                return false;
+            }
+
+            this.setValues([{
+                unid: uid,
+                name: name,
+                value: tdialog.getValue()
+            }]);
+
+            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+
+            return true;
+        });
     }
 
     /**
@@ -251,11 +259,61 @@ export class EnumTable extends BaseTable {
                 );
             });
 
+            value.setOnReorder((sourceId, targetId, position) => {
+                this.moveValue(sourceId, targetId, position);
+            });
+
             this._columns.appendChild(value.getElement());
             this._values.set(uuid, value);
 
             value.updateView();
         }
+    }
+
+    /**
+     * Move a value before or after another value (drag & drop reorder).
+     * @param {string} sourceId
+     * @param {string} targetId
+     * @param {'before'|'after'} position
+     */
+    public moveValue(sourceId: string, targetId: string, position: 'before'|'after'): void {
+        if (sourceId === targetId) {
+            return;
+        }
+
+        const sourceValue = this._values.get(sourceId);
+        const targetValue = this._values.get(targetId);
+
+        if (!sourceValue || !targetValue) {
+            return;
+        }
+
+        const sourceEl = sourceValue.getElement();
+        const targetEl = targetValue.getElement();
+
+        sourceEl.remove();
+
+        if (position === 'before') {
+            targetEl.parentElement!.insertBefore(sourceEl, targetEl);
+        } else {
+            targetEl.parentElement!.insertBefore(sourceEl, targetEl.nextSibling);
+        }
+
+        const reordered = new Map<string, EnumTableValue>();
+
+        for (const child of Array.from(this._columns.children)) {
+            for (const [id, val] of this._values.entries()) {
+                if (val.getElement() === child) {
+                    reordered.set(id, val);
+                    break;
+                }
+            }
+        }
+
+        this._values = reordered;
+
+        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+        jsPlumbInstance.repaintEverything();
     }
 
     /**
@@ -366,6 +424,7 @@ export class EnumTable extends BaseTable {
             this._values.delete(id);
         }
 
+        this._contextMenu.destroy();
         super.remove();
     }
 
