@@ -1,5 +1,6 @@
 import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
+import {ConfirmDialog} from '../Base/ConfirmDialog.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
@@ -238,14 +239,16 @@ export class EnumTable extends BaseTable {
             });
 
             value.setOnDelete(field1 => {
-                if (!confirm(`Do you really want to delete field '${field1.getName()}'?`)) {
-                    return;
-                }
+                ConfirmDialog.showConfirm(
+                    'Delete field',
+                    `Do you really want to delete field '${field1.getName()}'?`,
+                    () => {
+                        field1.remove();
+                        this._values.delete(field1.getId());
 
-                field1.remove();
-                this._values.delete(field1.getId());
-
-                window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                    }
+                );
             });
 
             this._columns.appendChild(value.getElement());

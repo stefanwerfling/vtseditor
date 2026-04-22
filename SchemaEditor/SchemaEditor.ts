@@ -3,6 +3,7 @@ import {ProjectSave} from '../SchemaProject/SchemaProjectSave.js';
 import {EditorInit, ProjectsData, SchemaProjectsResponse} from '../SchemaProject/SchemaProjectsResponse.js';
 import {AlertDialog, AlertDialogTypes} from './Base/AlertDialog.js';
 import {BaseTable} from './Base/BaseTable.js';
+import {ConfirmDialog} from './Base/ConfirmDialog.js';
 import {EditorEvents} from './Base/EditorEvents.js';
 import {EditorIcons} from './Base/EditorIcons.js';
 import {EnumTable} from './Enum/EnumTable.js';
@@ -405,7 +406,7 @@ export class SchemaEditor {
                     return;
                 }
 
-                if (confirm('Do you really want to delete Schema?')) {
+                ConfirmDialog.showConfirm('Delete schema', 'Do you really want to delete Schema?', () => {
                     if (rootEntry.removeSchemaTable(customEvent.detail.id)) {
                         rootEntry.removeEntry(customEvent.detail.id);
 
@@ -416,7 +417,7 @@ export class SchemaEditor {
                             }
                         }));
                     }
-                }
+                });
             }
         });
 
@@ -436,7 +437,7 @@ export class SchemaEditor {
                     return;
                 }
 
-                if (confirm('Do you really want to delete enum?')) {
+                ConfirmDialog.showConfirm('Delete enum', 'Do you really want to delete enum?', () => {
                     if (rootEntry.removeEnumTable(customEvent.detail.id)) {
                         rootEntry.removeEntry(customEvent.detail.id);
 
@@ -447,7 +448,7 @@ export class SchemaEditor {
                             }
                         }));
                     }
-                }
+                });
             }
         });
 
@@ -459,7 +460,7 @@ export class SchemaEditor {
 
             if (activEntry) {
                 if (activEntry.hasLinkObject(customEvent.detail.id)) {
-                    if (confirm('Do you really want to delete link?')) {
+                    ConfirmDialog.showConfirm('Delete link', 'Do you really want to delete link?', () => {
                         activEntry.removeLinkTable(customEvent.detail.id);
 
                         window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {
@@ -468,7 +469,7 @@ export class SchemaEditor {
                                 updateTreeView: true
                             }
                         }));
-                    }
+                    });
                 }
             }
         });
@@ -627,9 +628,14 @@ export class SchemaEditor {
                             link.getLinkObject()?.runWiggle();
                         }
                     } else {
-                        if (confirm('Do you want to add a link object to see the source schema/enum?')) {
-                            this._addLink(customEvent.detail.tableId);
-                        }
+                        ConfirmDialog.showConfirm(
+                            'Add link',
+                            'Do you want to add a link object to see the source schema/enum?',
+                            () => {
+                                this._addLink(customEvent.detail.tableId);
+                            },
+                            AlertDialogTypes.info
+                        );
                     }
                 }
             }

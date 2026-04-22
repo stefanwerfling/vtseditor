@@ -1,5 +1,6 @@
 import {Connection} from '@jsplumb/browser-ui';
 import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
+import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {MultiTypeFieldBadge} from '../Base/MultiType/MultiTypeFieldBadge.js';
 import {Tooltip} from '../Base/Tooltip.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
@@ -137,7 +138,7 @@ export class SchemaTableField {
         this._btnDelete.classList.add(...['vts-schema-table-column-delete', 'vts-schema-delete']);
         this._btnDelete.addEventListener('click', () => {
             if (this._readOnly) {
-                alert('Field can not delete by readonly!');
+                AlertDialog.showAlert('Field', 'Field can not delete by readonly!', AlertDialogTypes.warning);
                 return;
             }
 
@@ -178,7 +179,7 @@ export class SchemaTableField {
         this._btnEdit.classList.add(...['vts-schema-table-column-edit', 'vts-schema-edit']);
         this._btnEdit.addEventListener('click', () => {
             if (this._readOnly) {
-                alert('Field can not edit by readonly!');
+                AlertDialog.showAlert('Field', 'Field can not edit by readonly!', AlertDialogTypes.warning);
                 return;
             }
 

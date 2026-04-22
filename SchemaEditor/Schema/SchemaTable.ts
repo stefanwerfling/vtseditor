@@ -3,6 +3,7 @@ import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
 import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
 import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
+import {ConfirmDialog} from '../Base/ConfirmDialog.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import {ExtendTypeBadge} from '../Base/ExtendType/ExtendTypeBadge.js';
@@ -153,7 +154,7 @@ export class SchemaTable extends BaseTable {
         this._btnEdit.title = 'Edit Schema';
         this._btnEdit.addEventListener('click', () => {
             if (this._readOnly) {
-                alert('Schema is readonly!');
+                AlertDialog.showAlert('Schema', 'Schema is readonly!', AlertDialogTypes.warning);
                 return;
             }
 
@@ -169,15 +170,20 @@ export class SchemaTable extends BaseTable {
         this._btnSort.title = 'Sorting';
         this._btnSort.addEventListener('click', () => {
             if (this._readOnly) {
-                alert('Schema is readonly!');
+                AlertDialog.showAlert('Schema', 'Schema is readonly!', AlertDialogTypes.warning);
                 return;
             }
 
-            if (confirm('Do you want to sort the fields by name?')) {
-                this.sortingFields();
-                this.updateView();
-                window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
-            }
+            ConfirmDialog.showConfirm(
+                'Sort fields',
+                'Do you want to sort the fields by name?',
+                () => {
+                    this.sortingFields();
+                    this.updateView();
+                    window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                },
+                AlertDialogTypes.info
+            );
         });
 
         this._btnLineRight.appendChild(this._btnSort);
@@ -189,7 +195,7 @@ export class SchemaTable extends BaseTable {
         this._btnAdd.title = 'Add Field';
         this._btnAdd.addEventListener('click', () => {
             if (this._readOnly) {
-                alert('Schema is readonly!');
+                AlertDialog.showAlert('Schema', 'Schema is readonly!', AlertDialogTypes.warning);
                 return;
             }
 
@@ -294,7 +300,7 @@ export class SchemaTable extends BaseTable {
      */
     public openEditDialog(): void {
         if (this._readOnly) {
-            alert('Schema is readonly!');
+            AlertDialog.showAlert('Schema', 'Schema is readonly!', AlertDialogTypes.warning);
             return;
         }
 
@@ -310,7 +316,11 @@ export class SchemaTable extends BaseTable {
             const tId = SchemaTypes.getInstance().getExtendIdByName(schemaName);
 
             if (tId !== null && tId !== this._unid) {
-                alert('The Schemaname is already exist, please change your name!');
+                AlertDialog.showAlert(
+                    'Schema',
+                    'The Schemaname is already exist, please change your name!',
+                    AlertDialogTypes.error
+                );
                 return false;
             }
 
@@ -440,14 +450,16 @@ export class SchemaTable extends BaseTable {
         });
 
         field.setOnDelete(field1 => {
-            if (!confirm(`Do you really want to delete field '${field1.getName()}'?`)) {
-                return;
-            }
+            ConfirmDialog.showConfirm(
+                'Delete field',
+                `Do you really want to delete field '${field1.getName()}'?`,
+                () => {
+                    field1.remove();
+                    this._fields.delete(field1.getId());
 
-            field1.remove();
-            this._fields.delete(field1.getId());
-
-            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                    window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                }
+            );
         });
 
         this._columns.appendChild(field.getElement());

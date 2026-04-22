@@ -1,3 +1,4 @@
+import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
 import {JsonDataFS} from '../JsonData.js';
 import {TreeviewEntry} from './TreeviewEntry.js';
@@ -123,7 +124,11 @@ export class Treeview {
 
             if (entryInfo) {
                 if (destinationEntry.hasEntryWith(entryInfo.getName(), entryInfo.getType())) {
-                    alert('The destination have also a File/Folder with the same name!');
+                    AlertDialog.showAlert(
+                        'Move',
+                        'The destination have also a File/Folder with the same name!',
+                        AlertDialogTypes.error
+                    );
                     return;
                 }
 
@@ -151,7 +156,11 @@ export class Treeview {
 
             if (tableInfo) {
                 if (destinationEntry.hasTableOrEnumName(tableInfo.getName())) {
-                    alert('The destination have also a Schema/Enum with the same name!');
+                    AlertDialog.showAlert(
+                        'Move',
+                        'The destination have also a Schema/Enum with the same name!',
+                        AlertDialogTypes.error
+                    );
                     return;
                 }
 
@@ -186,7 +195,11 @@ export class Treeview {
 
             if (enumInfo) {
                 if (destinationEntry.hasTableOrEnumName(enumInfo.getName())) {
-                    alert('The destination have also a Schema/Enum with the same name!');
+                    AlertDialog.showAlert(
+                        'Move',
+                        'The destination have also a Schema/Enum with the same name!',
+                        AlertDialogTypes.error
+                    );
                     return;
                 }
 

@@ -1,3 +1,4 @@
+import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import {EnumTable} from '../Enum/EnumTable.js';
@@ -216,7 +217,11 @@ export class TreeviewEntry {
             btnAdd.classList.add('add-folder');
             btnAdd.addEventListener('click', () => {
                 if (this._readonly) {
-                    alert('Add new folder/file can not use by readonly!');
+                    AlertDialog.showAlert(
+                        'Add folder/file',
+                        'Add new folder/file can not use by readonly!',
+                        AlertDialogTypes.warning
+                    );
                     return;
                 }
 
@@ -280,7 +285,11 @@ export class TreeviewEntry {
             btnEdit.classList.add('add-folder');
             btnEdit.addEventListener('click', () => {
                 if (this._readonly) {
-                    alert('Edit folder/file can not use by readonly!');
+                    AlertDialog.showAlert(
+                        'Edit folder/file',
+                        'Edit folder/file can not use by readonly!',
+                        AlertDialogTypes.warning
+                    );
                     return;
                 }
 
@@ -328,7 +337,11 @@ export class TreeviewEntry {
             btnDelete.classList.add('delete-folder');
             btnDelete.addEventListener('click', () => {
                 if (this._readonly) {
-                    alert('Delete folder/file can not use by readonly!');
+                    AlertDialog.showAlert(
+                        'Delete folder/file',
+                        'Delete folder/file can not use by readonly!',
+                        AlertDialogTypes.warning
+                    );
                     return;
                 }
 
