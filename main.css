@@ -170,99 +170,232 @@ body {
 #treeview {
   flex: 1 1 auto;
   overflow-y: auto;
+  overflow-x: hidden;
   margin-top: 10px;
-  border: 1px solid #ccc;
-  padding: 8px;
-  font-size: 14px;
+  border: 1px solid #e2e6ea;
+  border-radius: 6px;
+  padding: 6px 4px;
+  font-size: 13px;
+  line-height: 1.4;
   background-color: #fff;
+  color: #222;
+  scrollbar-width: thin;
+  scrollbar-color: #c7ccd1 transparent;
+}
+
+#treeview::-webkit-scrollbar {
+  width: 10px;
+}
+
+#treeview::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#treeview::-webkit-scrollbar-thumb {
+  background-color: #d0d4d8;
+  border-radius: 10px;
+  border: 2px solid #fff;
+}
+
+#treeview::-webkit-scrollbar-thumb:hover {
+  background-color: #b0b5ba;
 }
 
 .treeview ul {
   list-style-type: none;
   margin: 0;
-  padding-left: 1em;
-  border-left: 1px dashed #ccc;
+  padding-left: 0;
 }
 
 .treeview ul ul {
-  margin-left: 0.5em;
+  padding-left: 20px;
+  position: relative;
+}
+
+/* vertical guide — sits on the ul so it spans the full height of the
+   branch (including any nested descendants) and connects continuously
+   to the next sibling ul. Rendered as a subtle dotted pattern so it
+   guides the eye without competing with the content. */
+.treeview ul ul::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-image: linear-gradient(to bottom, #a0a7b0 55%, transparent 55%);
+  background-size: 2px 6px;
+  background-repeat: repeat-y;
+  pointer-events: none;
+}
+
+/* horizontal tick from the vertical guide to each row */
+.treeview ul ul > li > .folder-line {
+  position: relative;
+}
+
+.treeview ul ul > li > .folder-line::after {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  width: 10px;
+  height: 2px;
+  background-color: #a0a7b0;
+  pointer-events: none;
 }
 
 .folder-line {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 4px;
+  padding: 3px 6px;
+  min-height: 24px;
+  margin: 1px 0;
   border-radius: 4px;
-  transition: background 0.2s ease;
+  border-left: 3px solid transparent;
+  cursor: default;
+  user-select: none;
+  transition: background-color 0.12s ease, border-left-color 0.12s ease;
 }
 
 .folder-line:hover {
-  background-color: #f0f4f8;
+  background-color: #f2f5f8;
 }
 
 .folder-line-hover {
-  background-color: #a9c9e8;
+  background-color: #dfeaf6;
+}
+
+.folder-line.dragging {
+  opacity: 0.55;
 }
 
 .treeview .folder {
-  cursor: pointer;
-  user-select: none;
   font-weight: 500;
+  color: #2b3440;
+  cursor: pointer;
+}
+
+/* icon span = first .folder after the toggle */
+.folder-line > span.toggle-icon + span.folder {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  font-weight: normal;
+}
+
+/* name span = the .folder right after the icon span */
+.folder-line > span.folder + span.folder {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .treeview-file {
-  font-style: italic;
-  color: #555;
+  font-style: normal;
+  color: #47525f;
+  font-weight: 400;
 }
 
-.treeview-file.active {
-  background-color: #d0e6ff;
-  border-radius: 4px;
-  padding: 2px 4px;
+/* row-level active states: highlight the whole line, not just the name */
+.folder-line:has(.treeview-file.active) {
+  background-color: #e7f0fb;
+  border-left-color: #3e7e9c;
 }
 
+.folder-line:has(.treeview-file.active2) {
+  background-color: #e8f7ea;
+  border-left-color: #3b8d3b;
+}
+
+/* strip the old per-span active chrome so the row is the visual anchor */
+.treeview-file.active,
 .treeview-file.active2 {
-  background-color: #d8f5dc;
-  border-radius: 4px;
-  padding: 2px 4px;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  color: #1a2633;
+  font-weight: 500;
+}
+
+/* action button container (the last <div> inside a folder-line) */
+.folder-line > div:last-child {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.folder-line:hover > div:last-child,
+.folder-line-hover > div:last-child,
+.folder-line:focus-within > div:last-child {
+  opacity: 1;
 }
 
 .folder-line button {
-  display: none;
-  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
   border: none;
-  cursor: pointer;
-  font-size: 12px;
   border-radius: 4px;
-  transition: background 0.2s ease;
-}
-
-.folder-line:hover button {
-  display: unset;
+  font-size: 12px;
+  line-height: 1;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .folder-line button:hover {
-  background-color: #e0e0e0;
+  background-color: #dde4ec;
 }
 
 button.delete-folder {
   color: #c00;
 }
 
+button.delete-folder:hover {
+  background-color: #fde0e0;
+}
+
 button.add-folder {
   color: #006400;
 }
 
-.toggle-icon {
-  display: inline-block;
-  width: 1em;
-  cursor: pointer;
-  user-select: none;
-  transition: transform 0.3s ease;
+button.add-folder:hover {
+  background-color: #e0f2e0;
 }
 
-.folder-line.dragging button {
+.toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: #889;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.12s ease;
+}
+
+.folder-line:hover .toggle-icon {
+  color: #3e7e9c;
+}
+
+.folder-line.dragging button,
+.folder-line.dragging > div:last-child {
   display: none;
 }
 
@@ -270,13 +403,10 @@ button.add-folder {
   display: none;
 }
 
-.folder-line.open > .toggle-icon {
-  /*transform: rotate(90deg);*/
-}
-
 .drag-over {
-  background-color: #f0f0f0;
-  outline: 1px dashed #888;
+  background-color: #fff5e0 !important;
+  outline: 2px dashed #e08a00;
+  outline-offset: -1px;
 }
 
 .jtk-connector.hovered-connection path {
