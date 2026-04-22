@@ -1,15 +1,43 @@
+:root {
+  --c-bg: #f6f8fa;
+  --c-panel: #ffffff;
+  --c-border: #e3e7ec;
+  --c-border-strong: #cfd5dc;
+  --c-text: #1f2937;
+  --c-text-muted: #6b7280;
+  --c-primary: #3e7e9c;
+  --c-primary-hover: #316481;
+  --c-primary-soft: #e7f0fb;
+  --c-danger: #c04040;
+  --c-danger-soft: #fde0e0;
+  --c-success: #3e9c3e;
+  --c-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --c-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --c-focus-ring: 0 0 0 3px rgba(62, 126, 156, 0.25);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
 body {
   margin: 0;
-  font-family: sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  color: var(--c-text);
+  background-color: var(--c-bg);
   height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .topbar {
   display: flex;
-  background-color: #ddd;
+  background-color: var(--c-panel);
+  border-bottom: 1px solid var(--c-border);
+  box-shadow: var(--c-shadow-sm);
   z-index: 400;
   position: relative;
   flex-shrink: 0;
@@ -20,68 +48,94 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px;
+  padding: 10px 14px;
   width: 100%;
 }
 
 .btn-grey {
-  background-color: #e0e0e0;
-  border: 1px solid #ccc;
-  color: #333;
-  padding: 6px 12px;
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--c-panel);
+  border: 1px solid var(--c-border-strong);
+  color: var(--c-text);
+  padding: 7px 14px;
+  font-size: 13px;
   font-weight: 500;
-  border-radius: 4px;
+  line-height: 1.2;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
 
 .btn-grey:hover {
-  background-color: #d5d5d5;
-  border-color: #bbb;
+  background-color: #f3f5f8;
+  border-color: #b9c0c8;
 }
 
 .btn-grey:active {
-  background-color: #c9c9c9;
-  border-color: #aaa;
+  background-color: #e9edf1;
+  border-color: #a8b0b9;
+  transform: translateY(1px);
 }
 
-.btn-grey:focus {
+.btn-grey:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 0.2rem rgba(180, 180, 180, 0.5);
+  border-color: var(--c-primary);
+  box-shadow: var(--c-focus-ring);
 }
 
 .btn-grey-tsm {
-  background-color: #e0e0e0;
-  border: 1px solid #ccc;
-  color: #333;
-  padding: 4px 4px;
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--c-panel);
+  border: 1px solid var(--c-border-strong);
+  color: var(--c-text);
+  padding: 4px 8px;
+  font-size: 13px;
   font-weight: 500;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-grey-tsm:hover {
+  background-color: #f3f5f8;
+  border-color: #b9c0c8;
+}
+
+.btn-grey-tsm:focus-visible {
+  outline: none;
+  border-color: var(--c-primary);
+  box-shadow: var(--c-focus-ring);
 }
 
 .topbar-header {
-  background-color: #f4f4f4;
+  background-color: var(--c-panel);
   width: 300px;
   min-width: 150px;
-  padding: 10px;
+  padding: 12px 14px;
   overflow-y: auto;
   display: flex;
   flex-shrink: 0;
   flex-direction: column;
+  justify-content: center;
   box-sizing: border-box;
+  border-right: 1px solid var(--c-border);
 }
 
 #topbar-title {
-  font-weight: bold;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--c-text);
+  letter-spacing: -0.01em;
 }
 
 #topbar-schema {
   font-size: 12px;
-  color: #666;
+  color: var(--c-text-muted);
+  margin-top: 2px;
 }
 
 #main {
@@ -94,33 +148,39 @@ body {
 #controls {
   width: 300px;
   min-width: 150px;
-  background-color: #f4f4f4;
-  padding: 10px;
+  background-color: var(--c-panel);
+  padding: 12px;
   box-sizing: border-box;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  border-right: 1px solid var(--c-border);
 }
 
 .resizer {
-  width: 5px;
-  background: #ccc;
+  width: 4px;
+  background: transparent;
   cursor: col-resize;
   user-select: none;
   flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.resizer:hover {
+  background-color: var(--c-primary);
 }
 
 #schemagrid {
   flex: 1;
-  background-color: #fff;
+  background-color: var(--c-bg);
   overflow: scroll;
   position: relative;
 
   background-image:
-    linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px),
-    linear-gradient(to right, rgba(0,0,0,0.15) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0,0,0,0.15) 1px, transparent 1px);
+    linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(to right, rgba(15, 23, 42, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.08) 1px, transparent 1px);
   background-size: 10px 10px, 10px 10px, 50px 50px, 50px 50px;
 }
 
@@ -129,20 +189,20 @@ body {
   top: 50px;
   left: 50px;
   width: 200px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
 }
 
 .title {
-  font-weight: bold;
+  font-weight: 600;
   margin-bottom: 6px;
 }
 
 .field {
   position: relative;
-  padding: 4px 8px;
+  padding: 6px 8px;
   margin-bottom: 4px;
-  background: #eee;
-  border-radius: 4px;
+  background: #f3f4f6;
+  border-radius: var(--radius-sm);
 }
 
 .endpoint {
@@ -415,14 +475,16 @@ button.add-folder:hover {
 }
 
 .drop-area {
-  background-color: #ffe0b2;
-  border: 2px dashed #ff8000;
-  color: #ff6600;
-  font-weight: 16;
+  background-color: #fff5e0;
+  border: 2px dashed #e08a00;
+  color: #8a4b0f;
+  font-size: 13px;
+  font-weight: 500;
   padding: 10px;
   margin-top: 10px;
+  border-radius: var(--radius-md);
   text-align: center;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .drop-area.hidden {
@@ -430,12 +492,13 @@ button.add-folder:hover {
 }
 
 .drop-area.hover {
-  background-color: #ff8000;
-  color: #000000;
+  background-color: #e08a00;
+  border-color: #a6650c;
+  color: #ffffff;
 }
 
 .dialog-checkbox {
   width: 16px;
   height: 16px;
-  accent-color: #3e7e9c;
+  accent-color: var(--c-primary);
 }

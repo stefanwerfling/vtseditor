@@ -44,6 +44,8 @@ export class AlertDialog extends BaseDialog {
         this._divBody.textContent = msg;
 
         this._btnCancel.textContent = 'Ok';
+        this._btnCancel.classList.remove('dialog-button-cancel');
+        this._btnCancel.classList.add('dialog-button-primary');
         this._btnConfirm.style.display = 'none';
     }
 

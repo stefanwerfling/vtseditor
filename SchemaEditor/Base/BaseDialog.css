@@ -6,28 +6,32 @@ dialog, .modal {
   min-width: 40%;
   max-width: 90vw;
   background: #ffffff;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  border: 1px solid #e3e7ec;
+  border-radius: 10px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
   transform: translate(-50%, -50%);
   z-index: 2000;
-  padding: 20px;
+  padding: 20px 22px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   max-height: 90vh;
   overflow-y: auto;
+  color: #1f2937;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 dialog::backdrop {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(2px);
 }
 
 /* Optional: Overlay für eigene modale <div> */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(2px);
   z-index: 1999;
 }
 
@@ -35,37 +39,50 @@ dialog::backdrop {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .dialog-title {
-  font-weight: bold;
+  font-weight: 600;
   font-size: 16px;
   color: #3e7e9c;
+  letter-spacing: -0.01em;
   margin: 0;
 }
 
 .dialog-close {
+  background: transparent;
   border: none;
-  font-size: 20px;
-  font-weight: bold;
-  background-color: #c25c5c;
-  color: white;
+  color: #6b7280;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  font-size: 20px;
+  font-weight: 400;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .dialog-close:hover {
-  background-color: #316481;
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.dialog-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(62, 126, 156, 0.25);
 }
 
 .dialog-body {
   font-size: 14px;
-  border-top: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
-
+  padding: 14px 0;
+  border-top: 1px solid #eef1f4;
+  border-bottom: 1px solid #eef1f4;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -86,32 +103,70 @@ dialog::backdrop {
 }
 
 .dialog-input {
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 7px 10px;
+  border: 1px solid #cfd5dc;
+  border-radius: 6px;
   font-size: 14px;
   width: 100%;
   box-sizing: border-box;
+  color: inherit;
+  background-color: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dialog-input:focus,
+.dialog-select:focus {
+  outline: none;
+  border-color: #3e7e9c;
+  box-shadow: 0 0 0 3px rgba(62, 126, 156, 0.2);
+}
+
+.dialog-input::placeholder {
+  color: #9ca3af;
 }
 
 .dialog-buttons {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .dialog-button {
-  background-color: #3e7e9c;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
+  padding: 7px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
   cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.dialog-button:hover {
+.dialog-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(62, 126, 156, 0.3);
+}
+
+.dialog-button-primary {
+  background-color: #3e7e9c;
+  color: #ffffff;
+  border: 1px solid #3e7e9c;
+}
+
+.dialog-button-primary:hover {
   background-color: #316481;
+  border-color: #316481;
+}
+
+.dialog-button-cancel {
+  background-color: #ffffff;
+  color: #1f2937;
+  border: 1px solid #cfd5dc;
+}
+
+.dialog-button-cancel:hover {
+  background-color: #f3f5f8;
+  border-color: #b9c0c8;
 }
 
 .dialog-subtypes-list {
@@ -132,24 +187,30 @@ dialog::backdrop {
 .dialog-select {
   width: 100%;
   flex: 1;
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 7px 10px;
+  border: 1px solid #cfd5dc;
+  border-radius: 6px;
   font-size: 14px;
   box-sizing: border-box;
+  background-color: #fff;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .delete-button {
   background: none;
   border: none;
-  color: #d00;
+  color: #c04040;
   font-size: 18px;
   cursor: pointer;
   padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .delete-button:hover {
-  color: #900;
+  background-color: #fde0e0;
+  color: #9a2f2f;
 }
 
 .centered-button {
@@ -160,7 +221,9 @@ dialog::backdrop {
 
 .dialog-label {
   font-weight: 600;
-  font-size: 13px;
-  color: #555;
-  margin-top: 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  margin-top: 6px;
 }

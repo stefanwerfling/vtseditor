@@ -134,7 +134,7 @@ export class BaseDialog {
 
         this._btnCancel = document.createElement('button');
         this._btnCancel.textContent = 'Cancel';
-        this._btnCancel.classList.add('dialog-button');
+        this._btnCancel.classList.add('dialog-button', 'dialog-button-cancel');
         this._btnCancel.addEventListener('click', () => {
             if (this._onClose) {
                 this._onClose();
@@ -147,7 +147,7 @@ export class BaseDialog {
 
         this._btnConfirm = document.createElement('button');
         this._btnConfirm.textContent = 'Save';
-        this._btnConfirm.classList.add('dialog-button');
+        this._btnConfirm.classList.add('dialog-button', 'dialog-button-primary');
         this._btnConfirm.addEventListener('click', () => {
             if (this._onConfirm) {
                 if (this._onConfirm(this)) {
