@@ -718,6 +718,49 @@ export class SchemaTable extends BaseTable {
     }
 
     /**
+     * Return the list of schema/enum ids that this schema depends on
+     * (referenced via extend or any field type). Only ids that exist in
+     * the global SchemaTypes registry are returned.
+     * @return {string[]}
+     */
+    public getDependencyIds(): string[] {
+        const types = SchemaTypes.getInstance();
+        const ids = new Set<string>();
+
+        const isKnown = (t: string): boolean =>
+            types.isTypeASchema(t) || types.getEnumTypes().has(t);
+
+        if (this._extend.type === 'object2' || this._extend.type === 'array') {
+            if (this._extend.value && isKnown(this._extend.value)) {
+                ids.add(this._extend.value);
+            }
+        } else if (this._extend.type === 'or' && this._extend.or_values) {
+            for (const ov of this._extend.or_values) {
+                if (isKnown(ov.type)) {
+                    ids.add(ov.type);
+                }
+            }
+        } else if (isKnown(this._extend.type)) {
+            ids.add(this._extend.type);
+        }
+
+        for (const [, field] of this._fields) {
+            const fieldTypes = SchemaJsonDataUtil.getTypeArray(field.getType());
+
+            for (const t of fieldTypes) {
+                if (isKnown(t)) {
+                    ids.add(t);
+                }
+            }
+        }
+
+        // never depend on self (defensive — shouldn't happen)
+        ids.delete(this._unid);
+
+        return Array.from(ids);
+    }
+
+    /**
      * Is schema table use
      * @param {string} id
      * @return {boolean}

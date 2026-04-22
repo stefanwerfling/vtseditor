@@ -160,6 +160,14 @@ export class LinkTable {
     }
 
     /**
+     * Return the name of the linked object (empty if unresolved).
+     * @return {string}
+     */
+    public getName(): string {
+        return this._linkObject?.getName() ?? '';
+    }
+
+    /**
      * Return the Data
      * @return {JsonLinkDescription}
      */

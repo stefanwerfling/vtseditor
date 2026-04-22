@@ -2,6 +2,7 @@ import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
 import {ProjectSave} from '../SchemaProject/SchemaProjectSave.js';
 import {EditorInit, ProjectsData, SchemaProjectsResponse} from '../SchemaProject/SchemaProjectsResponse.js';
 import {AlertDialog, AlertDialogTypes} from './Base/AlertDialog.js';
+import {AutoLayout} from './Base/AutoLayout.js';
 import {BaseTable} from './Base/BaseTable.js';
 import {ConfirmDialog} from './Base/ConfirmDialog.js';
 import {EditorEvents} from './Base/EditorEvents.js';
@@ -82,6 +83,12 @@ export class SchemaEditor {
      * @protected
      */
     protected _btnCreateSchema: HTMLElement | null = null;
+
+    /**
+     * Button for arranging tables by dependency
+     * @protected
+     */
+    protected _btnArrangeTables: HTMLElement | null = null;
 
     /**
      * Searchbar
@@ -270,6 +277,55 @@ export class SchemaEditor {
                     AlertDialogTypes.error,
                 );
             }
+        });
+
+        // arrange tables button ---------------------------------------------------------------------------------------
+
+        this._btnArrangeTables = document.getElementById('arrangeTablesBtn');
+        this._btnArrangeTables!.style.display = 'none';
+        this._btnArrangeTables!.addEventListener('click', () => {
+            const activeEntry = Treeview.getActiveEntry();
+
+            if (activeEntry === null) {
+                AlertDialog.showAlert(
+                    'Arrange tables',
+                    'Please select first a File with tables!',
+                    AlertDialogTypes.error,
+                );
+                return;
+            }
+
+            if (activeEntry.isReadOnly()) {
+                AlertDialog.showAlert(
+                    'Arrange tables',
+                    'This file is read-only — rearranging would not persist.',
+                    AlertDialogTypes.warning,
+                );
+                return;
+            }
+
+            const schemas = activeEntry.getSchemaTables();
+            const enums = activeEntry.getEnumTables();
+            const links = activeEntry.getLinkTables();
+
+            if (schemas.length === 0 && enums.length === 0 && links.length === 0) {
+                AlertDialog.showAlert(
+                    'Arrange tables',
+                    'There are no tables to arrange in this file.',
+                    AlertDialogTypes.info,
+                );
+                return;
+            }
+
+            AutoLayout.arrange(schemas, enums, links);
+
+            this._jsPlumbInstance?.repaintEverything();
+
+            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {
+                detail: {
+                    updateView: true
+                }
+            }));
         });
 
         // searchbar ---------------------------------------------------------------------------------------------------
@@ -798,6 +854,7 @@ export class SchemaEditor {
         if (entry) {
             this._btnAddSchema!.style.display = '';
             this._btnAddEnum!.style.display = '';
+            this._btnArrangeTables!.style.display = '';
             this._searchbar!.show();
 
             if (this._editorInit.enable_schema_create) {
