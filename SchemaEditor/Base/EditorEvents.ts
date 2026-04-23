@@ -13,5 +13,6 @@ export enum EditorEvents {
     deleteSchemaTable = 'schemaeditor:deleteschematable',
     updateView = 'schemaeditor:updateview',
     selectTable = 'schemaeditor:selecttable',
-    invokeSchema = 'schemaeditor:invokeschema'
+    invokeSchema = 'schemaeditor:invokeschema',
+    validateSchema = 'schemaeditor:validateschema'
 }

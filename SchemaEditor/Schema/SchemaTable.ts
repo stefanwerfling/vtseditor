@@ -23,6 +23,7 @@ import {SchemaTypes} from '../Register/SchemaTypes.js';
 import {SchemaTableDialog} from './SchemaTableDialog.js';
 import {SchemaTableField} from './SchemaTableField.js';
 import {SchemaTableFieldDialog} from './SchemaTableFieldDialog.js';
+import {SchemaValidateDialog} from './SchemaValidateDialog.js';
 
 /**
  * Delete event for Schema
@@ -194,6 +195,15 @@ export class SchemaTable extends BaseTable {
             label: 'Edit schema',
             onClick: () => {
                 this.openEditDialog();
+            }
+        });
+
+        this._contextMenu.addItem({
+            icon: EditorIcons.info,
+            label: 'Validate JSON',
+            onClick: () => {
+                const dialog = new SchemaValidateDialog(this._unid, this._name);
+                dialog.show();
             }
         });
 

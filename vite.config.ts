@@ -4,7 +4,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import {defineConfig, Plugin} from 'vite';
-import {SchemaErrors} from 'vts';
+import {SchemaErrors, Vts} from 'vts';
 import {ConfigAIProviderName, SchemaConfig} from './Config/Config.js';
 import {JsonData, SchemaJsonData, SchemaJsonEditorSettings} from './SchemaEditor/JsonData.js';
 import {SchemaExternLoader} from './SchemaExtern/SchemaExternLoader.js';
@@ -19,6 +19,22 @@ import {ProjectsData, ProjectsResponse} from './SchemaProject/SchemaProjectsResp
 import {SchemaProvider} from './SchemaProvider/SchemaProvider.js';
 import {SchemaProviderAIBase} from './SchemaProvider/SchemaProviderAIBase.js';
 import {SchemaScript} from './SchemaScript/SchemaScript.js';
+import {SchemaValidator} from './SchemaValidator/SchemaValidator.js';
+
+/**
+ * Request body schema for POST /api/validate-schema.
+ */
+const SchemaValidateRequest = Vts.object({
+    schemaUnid: Vts.string(),
+    json: Vts.string()
+});
+
+/**
+ * Request body schema for POST /api/schema-example.
+ */
+const SchemaExampleRequest = Vts.object({
+    schemaUnid: Vts.string()
+});
 
 /**
  * Express middleware
@@ -357,6 +373,126 @@ function expressMiddleware(): Plugin {
                 };
 
                 res.status(200).json(response);
+            });
+
+            // ---------------------------------------------------------------------------------------------------------
+
+            // Build a SchemaValidator spanning every saved project file. Used
+            // by both validate-schema and schema-example. Externs are not yet
+            // included (MVP scope).
+            const buildCombinedValidator = (): SchemaValidator|null => {
+                let validator: SchemaValidator|null = null;
+
+                for (const project of projects.values()) {
+                    try {
+                        if (!fs.existsSync(project.schemaPath)) {
+                            continue;
+                        }
+
+                        const content = fs.readFileSync(project.schemaPath, 'utf-8');
+                        const schemaData = JSON.parse(content);
+
+                        if (!SchemaJsonData.validate(schemaData, [])) {
+                            continue;
+                        }
+
+                        if (validator === null) {
+                            validator = new SchemaValidator(schemaData.fs);
+                        } else {
+                            validator.addFs(schemaData.fs);
+                        }
+                    } catch (e) {
+                        console.log('buildCombinedValidator: failed to load project file');
+                        console.log(e);
+                    }
+                }
+
+                return validator;
+            };
+
+            app.post('/api/validate-schema', (req, res): void => {
+                const bodyData = req.body;
+
+                if (!SchemaValidateRequest.validate(bodyData, [])) {
+                    res.status(400).json({
+                        success: false,
+                        msg: 'Bad request body.'
+                    });
+                    return;
+                }
+
+                const validator = buildCombinedValidator();
+
+                if (validator === null || !validator.hasSchema(bodyData.schemaUnid)) {
+                    res.status(404).json({
+                        success: false,
+                        msg: `Schema unid=${bodyData.schemaUnid} not found in any saved project.`
+                    });
+                    return;
+                }
+
+                // Parse incoming JSON input. Parse errors flow into the same
+                // error tree so the frontend renders uniformly.
+                let parsed: unknown;
+
+                try {
+                    parsed = JSON.parse(bodyData.json);
+                } catch (e) {
+                    res.status(200).json({
+                        success: true,
+                        result: {
+                            valid: false,
+                            errors: {
+                                key: '',
+                                messages: [`Invalid JSON: ${(e as Error).message}`],
+                                children: []
+                            }
+                        }
+                    });
+                    return;
+                }
+
+                const result = validator.validate(bodyData.schemaUnid, parsed);
+
+                res.status(200).json({
+                    success: true,
+                    result
+                });
+            });
+
+            app.post('/api/schema-example', (req, res): void => {
+                const bodyData = req.body;
+
+                if (!SchemaExampleRequest.validate(bodyData, [])) {
+                    res.status(400).json({
+                        success: false,
+                        msg: 'Bad request body.'
+                    });
+                    return;
+                }
+
+                const validator = buildCombinedValidator();
+
+                if (validator === null || !validator.hasSchema(bodyData.schemaUnid)) {
+                    res.status(404).json({
+                        success: false,
+                        msg: `Schema unid=${bodyData.schemaUnid} not found in any saved project.`
+                    });
+                    return;
+                }
+
+                try {
+                    const example = validator.generateExample(bodyData.schemaUnid);
+                    res.status(200).json({
+                        success: true,
+                        example
+                    });
+                } catch (e) {
+                    res.status(500).json({
+                        success: false,
+                        msg: (e as Error).message
+                    });
+                }
             });
 
             // ---------------------------------------------------------------------------------------------------------

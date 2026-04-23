@@ -14,6 +14,7 @@ import {LinkTable} from './Link/LinkTable.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
 import {SchemaTypes} from './Register/SchemaTypes.js';
 import {SchemaCreateDialog} from './SchemaCreateDialog.js';
+import {SchemaValidateDialog} from './Schema/SchemaValidateDialog.js';
 import {Searchbar, SearchbarResultEntry} from './Search/Searchbar.js';
 import {Treeview} from './Treeview/Treeview.js';
 
@@ -47,6 +48,16 @@ type SchemaEditorWiggleEventDetail = {
  */
 type SchemaEditorInvokeEventDetail = {
     schema: string;
+};
+
+/**
+ * SchemaEditor validate event detail. Fired by external integrators
+ * (e.g. the JetBrains plugin) to open the Validate-JSON dialog for a
+ * named schema with a JSON payload pre-filled and auto-validated.
+ */
+type SchemaEditorValidateEventDetail = {
+    schema: string;
+    json: string;
 };
 
 /**
@@ -745,6 +756,58 @@ export class SchemaEditor {
             const schemaName = customEvent.detail.schema;
 
             this._selectSchemaByName(schemaName);
+        });
+
+        // listener validate schema (external trigger, e.g. JetBrains plugin) --------------------------------------------
+
+        window.addEventListener(EditorEvents.validateSchema, (event: Event) => {
+            const customEvent = event as CustomEvent<SchemaEditorValidateEventDetail>;
+            const schemaName = customEvent.detail.schema;
+            const jsonString = customEvent.detail.json;
+
+            const rootEntry = this._treeview?.getRoot();
+
+            if (!rootEntry) {
+                console.warn(`${EditorEvents.validateSchema}: treeview not ready`);
+                return;
+            }
+
+            const results = rootEntry.search(schemaName);
+
+            if (!results || results.length === 0) {
+                AlertDialog.showAlert(
+                    'Validate JSON',
+                    `Schema "${schemaName}" not found.`,
+                    AlertDialogTypes.error
+                );
+                return;
+            }
+
+            // Prefer an exact-name match; fall back to the first result (same
+            // rule as _selectSchemaByName).
+            let match = results.find(r => {
+                const obj = r.schema ?? r.enum;
+                return obj?.getName() === schemaName;
+            });
+
+            if (!match) {
+                match = results[0];
+            }
+
+            const target = match.schema ?? match.enum;
+
+            if (!target) {
+                AlertDialog.showAlert(
+                    'Validate JSON',
+                    `Schema "${schemaName}" not resolvable.`,
+                    AlertDialogTypes.error
+                );
+                return;
+            }
+
+            const dialog = new SchemaValidateDialog(target.getUnid(), target.getName());
+            dialog.show();
+            dialog.validateNow(jsonString);
         });
 
         // resizer -----------------------------------------------------------------------------------------------------
