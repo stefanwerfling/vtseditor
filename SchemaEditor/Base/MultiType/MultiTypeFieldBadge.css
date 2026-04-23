@@ -1,95 +1,94 @@
 /**
- * Badge
+ * Type-pill badges shown next to fields on schema tables and in
+ * extend-type descriptions.
+ *
+ *   wh-1  primitive type (default level)
+ *   wh-2  schema / enum reference — clickable, jumps to the referenced table
+ *   wh-3  primitive type (alternating level, inside nested `or` / sub-badges)
+ *   wh-4  enum value literal
+ *   wh-5  "Array" wrapper around a nested type badge
+ *   wh-6  nested schema reference (inside extend-type sub-badges)
  */
-.vts-badge-wh-1 {
-  margin-left: 4px !important;
-  display: inline-block;
-  min-width: 10px;
-  padding: 3px 7px;
-  font-size: 11px;
-  color: #fff;
-  background-color: #7B3CEC;
-  line-height: 1;
-  vertical-align: middle;
-  white-space: nowrap;
-  text-align: center;
-  border-radius: 10px;
-}
 
-.vts-badge-wh-2 {
-  margin-left: 4px !important;
-  display: inline-block;
-  min-width: 10px;
-  padding: 3px 7px;
-  font-size: 11px;
-  color: #000;
-  background-color: greenyellow;
-  line-height: 1;
-  vertical-align: middle;
-  white-space: nowrap;
-  text-align: center;
-  border-radius: 10px;
-}
-
-.vts-badge-wh-3 {
-  margin-left: 4px !important;
-  display: inline-block;
-  min-width: 10px;
-  padding: 3px 7px;
-  font-size: 11px;
-  color: #000;
-  background-color: orange;
-  line-height: 1;
-  vertical-align: middle;
-  white-space: nowrap;
-  text-align: center;
-  border-radius: 10px;
-}
-
-.vts-badge-wh-4 {
-  margin-left: 4px !important;
-  display: inline-block;
-  min-width: 10px;
-  padding: 3px 7px;
-  font-size: 11px;
-  color: #000;
-  background-color: #ffffff;
-  line-height: 1;
-  vertical-align: middle;
-  white-space: nowrap;
-  text-align: center;
-  border-radius: 10px;
-  border: 1px solid #000;
-}
-
-.vts-badge-wh-5 {
-  margin-left: 4px !important;
-  display: inline-block;
-  min-width: 10px;
-  padding: 3px 7px;
-  font-size: 11px;
-  color: #000;
-  background-color: yellow;
-  line-height: 1;
-  vertical-align: middle;
-  white-space: nowrap;
-  text-align: center;
-  border-radius: 10px;
-  border: 1px solid #000;
-}
-
+.vts-badge-wh-1,
+.vts-badge-wh-2,
+.vts-badge-wh-3,
+.vts-badge-wh-4,
+.vts-badge-wh-5,
 .vts-badge-wh-6 {
-  margin-left: 4px !important;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   min-width: 10px;
-  padding: 3px 7px;
+  margin-left: 4px !important;
+  padding: 2px 8px;
   font-size: 11px;
-  color: #000;
-  background-color: lightskyblue;
-  line-height: 1;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
   vertical-align: middle;
   white-space: nowrap;
   text-align: center;
-  border-radius: 10px;
-  border: 1px solid #000;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition: background-color 120ms ease, color 120ms ease,
+              border-color 120ms ease, box-shadow 120ms ease;
+}
+
+/* primitive type — default level */
+.vts-badge-wh-1 {
+  color: #ffffff;
+  background-color: #64748b;
+  border-color: #475569;
+}
+
+/* schema / enum reference — clickable */
+.vts-badge-wh-2 {
+  color: #ffffff;
+  background-color: var(--c-primary);
+  border-color: var(--c-primary-hover);
+  cursor: pointer;
+}
+
+.vts-badge-wh-2:hover {
+  background-color: var(--c-primary-hover);
+  border-color: var(--c-primary-hover);
+  box-shadow: var(--c-focus-ring);
+}
+
+/* primitive type — alternating level */
+.vts-badge-wh-3 {
+  color: #ffffff;
+  background-color: #94a3b8;
+  border-color: #64748b;
+}
+
+/* enum value literal */
+.vts-badge-wh-4 {
+  color: var(--c-text);
+  background-color: #ffffff;
+  border-color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* array wrapper around a nested type badge */
+.vts-badge-wh-5 {
+  color: #ffffff;
+  background-color: #d97706;
+  border-color: #b45309;
+}
+
+/* nested schema reference (sub-badge) */
+.vts-badge-wh-6 {
+  color: #ffffff;
+  background-color: #0284c7;
+  border-color: #0369a1;
+  cursor: pointer;
+}
+
+.vts-badge-wh-6:hover {
+  background-color: #0369a1;
+  border-color: #0369a1;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.3);
 }
