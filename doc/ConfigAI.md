@@ -6,6 +6,8 @@ Currently supported providers are:
 - **Gemini (Google AI Studio)**
 - **LocalAI (self-hosted)**
 - **OpenAI**
+- **Claude Code CLI (local)**
+- **Anthropic (Messages API)**
 
 ---
 
@@ -109,6 +111,52 @@ LocalAI is self-hosted. You don’t need an API key by default.
 Just set the `apiUrl` to your LocalAI server and specify the `model`.
 
 Read more on [LocalAI](https://localai.io/)
+
+### Claude Code CLI
+Uses the local `claude` binary instead of talking to a remote HTTP API.
+Requires [Claude Code](https://claude.com/claude-code) to be installed and
+authenticated (either `ANTHROPIC_API_KEY` in your `.env` or run
+`claude login` once).
+
+Config mapping:
+- **`apiUrl`** → path to the `claude` binary (leave empty to use `claude`
+  from `PATH`).
+- **`apiKey`** → optional `ANTHROPIC_API_KEY` value forwarded into the
+  spawned process.
+- **`model`** → optional model alias or full ID (e.g. `opus`,
+  `claude-sonnet-4-6`).
+
+Example:
+
+```json
+{
+  "apiProvider": "claudecode",
+  "apiKey": "$ANTHROPIC_API_KEY",
+  "apiUrl": "",
+  "model": "opus"
+}
+```
+
+### Anthropic (Messages API)
+Direct HTTP provider — talks to `api.anthropic.com` without spawning a local
+CLI. Needs an `ANTHROPIC_API_KEY`.
+
+Config mapping:
+- **`apiKey`** → `ANTHROPIC_API_KEY` (required).
+- **`apiUrl`** → base URL (leave empty / omit for `https://api.anthropic.com`).
+- **`model`** → model ID, e.g. `claude-sonnet-4-5`, `claude-opus-4-5`.
+  Defaults to `claude-sonnet-4-5`.
+
+Example:
+
+```json
+{
+  "apiProvider": "anthropic",
+  "apiKey": "$ANTHROPIC_API_KEY",
+  "apiUrl": "",
+  "model": "claude-sonnet-4-5"
+}
+```
 
 ---
 

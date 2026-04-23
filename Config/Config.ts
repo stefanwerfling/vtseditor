@@ -38,7 +38,9 @@ export const SchemaConfigProjectScripts = Vts.object({
 export enum ConfigAIProviderName {
     gemini = 'gemini',
     localai = 'localai',
-    openai = 'openai'
+    openai = 'openai',
+    claudecode = 'claudecode',
+    anthropic = 'anthropic'
 }
 
 /**

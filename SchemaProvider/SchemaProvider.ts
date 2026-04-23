@@ -1,4 +1,6 @@
 import {ConfigProvider, ConfigAIProviderName} from '../Config/Config.js';
+import {SchemaProviderAnthropic} from './AI/SchemaProviderAnthropic.js';
+import {SchemaProviderClaudeCode} from './AI/SchemaProviderClaudeCode.js';
 import {SchemaProviderGemini} from './AI/SchemaProviderGemini.js';
 import {SchemaProviderLocalAI} from './AI/SchemaProviderLocalAI.js';
 import {SchemaProviderOpenAI} from './AI/SchemaProviderOpenAI.js';
@@ -47,6 +49,14 @@ export class SchemaProvider {
 
             case ConfigAIProviderName.openai:
                 aProvider = new SchemaProviderOpenAI(config);
+                break;
+
+            case ConfigAIProviderName.claudecode:
+                aProvider = new SchemaProviderClaudeCode(config);
+                break;
+
+            case ConfigAIProviderName.anthropic:
+                aProvider = new SchemaProviderAnthropic(config);
                 break;
         }
 
