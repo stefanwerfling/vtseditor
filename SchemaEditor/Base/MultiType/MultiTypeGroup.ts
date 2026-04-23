@@ -139,7 +139,7 @@ export class MultiTypeGroup {
         const field = this._fields.get(unid);
 
         if (field) {
-            field.getElement().remove();
+            field.destroy();
             this._fields.delete(unid);
         }
     }
@@ -179,13 +179,36 @@ export class MultiTypeGroup {
     }
 
     /**
-     * Set type values by list
+     * Set type values by list. Replace semantics: every existing child field
+     * is destroyed before the incoming values are added, so repeated calls
+     * do not accumulate rows.
      * @param {JsonSchemaFieldTypeArray} values
      */
     public setValues(values: JsonSchemaFieldTypeArray): void {
+        for (const field of this._fields.values()) {
+            field.destroy();
+        }
+
+        this._fields.clear();
+
         for (const value of values) {
             this.addField(value);
         }
+
+        this._updateLabelInfo();
+    }
+
+    /**
+     * Dispose: destroy every child field (releasing their selects' document listeners)
+     * and detach our own builder from the DOM.
+     */
+    public destroy(): void {
+        for (const field of this._fields.values()) {
+            field.destroy();
+        }
+
+        this._fields.clear();
+        this._divBuilder.remove();
     }
 
 }

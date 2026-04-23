@@ -137,7 +137,7 @@ export class ExtendTypeGroup {
         const field = this._fields.get(unid);
 
         if (field) {
-            field.getElement().remove();
+            field.destroy();
             this._fields.delete(unid);
         }
     }
@@ -178,12 +178,35 @@ export class ExtendTypeGroup {
     }
 
     /**
-     * Set type values by list
+     * Set type values by list. Replace semantics: every existing child field
+     * is destroyed before the incoming values are added, so repeated calls
+     * do not accumulate rows.
      * @param {JsonSchemaDescriptionExtendValue[]} values
      */
     public setValues(values: JsonSchemaDescriptionExtendValue[]): void {
+        for (const field of this._fields.values()) {
+            field.destroy();
+        }
+
+        this._fields.clear();
+
         for (const value of values) {
             this.addField(value);
         }
+
+        this._updateLabelInfo();
+    }
+
+    /**
+     * Dispose: destroy every child extend-type (releasing their selects'
+     * document listeners) and detach our own builder from the DOM.
+     */
+    public destroy(): void {
+        for (const field of this._fields.values()) {
+            field.destroy();
+        }
+
+        this._fields.clear();
+        this._divBuilder.remove();
     }
 }

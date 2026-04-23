@@ -121,4 +121,13 @@ export class SchemaTableFieldDialog extends BaseDialog {
         return this._textareaDescription.value;
     }
 
+    /**
+     * Dispose: destroy owned MultiTypeField (cleaning up its select's document
+     * listener) before letting BaseDialog remove the dialog DOM.
+     */
+    public override destroy(): void {
+        this._multiType.destroy();
+        super.destroy();
+    }
+
 }

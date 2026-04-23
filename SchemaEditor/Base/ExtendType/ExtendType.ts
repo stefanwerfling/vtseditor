@@ -350,4 +350,15 @@ export class ExtendType {
         this._onUpdateOptions(value.type);
     }
 
+    /**
+     * Dispose: tear down both owned selects, any nested OR-group, then detach.
+     */
+    public destroy(): void {
+        this._select.destroy();
+        this._selectValueSchema.destroy();
+        this._multiExtendGroup?.destroy();
+        this._multiExtendGroup = null;
+        this._divMainField.remove();
+    }
+
 }

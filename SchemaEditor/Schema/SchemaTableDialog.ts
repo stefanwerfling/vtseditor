@@ -121,4 +121,13 @@ export class SchemaTableDialog extends BaseDialog {
         return this._textareaDescription.value;
     }
 
+    /**
+     * Dispose: destroy owned ExtendType (cleaning up its selects' document
+     * listeners) before letting BaseDialog remove the dialog DOM.
+     */
+    public override destroy(): void {
+        this._selectExtend.destroy();
+        super.destroy();
+    }
+
 }

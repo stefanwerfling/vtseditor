@@ -287,4 +287,14 @@ export class MultiTypeField {
         this._select.setValue(type.type);
     }
 
+    /**
+     * Dispose: tear down the owned select and any nested OR-group, then detach.
+     */
+    public destroy(): void {
+        this._select.destroy();
+        this._multiTypeGroup?.destroy();
+        this._multiTypeGroup = null;
+        this._divMainField.remove();
+    }
+
 }
