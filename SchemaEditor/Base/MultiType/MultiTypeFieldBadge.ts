@@ -35,8 +35,15 @@ export class MultiTypeFieldBadge {
         const spanType = document.createElement('span');
         spanType.textContent = `${typename}`;
 
-        if (SchemaTypes.getInstance().isTypeASchema(data.type)) {
-            spanType.classList.add(...['vts-badge-wh-2']);
+        // NOTE: SchemaTypes.isTypeASchema() returns true for both schemas and
+        // enums — check enum first and treat it as the authoritative signal,
+        // otherwise enum refs would land on the schema branch and lose the
+        // green distinction.
+        const isEnum = SchemaTypes.getInstance().getEnumTypes().has(data.type);
+        const isSchema = !isEnum && SchemaTypes.getInstance().isTypeASchema(data.type);
+
+        if (isSchema || isEnum) {
+            spanType.classList.add(isEnum ? 'vts-badge-wh-7' : 'vts-badge-wh-2');
             spanType.addEventListener('click', () => {
                 window.dispatchEvent(new CustomEvent(EditorEvents.showTable, {
                     detail: {

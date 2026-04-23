@@ -32,13 +32,14 @@ export class ExtendTypeBadge {
         this._mainSpan.classList.add('extendtype-span-short');
         let contentElement = this._mainSpan;
 
+        // getExtendNameBy returns a name for enums too (enums live inside the
+        // merged _getAllExtends map), so checking `extendName === null` is not
+        // a reliable enum signal. Detect via the enum map directly.
+        const isEnum = SchemaTypes.getInstance().getEnumTypes().has(data.type);
         let extendName = SchemaTypes.getInstance().getExtendNameBy(data.type);
 
-        let isEnum = false;
-
-        if (extendName === null && SchemaTypes.getInstance().getEnumTypes().has(data.type)) {
+        if (isEnum) {
             extendName = SchemaTypes.getInstance().getTypeNameBy(data.type);
-            isEnum = true;
         }
 
         const spanType = document.createElement('span');
@@ -46,7 +47,7 @@ export class ExtendTypeBadge {
         spanType.textContent = `${extendName}`;
 
         if (SchemaTypes.getInstance().isTypeASchema(data.type) || isEnum) {
-            spanType.classList.add(...['vts-badge-wh-2']);
+            spanType.classList.add(isEnum ? 'vts-badge-wh-7' : 'vts-badge-wh-2');
             spanType.addEventListener('click', () => {
                 window.dispatchEvent(new CustomEvent(EditorEvents.showTable, {
                     detail: {
@@ -102,23 +103,17 @@ export class ExtendTypeBadge {
      * @protected
      */
     protected _createSubBadgeSpan(value: string): HTMLSpanElement {
-        let extendName2 = SchemaTypes.getInstance().getTypeNameBy(value);
-        let isEnum2 = false;
-
-        if (extendName2 === null && SchemaTypes.getInstance().getEnumTypes().has(value)) {
-            extendName2 = SchemaTypes.getInstance().getTypeNameBy(value);
-            isEnum2 = true;
-        }
+        // Detect via the enum map directly — getTypeNameBy() returns a name
+        // for enums too, so the old `extendName2 === null` heuristic always
+        // missed and sub-enums got painted with the schema-blue wh-6.
+        const isEnum2 = SchemaTypes.getInstance().getEnumTypes().has(value);
+        const extendName2 = SchemaTypes.getInstance().getTypeNameBy(value);
 
         const spanType = document.createElement('span');
         spanType.textContent = `${extendName2}`;
 
         if (SchemaTypes.getInstance().isTypeASchema(value) || isEnum2) {
-            if (isEnum2) {
-                spanType.classList.add(...['vts-badge-wh-2']);
-            } else {
-                spanType.classList.add(...['vts-badge-wh-6']);
-            }
+            spanType.classList.add(isEnum2 ? 'vts-badge-wh-7' : 'vts-badge-wh-6');
 
             spanType.addEventListener('click', () => {
                 window.dispatchEvent(new CustomEvent(EditorEvents.showTable, {

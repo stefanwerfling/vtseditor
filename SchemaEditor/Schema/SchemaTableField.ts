@@ -406,6 +406,16 @@ export class SchemaTableField {
 
         if (this._connection !== null) {
             jsPlumbInstance.deleteConnection(this._connection);
+            this._connection = null;
+        }
+
+        // When the owning SchemaTable has its columns hidden (extend type is
+        // not `object` / not a schema ref), this row is display:none via an
+        // ancestor. Skip the connect call — jsPlumb would otherwise place the
+        // source endpoint at (0, 0) on the next repaint and draw a phantom
+        // arrow from the canvas origin to the target.
+        if (!this._column.offsetParent) {
+            return;
         }
 
         const types: string[] = SchemaJsonDataUtil.getTypeArray(this._type);

@@ -121,6 +121,14 @@ export class SchemaTable extends BaseTable {
     protected _dropArea: HTMLDivElement;
 
     /**
+     * Empty-state row shown inside _columns when the table allows fields
+     * but none are defined yet. Auto-hidden when extend type disallows fields
+     * (because the whole _columns container is display:none then).
+     * @protected
+     */
+    protected _columnsEmpty: HTMLDivElement;
+
+    /**
      * Constructor
      * @param {string} unid
      * @param {string} name
@@ -216,16 +224,21 @@ export class SchemaTable extends BaseTable {
         this._columns = document.createElement('div');
         this._columns.classList.add(...['vts-schema-columns']);
 
+        this._columnsEmpty = document.createElement('div');
+        this._columnsEmpty.classList.add('vts-schema-columns-empty');
+        this._columnsEmpty.textContent = 'No fields yet';
+        this._columns.appendChild(this._columnsEmpty);
+
         this._table.appendChild(this._columns);
 
-        this.setExtend(this._extend);
-
         // drop area ---------------------------------------------------------------------------------------------------
-
+        // Must exist before setExtend() so _updateViewExtend can safely toggle it.
         this._dropArea = document.createElement('div');
         this._dropArea.classList.add(...['drop-area', 'hidden']);
         this._dropArea.textContent = '+ Drop your column';
         this._table.appendChild(this._dropArea);
+
+        this.setExtend(this._extend);
 
         // set jsPlumb -------------------------------------------------------------------------------------------------
 
@@ -236,7 +249,7 @@ export class SchemaTable extends BaseTable {
         this._table.addEventListener('dragover', e => {
             e.preventDefault();
 
-            if (this._readOnly) {
+            if (this._readOnly || !this._allowsFields()) {
                 return;
             }
 
@@ -257,7 +270,7 @@ export class SchemaTable extends BaseTable {
             this._dropArea.classList.remove('hover');
             e.preventDefault();
 
-            if (this._readOnly) {
+            if (this._readOnly || !this._allowsFields()) {
                 return;
             }
 
@@ -269,6 +282,18 @@ export class SchemaTable extends BaseTable {
                 }
             }
         });
+    }
+
+    /**
+     * Whether this schema's current extend type permits fields. Fields only
+     * make sense for `object` extends or extends that reference another schema
+     * (which effectively inherit that schema's shape). Anything else (array,
+     * or, object2, primitive, enum, …) should refuse drop, hide the drop area,
+     * and hide the column container.
+     * @protected
+     */
+    protected _allowsFields(): boolean {
+        return this._extend.type === 'object' || SchemaTypes.getInstance().isTypeASchema(this._extend.type);
     }
 
     /**
@@ -344,11 +369,13 @@ export class SchemaTable extends BaseTable {
     }
 
     /**
-     * Show the drop area
+     * Show the drop area. Noop when the schema's current extend type would
+     * reject a field drop — keeps the hint from appearing on e.g. Array<…>
+     * schemas where fields cannot be added.
      * @param {boolean} show
      */
     public showDropArea(show: boolean): void {
-        if (show) {
+        if (show && this._allowsFields()) {
             this._dropArea.classList.remove('hidden');
         } else {
             this._dropArea.classList.add('hidden');
@@ -456,6 +483,7 @@ export class SchemaTable extends BaseTable {
                 () => {
                     field1.remove();
                     this._fields.delete(field1.getId());
+                    this._updateEmptyState();
 
                     window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
                 }
@@ -468,9 +496,20 @@ export class SchemaTable extends BaseTable {
 
         this._columns.appendChild(field.getElement());
         this._fields.set(uuid, field);
+        this._updateEmptyState();
 
         field.setReadOnly(this._readOnly);
         field.updateView();
+    }
+
+    /**
+     * Show the "No fields yet" placeholder only when the table has zero fields.
+     * When fields exist, hide it. The parent container (_columns) is itself
+     * hidden for non-object extends, so we don't need to double-check that here.
+     * @protected
+     */
+    protected _updateEmptyState(): void {
+        this._columnsEmpty.style.display = this._fields.size === 0 ? '' : 'none';
     }
 
     /**
@@ -553,12 +592,15 @@ export class SchemaTable extends BaseTable {
      * @protected
      */
     protected _updateViewExtend(): void {
-        const isSchema = SchemaTypes.getInstance().isTypeASchema(this._extend.type);
-        const allowsFields = this._extend.type === 'object' || isSchema;
+        const allowsFields = this._allowsFields();
 
         this._miAddField.style.display = allowsFields ? '' : 'none';
         this._miSortFields.style.display = allowsFields ? '' : 'none';
         this._columns.style.display = allowsFields ? '' : 'none';
+
+        if (!allowsFields) {
+            this._dropArea.classList.add('hidden');
+        }
 
         const badge = new ExtendTypeBadge(this._extend);
         this._schemaExtend.innerHTML = '';
@@ -574,11 +616,16 @@ export class SchemaTable extends BaseTable {
         this.getIconElement().textContent = EditorIcons.schema;
         this.setOnDelete(SchemaTableEventOnDelete);
 
+        // Apply extend-related visibility (columns shown only for object/schema
+        // extends) BEFORE the fields update. Otherwise a later hide on the
+        // column container leaves field endpoints at (0, 0) after the next
+        // repaintEverything — phantom connections drawn from the canvas origin.
+        this._updateViewExtend();
+
         for (const [, field] of this._fields.entries()) {
             field.updateView();
         }
 
-        this._updateViewExtend();
         this.updateConnection();
     }
 

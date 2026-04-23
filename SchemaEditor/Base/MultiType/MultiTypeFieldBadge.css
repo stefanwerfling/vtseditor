@@ -3,11 +3,12 @@
  * extend-type descriptions.
  *
  *   wh-1  primitive type (default level)
- *   wh-2  schema / enum reference — clickable, jumps to the referenced table
+ *   wh-2  schema reference — clickable, jumps to the referenced table
  *   wh-3  primitive type (alternating level, inside nested `or` / sub-badges)
  *   wh-4  enum value literal
  *   wh-5  "Array" wrapper around a nested type badge
  *   wh-6  nested schema reference (inside extend-type sub-badges)
+ *   wh-7  enum reference — clickable, green so enums stay visually distinct
  */
 
 .vts-badge-wh-1,
@@ -15,7 +16,8 @@
 .vts-badge-wh-3,
 .vts-badge-wh-4,
 .vts-badge-wh-5,
-.vts-badge-wh-6 {
+.vts-badge-wh-6,
+.vts-badge-wh-7 {
   display: inline-flex;
   align-items: center;
   min-width: 10px;
@@ -91,4 +93,18 @@
   background-color: #0369a1;
   border-color: #0369a1;
   box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.3);
+}
+
+/* enum reference — clickable, distinct green to set enums apart from schemas */
+.vts-badge-wh-7 {
+  color: #ffffff;
+  background-color: var(--c-success);
+  border-color: #2d7a2d;
+  cursor: pointer;
+}
+
+.vts-badge-wh-7:hover {
+  background-color: #2d7a2d;
+  border-color: #2d7a2d;
+  box-shadow: 0 0 0 3px rgba(62, 156, 62, 0.3);
 }
