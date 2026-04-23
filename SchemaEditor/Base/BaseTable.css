@@ -48,13 +48,18 @@
   box-shadow: 0 0 0 2px #e08a00, 0 8px 20px rgba(15, 23, 42, 0.14);
 }
 
+/* Link-table references — distinct violet tint so references are obvious at
+   a glance. Fully opaque so jsPlumb connectors passing behind are properly
+   occluded (a previous version used opacity: 0.5 which made the table
+   see-through and made connectors appear to sit on top of it). */
 .vts-schema-table.vts-link-table {
-  opacity: 0.5;
-  transition: opacity 0.3s ease;
+  background-color: #faf9ff;
+  border: 1.5px dashed #a68ff0;
 }
 
 .vts-schema-table.vts-link-table:hover {
-  opacity: 1;
+  background-color: #ffffff;
+  border-color: #6d5bd4;
 }
 
 .vts-schema-element {
@@ -87,6 +92,24 @@
 
 .vts-enum-element-name {
   background-color: #3e9c3e;
+}
+
+/* Link-table headline keeps its original schema-blue / enum-green colour so
+   the user still sees WHAT the link wraps. The link semantics come from the
+   LINK chip below, the body tint, and the dashed border. */
+.vts-element-link-name::before {
+  content: 'LINK';
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px 7px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  background-color: #6d5bd4;
+  border-radius: 999px;
+  text-transform: uppercase;
 }
 
 .vts-schema-element-name span {

@@ -1,6 +1,5 @@
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
-import {EditorIcons} from '../Base/EditorIcons.js';
 import {JsonLinkDescription, JsonSchemaPositionDescription} from '../JsonData.js';
 
 /**
@@ -102,7 +101,9 @@ export class LinkTable {
 
         this._linkObject.getElement().classList.add('vts-link-table');
         this._linkObject.getHeadlineElement().classList.add('vts-element-link-name');
-        this._linkObject.getIconElement().textContent = EditorIcons.link;
+        // Keep the original icon (🧬 / 🧩) so the user can still tell whether
+        // the link refers to a schema or an enum. The "LINK" chip and the
+        // dashed violet border announce the link semantics separately.
     }
 
     /**
@@ -145,7 +146,8 @@ export class LinkTable {
                 this._linkObject.getElement().classList.add('vts-link-table')
             }
 
-            this._linkObject.getIconElement().textContent = EditorIcons.link;
+            // Do not replace the icon — the original schema/enum icon needs
+            // to remain so users can tell what the link wraps.
             this._linkObject.setOnDelete(LinkTableOnDelete);
             this._linkObject.updateConnection();
         }
