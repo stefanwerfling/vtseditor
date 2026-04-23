@@ -6,7 +6,6 @@ import {AutoLayout} from './Base/AutoLayout.js';
 import {BaseTable} from './Base/BaseTable.js';
 import {ConfirmDialog} from './Base/ConfirmDialog.js';
 import {EditorEvents} from './Base/EditorEvents.js';
-import {EditorIcons} from './Base/EditorIcons.js';
 import {EnumTable} from './Enum/EnumTable.js';
 import {JsonDataFS, JsonEditorSettings, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js';
 import jsPlumbInstance from './jsPlumbInstance.js';
@@ -369,36 +368,23 @@ export class SchemaEditor {
                         return;
                     }
 
-                    let path = '';
+                    // Path segments (ancestors + owning file entry). Searchbar
+                    // uses these to group results into a folder tree instead
+                    // of showing a breadcrumb on each row.
+                    const pathSegments = value.path.map(p => ({
+                        name: p.getName(),
+                        type: p.getType()
+                    }));
 
-                    value.path.forEach(pathValue => {
-                        if (path !== '') {
-                            path += ` ${EditorIcons.toggle_close} `;
-                        }
-
-                        switch (pathValue.getType()) {
-                            case SchemaJsonDataFSType.root:
-                                path += `${EditorIcons.root}`;
-                                break;
-
-                            case SchemaJsonDataFSType.project:
-                                path += `${EditorIcons.project}`;
-                                break;
-
-                            case SchemaJsonDataFSType.extern:
-                                path += `${EditorIcons.registry}`;
-                                break;
-
-                            case SchemaJsonDataFSType.folder:
-                                path += `${EditorIcons.folder}`;
-                                break;
-                        }
-
-                        path += `${pathValue.getName()}`;
-                    });
+                    if (value.entry) {
+                        pathSegments.push({
+                            name: value.entry.getName(),
+                            type: value.entry.getType()
+                        });
+                    }
 
                     items.push({
-                        path: path,
+                        pathSegments,
                         isSchema: isSchema,
                         objectId: object.getUnid(),
                         name: object ? object.getName() : 'Unknown',
