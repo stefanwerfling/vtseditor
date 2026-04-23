@@ -3,6 +3,7 @@ import {
     SchemaProjectGenerateSchemaResponse
 } from '../SchemaProject/SchemaProjectGenerateSchema.js';
 import {ConversationPartRole} from '../SchemaProvider/SchemaProviderConversationPart.js';
+import {AlertDialog, AlertDialogTypes} from './Base/AlertDialog.js';
 import {BaseDialog} from './Base/BaseDialog.js';
 import {ChatContainer} from './Base/ChatContainer/ChatContainer.js';
 import {EditorEvents} from './Base/EditorEvents.js';
@@ -15,7 +16,7 @@ import {Treeview} from './Treeview/Treeview.js';
 export class SchemaCreateDialog extends BaseDialog {
 
     /**
-     * textarea description
+     * Chat container driving the conversation with the AI provider
      * @protected
      */
     protected _chatContainer: ChatContainer;
@@ -26,21 +27,30 @@ export class SchemaCreateDialog extends BaseDialog {
     public constructor() {
         super();
 
-        this.setDialogTitle('Create Schema');
+        this.setDialogTitle('✨ Create Schema with AI');
 
-        const labelDescription = document.createElement('div');
-        labelDescription.classList.add('dialog-label');
-        labelDescription.textContent = 'Assistant';
-        this._divBody.appendChild(labelDescription);
+        // Intro line under the title explaining the flow briefly.
+        const intro = document.createElement('div');
+        intro.classList.add('dialog-label');
+        intro.textContent = 'Chat with the configured AI provider. When a generated schema looks right, click "Add to schema" to import it.';
+        intro.style.fontWeight = '400';
+        intro.style.marginBottom = '8px';
+        this._divBody.appendChild(intro);
 
         this._chatContainer = new ChatContainer();
-        this._chatContainer.addAssistant('Tell us about your schema! 🙂');
+        this._chatContainer.addAssistant('Hi! Tell me about the schema you want to build. 🙂');
+
         this._chatContainer.setOnSendClick(async () => {
             await this._sendRequestProvider();
         });
 
         this._chatContainer.setOnApplyTableClick((table): void => {
             if (Treeview.getActiveEntry() === null) {
+                AlertDialog.showAlert(
+                    'Add schema',
+                    'No active entry is selected — please open a project / file first.',
+                    AlertDialogTypes.info
+                );
                 return;
             }
 
@@ -64,14 +74,17 @@ export class SchemaCreateDialog extends BaseDialog {
 
         this._divBody.appendChild(this._chatContainer.getElement());
 
+        // No Save/Confirm action — the Close button is sufficient and the
+        // Apply-to-Schema button lives inside each assistant bubble.
         this._btnConfirm.style.display = 'none';
         this._btnCancel.textContent = 'Close';
 
-        this._loadConversation().then();
+        this._loadConversation().catch(err => console.error('Load conversation failed', err));
     }
 
     /**
-     * load conversation
+     * Load the existing conversation from the backend (persists in-memory on
+     * the SchemaProvider singleton across multiple opens of this dialog).
      * @protected
      */
     protected async _loadConversation(): Promise<void> {
@@ -89,7 +102,8 @@ export class SchemaCreateDialog extends BaseDialog {
     }
 
     /**
-     * set conversation response
+     * Re-render the full conversation from a backend response. Clears any
+     * existing messages (including loader) first.
      * @param {ProjectGenerateSchemaResponse} response
      * @protected
      */
@@ -98,6 +112,7 @@ export class SchemaCreateDialog extends BaseDialog {
             this._chatContainer.clear();
         }
 
+        // Skip index 0 — that's the seeded system prompt, not a real turn.
         for (const part of response.conversation.slice(1)) {
             switch (part.role) {
                 case ConversationPartRole.user:
@@ -137,28 +152,46 @@ export class SchemaCreateDialog extends BaseDialog {
     }
 
     /**
-     * send request provider
+     * Capture current textarea input as a user message, render it immediately,
+     * then POST to the provider. The loading indicator runs while the server
+     * thinks. On failure, render an assistant error bubble so the user sees
+     * something actionable instead of a silent hang.
      * @protected
      */
     protected async _sendRequestProvider(): Promise<void> {
-        const generate: ProjectGenerateSchema = {
-            description: this._chatContainer.getDescription()
-        };
+        const description = this._chatContainer.getDescription().trim();
 
-        const response = await fetch('/api/provider/createschema/requestprovider', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(generate)
-        });
-
-        if (!response.ok) {
-            throw new Error(`Can not load: ${response.statusText}`);
+        if (!description) {
+            return;
         }
 
-        const data = await response.json();
+        this._chatContainer.setLoading(true);
 
-        if (SchemaProjectGenerateSchemaResponse.validate(data, [])) {
-            this._setConversationResponse(data);
+        try {
+            const generate: ProjectGenerateSchema = {description};
+
+            const response = await fetch('/api/provider/createschema/requestprovider', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(generate)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            if (SchemaProjectGenerateSchemaResponse.validate(data, [])) {
+                // Re-render wipes the loader — no explicit setLoading(false) needed.
+                this._setConversationResponse(data);
+                return;
+            }
+
+            throw new Error('Server returned an unexpected response shape.');
+        } catch (err) {
+            this._chatContainer.setLoading(false);
+            this._chatContainer.addAssistant(`⚠ ${(err as Error).message}`);
         }
     }
 }
