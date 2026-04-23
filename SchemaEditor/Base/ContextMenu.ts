@@ -28,6 +28,14 @@ export type ContextMenuItem = {
 export class ContextMenu {
 
     /**
+     * Currently-open menu, tracked globally so opening a second menu can
+     * close the first one. The trigger-click handler stops propagation,
+     * so the document-click path cannot do this on its own.
+     * @protected
+     */
+    protected static _currentOpen: ContextMenu|null = null;
+
+    /**
      * Trigger button (three dots)
      * @protected
      */
@@ -181,6 +189,11 @@ export class ContextMenu {
             return;
         }
 
+        // Close any other open menu first so only one is ever visible.
+        if (ContextMenu._currentOpen && ContextMenu._currentOpen !== this) {
+            ContextMenu._currentOpen.close();
+        }
+
         this._menu.style.visibility = 'hidden';
         this._menu.style.display = '';
         this._position();
@@ -188,6 +201,7 @@ export class ContextMenu {
 
         this._open = true;
         this._trigger.classList.add('open');
+        ContextMenu._currentOpen = this;
 
         document.addEventListener('click', this._onDocumentClick);
         document.addEventListener('keydown', this._onKeyDown);
@@ -206,6 +220,10 @@ export class ContextMenu {
         this._menu.style.display = 'none';
         this._open = false;
         this._trigger.classList.remove('open');
+
+        if (ContextMenu._currentOpen === this) {
+            ContextMenu._currentOpen = null;
+        }
 
         document.removeEventListener('click', this._onDocumentClick);
         document.removeEventListener('keydown', this._onKeyDown);
