@@ -95,6 +95,38 @@ export const SchemaConfigEditor = Vts.object({
 });
 
 /**
+ * Action a policy rule can prescribe for a tool call.
+ */
+export enum ConfigMcpPolicyAction {
+    allow = 'allow',
+    ask = 'ask',
+    deny = 'deny'
+}
+
+/**
+ * One policy rule. `match` is a glob against the tool name
+ * (e.g. `vts_delete_*`); `action` is what to do on match.
+ */
+export const SchemaConfigMcpPolicyRule = Vts.object({
+    match: Vts.string(),
+    action: Vts.enum(ConfigMcpPolicyAction)
+});
+
+export type ConfigMcpPolicyRule = ExtractSchemaResultType<typeof SchemaConfigMcpPolicyRule>;
+
+/**
+ * Client-agnostic permission policy for MCP tool calls. Rules are
+ * evaluated in order against the tool name; first match wins. If no
+ * rule matches, `default` applies (fallback `ask`).
+ */
+export const SchemaConfigMcpPolicy = Vts.object({
+    default: Vts.optional(Vts.enum(ConfigMcpPolicyAction)),
+    rules: Vts.optional(Vts.array(SchemaConfigMcpPolicyRule))
+});
+
+export type ConfigMcpPolicy = ExtractSchemaResultType<typeof SchemaConfigMcpPolicy>;
+
+/**
  * Schema of config MCP. When `enabled` is true the Vite dev server exposes a
  * Model Context Protocol endpoint at `path` (default `/mcp`) so Claude CLI
  * and other MCP clients can mutate the schema tree through the same
@@ -102,7 +134,8 @@ export const SchemaConfigEditor = Vts.object({
  */
 export const SchemaConfigMcp = Vts.object({
     enabled: Vts.boolean(),
-    path: Vts.optional(Vts.string())
+    path: Vts.optional(Vts.string()),
+    policy: Vts.optional(SchemaConfigMcpPolicy)
 });
 
 export type ConfigMcp = ExtractSchemaResultType<typeof SchemaConfigMcp>;

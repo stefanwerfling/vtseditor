@@ -905,7 +905,11 @@ export class TreeviewEntry {
         if (data.enums) {
             for (const aEnum of data.enums) {
                 const tenum = new EnumTable(aEnum.unid, aEnum.name);
-                tenum.setData(aEnum);
+                // Defer field population until the element is in the DOM —
+                // SchemaEditor._updateView calls flushPendingData() after
+                // appendChild. Populating while detached causes intrinsic
+                // flex sizing to lock the table to the widest nowrap child.
+                tenum.setPendingData(aEnum);
                 this.addEnumTable(tenum);
             }
         }
@@ -920,7 +924,7 @@ export class TreeviewEntry {
             }
 
             const schema = new SchemaTable(aSchema.unid, aSchema.name, extend);
-            schema.setData(aSchema);
+            schema.setPendingData(aSchema);
             this.addSchemaTable(schema);
         }
 

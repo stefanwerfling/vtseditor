@@ -5,6 +5,8 @@ import {
     ListToolsRequestSchema
 } from '@modelcontextprotocol/sdk/types.js';
 import {ExtractSchemaResultType, Schema, SchemaErrors} from 'vts';
+import {ConfigMcpPolicyAction} from '../Config/Config.js';
+import {McpPolicyDecide} from './SchemaMcpPolicy.js';
 import {JsonSchemaNode, vtsDescriptionToJsonSchema} from './VtsToJsonSchema.js';
 
 /**
@@ -47,13 +49,45 @@ export function defineVtsMcpTool<S extends Schema<unknown>>(
 }
 
 /**
+ * Optional extension point for the policy gate. When a tool resolves to
+ * `ask` the registry calls this callback; it should return `true` to
+ * allow the call through or `false` to reject it. Phase 1 ships with no
+ * approval UI — the default behaviour without a handler is to deny.
+ */
+export type McpApprovalHandler = (toolName: string, args: unknown) => Promise<boolean>;
+
+/**
+ * Looks up a user-granted override for a tool (remember=session /
+ * remember=forever). Returns `allow` to short-circuit the gate with
+ * success, `deny` to short-circuit with failure, or `undefined` to
+ * fall through to the regular policy decision.
+ */
+export type McpSessionOverrideLookup = (toolName: string) =>
+    ConfigMcpPolicyAction.allow|ConfigMcpPolicyAction.deny|undefined;
+
+/**
+ * Options for {@link registerVtsMcpTools}. `decide` is the compiled
+ * policy function (see {@link compileMcpPolicy}); when omitted every
+ * call is allowed so existing callers keep their previous behaviour.
+ */
+export type RegisterVtsMcpToolsOptions = {
+    decide?: McpPolicyDecide;
+    onApprovalRequest?: McpApprovalHandler;
+    getSessionOverride?: McpSessionOverrideLookup;
+};
+
+/**
  * Register a set of VTS-schema-typed MCP tools on an McpServer,
  * bypassing {@link McpServer.registerTool} (which is hard-bound to zod).
  * We wire `tools/list` and `tools/call` handlers directly onto the
  * underlying {@link Server} so our own code stays zod-free — the SDK
  * keeps zod only as a transitive dep for its own request schemas.
  */
-export function registerVtsMcpTools(mcp: McpServer, tools: readonly VtsMcpTool[]): void {
+export function registerVtsMcpTools(
+    mcp: McpServer,
+    tools: readonly VtsMcpTool[],
+    options: RegisterVtsMcpToolsOptions = {}
+): void {
     const byName = new Map<string, VtsMcpTool>();
 
     for (const tool of tools) {
@@ -66,12 +100,29 @@ export function registerVtsMcpTools(mcp: McpServer, tools: readonly VtsMcpTool[]
 
     // Compute JSON Schemas once — tool definitions are static over the
     // life of the server and `describe()` walks the whole schema tree.
-    const toolList: Array<{name: string; description: string; inputSchema: JsonSchemaNode}> =
-        tools.map((t) => ({
+    // Policy-hidden tools are filtered here as UX/defense-in-depth; the
+    // gate in the call handler remains authoritative.
+    type ListedTool = {name: string; description: string; inputSchema: JsonSchemaNode};
+
+    const toolList: ListedTool[] = [];
+
+    for (const t of tools) {
+        const action = options.decide ? options.decide(t.name) : ConfigMcpPolicyAction.allow;
+
+        if (action === ConfigMcpPolicyAction.deny) {
+            continue;
+        }
+
+        const description = action === ConfigMcpPolicyAction.ask
+            ? `⚠ Requires user approval — ${t.description}`
+            : t.description;
+
+        toolList.push({
             name: t.name,
-            description: t.description,
+            description,
             inputSchema: vtsDescriptionToJsonSchema(t.inputSchema.describe() as never)
-        }));
+        });
+    }
 
     mcp.server.registerCapabilities({tools: {listChanged: false}});
 
@@ -100,6 +151,41 @@ export function registerVtsMcpTools(mcp: McpServer, tools: readonly VtsMcpTool[]
                 }],
                 isError: true
             };
+        }
+
+        // Policy gate — sits between args validation and handler so that
+        // schema errors surface regardless of policy, and so handlers
+        // never see a blocked call.
+        const override = options.getSessionOverride?.(tool.name);
+        const action = override
+            ?? (options.decide ? options.decide(tool.name) : ConfigMcpPolicyAction.allow);
+
+        if (action === ConfigMcpPolicyAction.deny) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: override === ConfigMcpPolicyAction.deny
+                        ? `Tool '${tool.name}' denied by remembered user decision.`
+                        : `Tool '${tool.name}' denied by policy.`
+                }],
+                isError: true
+            };
+        }
+
+        if (action === ConfigMcpPolicyAction.ask) {
+            const approved = options.onApprovalRequest
+                ? await options.onApprovalRequest(tool.name, args)
+                : false;
+
+            if (!approved) {
+                return {
+                    content: [{
+                        type: 'text',
+                        text: `Tool '${tool.name}' requires user approval and was not confirmed.`
+                    }],
+                    isError: true
+                };
+            }
         }
 
         try {

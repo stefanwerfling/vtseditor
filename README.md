@@ -1,90 +1,210 @@
+<div align="center">
 
+<img src="doc/images/vtslogo.png" width="160" alt="VTS logo" style="border-radius: 24px" />
 
-# VTS & VTS-Editor
+# VTS Editor
 
-[![Discord](https://img.shields.io/discord/1347133593578766369.svg?label=Discord&logo=discord&color=5865F2&logoColor=white)](https://discord.gg/52PQ2mbWQD) 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stefanwerfling/vtseditor) 
-![Node Version](https://img.shields.io/badge/Node-%3E%3D%2020-green)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
-![Version](https://img.shields.io/badge/Version-Beta%201.0.8-orange)
+### Visual schema design for [VTS](https://github.com/OpenSourcePKG/vts) — draw your types, ship validated TypeScript.
 
-<hr>
+[![Discord](https://img.shields.io/discord/1347133593578766369?label=Discord&logo=discord&color=5865F2&logoColor=white&style=flat-square)](https://discord.gg/52PQ2mbWQD)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stefanwerfling/vtseditor)
+![Node](https://img.shields.io/badge/Node-%E2%89%A5%2020-43853d?style=flat-square&logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Version](https://img.shields.io/badge/Beta-1.0.8-f59e0b?style=flat-square)
+![License](https://img.shields.io/badge/License-ISC-blue?style=flat-square)
 
-## 📦 VTS — Type-Safe Data Validation in TypeScript
-<p align="center">
-<img src="doc/images/vtslogo.png" width="300px" style="border-radius: 15px;transition: transform .2s;object-fit: cover;">
-<br><br>
-Vts is a data type validation library written entirely in TypeScript. Its main focus lies on validating the types of the
-given data (e.g. "is x a string") and not so much on validating the data itself (e.g. "is the length of the string x
-equal to y") to ensure that external data is compatible with your own source code.
-<br><br>
-The package consists of some basic type guarded validator methods like isString() and isFunction() that can be accessed
-via the main Vts object. Most of these validators are also encapsulated in schema classes which can be used to create
-complex schemas. The main strategy when validating those complex schemas is to be as strict as possible.
-</p>
+[Getting started](#-getting-started) ·
+[Features](#-features) ·
+[Generated code](#-generated-output) ·
+[AI providers](#-ai-providers) ·
+[MCP server](#-mcp-server) ·
+[Config reference](doc/Config.md)
 
-### 🧰 Key Features
-* ✅ Simple validators like isString(), isFunction(), etc.
-* 🧠 Strict type guards for maximum safety and reliability.
-* 🧱 Composable schema classes for defining structured, reusable validation logic.
-* 💡 Built with TypeScript types in mind — works seamlessly with typeof, instanceof, and conditional typing.
+</div>
 
-[Read more by VTS project: https://github.com/OpenSourcePKG/vts](https://github.com/OpenSourcePKG/vts)
+---
 
-<hr>
+## What is this?
 
-## 🎨 VTS-Editor
-The VTS Editor is a graphical tool for building and managing VTS schemas visually. It provides a drag-and-drop interface where developers can create, modify, and connect schema definitions without writing raw code.
+**VTS Editor** is a browser-based visual editor for building [VTS](https://github.com/OpenSourcePKG/vts) type-validation schemas — the runtime validators behind `Vts.object(...)`, `Vts.string(...)` & friends. Sketch your types on a canvas, wire them up visually, and the editor emits fully-typed `.ts` files with matching VTS schemas and extracted TypeScript types.
 
-With the editor, you can:
+Ships as a tiny CLI (`npx vtseditor`) that runs inside **your own project**, reads/writes a single `schema.json`, and regenerates the TypeScript on save.
 
-* 📄 Define new schema types with fields and inheritance.
-* 🔗 Create references between schemas (e.g. nested types or extensions).
-* 💾 Export/import schemas as JSON
-* 🔍 Get an overview of schema structure and dependencies at a glance.
-* ⚙️ Automatically generate TypeScript schema and type files
-* ✅ Drag and Drop
-* 🔖 Remembers your workspace — active schema/file and folder collapse state are restored across reloads.
-* 🧠 AI Provider support
-* 🤖 Expose an [MCP](https://modelcontextprotocol.io/) server so Claude CLI (and other MCP clients) can read and mutate your schemas directly.
+---
 
-This is especially useful for large projects, team collaboration, or when sharing schema definitions with non-developers.
+## ✨ Features
 
-### Screenshots
-#### Schema in use
-<img src="doc/images/screenshot1.png" alt="Screenshot 1" width="450px" />
+<table>
+<tr>
+<td width="50%" valign="top">
 
-#### Schema with Extend
-<img src="doc/images/screenshot2.png" alt="Screenshot 2" width="450px" />
+### 🎨 Visual design
+- Drag-and-drop schema canvas
+- Folder / file tree, groups, links
+- Inheritance, nested objects, `or`-types
+- Auto-layout + search
 
-#### Schema edit
-<img src="doc/images/screenshot_edit1.png" alt="Screenshot Edit 1" width="450px" />
+</td>
+<td width="50%" valign="top">
 
-#### Schema field edit
-<img src="doc/images/screenshot_edit2.png" alt="Screenshot Edit 2" width="450px" />
+### ⚙️ Code generation
+- Strict `Vts.object(...)` + extracted `type`
+- Enums, cross-file imports
+- Extern packages (read-only) via `node_modules`
+- Pre/post generation hooks
 
-#### AI Schema create
-<img src="doc/images/screenshotai1.jpeg" alt="Screenshot AI Create" width="450px" />
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
 
-### Output
-The schemas are generated in Typescript and the result is the schema/enum and the type:
+### 🧠 AI assist
+- Generate schemas from a natural-language description
+- Gemini · OpenAI · Anthropic · Claude Code · LocalAI
+- Conversation history compressed with **TOON** for token efficiency
 
-```typescript
-// Import section - automatically generated
+</td>
+<td width="50%" valign="top">
+
+### 🤖 MCP server
+- Expose 27 `vts_*` tools over HTTP
+- Claude CLI, Cursor, any MCP client can read & mutate schemas
+- Same commit pipeline as the UI — browser tab stays in sync via SSE
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 💾 Sticky workspace
+- Remembers the active schema/file you were on
+- Remembers which folders you collapsed
+- Multi-tab safe (SSE live-sync)
+
+</td>
+<td width="50%" valign="top">
+
+### 🧰 Zero build step
+- Node ≥ 20 · ESM · TypeScript 5.x
+- No compile, no bundler config
+- `vtseditor.json` validated on startup — bad config aborts the server
+
+</td>
+</tr>
+</table>
+
+---
+
+## 📸 Screenshots
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="doc/images/screenshot1.png" width="440" alt="Schema in use" /><br /><sub><b>Schema on the canvas</b></sub></td>
+<td align="center" width="50%"><img src="doc/images/screenshot2.png" width="440" alt="Schema with Extend" /><br /><sub><b>Schema with extend</b></sub></td>
+</tr>
+<tr>
+<td align="center" width="50%"><img src="doc/images/screenshot_edit1.png" width="440" alt="Schema edit" /><br /><sub><b>Schema editor</b></sub></td>
+<td align="center" width="50%"><img src="doc/images/screenshot_edit2.png" width="440" alt="Schema field edit" /><br /><sub><b>Field editor</b></sub></td>
+</tr>
+<tr>
+<td align="center" colspan="2"><img src="doc/images/screenshotai1.jpeg" width="560" alt="AI schema creation" /><br /><sub><b>AI-assisted schema creation</b></sub></td>
+</tr>
+</table>
+
+---
+
+## 🚀 Getting started
+
+### 1 · Install
+
+<details open>
+<summary><b>From npm</b> (recommended)</summary>
+
+```bash
+# in your project
+npm install --save-dev vtseditor
+
+# or globally
+npm install -g vtseditor
+```
+
+</details>
+
+<details>
+<summary><b>From GitHub</b> (main branch)</summary>
+
+```bash
+# in your project
+npm install --save-dev git+https://github.com/stefanwerfling/vtseditor.git
+
+# or globally
+npm install -g git+https://github.com/stefanwerfling/vtseditor.git
+```
+
+</details>
+
+### 2 · Drop a `vtseditor.json` at your project root
+
+```jsonc
+{
+  "projects": [
+    {
+      "schemaPath": "./schemas/schema.json",
+      "destinationPath": "./schemas/src",
+      "destinationClear": false,
+      "autoGenerate": false,
+      "code": {
+        "schemaPrefix": "Schema",
+        "createTypes": true,
+        "createIndex": true,
+        "codeComment": true,
+        "codeIndent": "    "
+      },
+      "scripts": {
+        "before_generate": [],
+        "after_generate": [
+          { "path": "./schemas", "script": "npm run compile" }
+        ]
+      }
+    }
+  ],
+  "server":  { "port": 5173 },
+  "browser": { "open": true }
+}
+```
+
+> Full reference in **[`doc/Config.md`](doc/Config.md)** — including AI providers ([`doc/ConfigAI.md`](doc/ConfigAI.md)) and MCP ([`doc/ConfigMcp.md`](doc/ConfigMcp.md)).
+
+### 3 · Launch
+
+```bash
+npx vtseditor
+```
+
+The editor opens at **http://localhost:5173**. Create a schema, hit save, and the `.ts` files appear under `destinationPath`.
+
+---
+
+## 📄 Generated output
+
+Every schema on the canvas becomes a pair of runtime validator + TypeScript type:
+
+```ts
+// auto-generated imports
 import {ExtractSchemaResultType, Vts} from 'vts';
-import {SchemaName1, SchemaName2} from './relative/path.js';
+import {ProfileSchema} from './relative/path.js';
 import {ExternalSchema} from 'external-package';
 
-// Enum definitions (if present)
+// enums ------------------------------------------------
 export enum StatusEnum {
     'active' = 'active',
     'inactive' = 'inactive',
 }
 
-// Schema definitions
+// schema + options ------------------------------------
 export const UserSchema = Vts.object({
-    id: Vts.string({description: 'User identifier'}),
-    status: Vts.enum(StatusEnum),
+    id:      Vts.string({description: 'User identifier'}),
+    status:  Vts.enum(StatusEnum),
     profile: ProfileSchema,
 }, {
     description: 'User entity schema',
@@ -93,103 +213,46 @@ export const UserSchema = Vts.object({
     }
 });
 
-// TypeScript type definitions (optional)
+// matching TS type ------------------------------------
 export type User = ExtractSchemaResultType<typeof UserSchema>;
 ```
 
-### Install
+Runtime validation for free, `User` is the inferred shape — swap in your favourite boundary check:
 
-1. install the vts editor 
-    ##### Github
+```ts
+const errors: SchemaErrors = [];
 
-    a) for your project: 
-    ```shell
-    npm install --save-dev git+https://github.com/stefanwerfling/vtseditor.git
-    ```
+if (!UserSchema.validate(payload, errors)) {
+    throw new ValidationError(errors);
+}
 
-    b) or for global:
-    ```shell
-    npm install -g git+https://github.com/stefanwerfling/vtseditor.git
-    ```
+// payload is typed as User from here on
+```
 
-   ##### npm
+---
 
-    a) for your project: 
-    ```shell
-    npm install --save-dev vtseditor
-    ```
+## 🧠 AI providers
 
-    b) or for global:
-    ```shell
-    npm install -g vtseditor
-    ```
+Tell the editor what you want in plain English; it drafts a schema for you. Supported out of the box:
 
-2. create your config ```vtseditor.json``` example:
-   ```json
-   {
-     "projects": [
-       {
-         "schemaPath": "./schemas/schema.json",
-         "code": {
-           "schemaPrefix": "Schema",
-           "createTypes": true,
-           "createIndex": true,
-           "codeComment": true,
-           "codeIndent": "    "
-         },
-         "autoGenerate": false,
-         "destinationPath": "./schemas/src",
-         "destinationClear": false,
-         "scripts": {
-           "before_generate": [],
-           "after_generate": [
-             {
-               "path": "./schemas",
-               "script": "npm run compile"
-             }
-           ]
-         }
-       }
-     ],
-     "server": {
-       "port": 5173
-     },
-     "browser": {
-       "open": true
-     }
-   }
-   ```
-    Read more by [Config-Description](doc/Config.md).
+| Provider | Type | Notes |
+|---|---|---|
+| **Anthropic** | API key | `claude-sonnet-4-5` default |
+| **Claude Code** | Local CLI | Uses the `claude` binary you already have |
+| **OpenAI** | API key | Any chat-completions model |
+| **Gemini** | Google AI Studio | |
+| **LocalAI** | Self-hosted | OpenAI-compatible endpoint |
 
+Past assistant turns replayed in the conversation are re-encoded as **TOON** ([Token-Oriented Object Notation](https://toonformat.dev)) to shave ~25–30 % of tokens off the replay cost. Config details → **[`doc/ConfigAI.md`](doc/ConfigAI.md)**.
 
-3. start the vts editor
-    ```shell
-    npx vtseditor
-    ```
+---
 
-4. open the vts editor in your browser: http://localhost:5173
-5. create your schemas, have fun
+## 🤖 MCP server
 
-### 🧠 Configuring AI Providers in VTS Editor
+Flip on the [Model Context Protocol](https://modelcontextprotocol.io/) endpoint and your favourite AI agent edits the exact same schema file the browser editor does — no detour through the UI, no separate lock file.
 
-The **VTS Editor** can connect to different AI providers to help you generate or refine your schemas 🚀.  
-Currently supported providers are:
-
-- **Gemini (Google AI Studio)**
-- **LocalAI (self-hosted)**
-- **OpenAI**
-- **Anthropic**
-- **Claude Code**
-
-Read more by [Config-AI-Description](doc/ConfigAI.md).
-
-### 🤖 MCP server (Claude CLI & other agents)
-
-Opt in to the [Model Context Protocol](https://modelcontextprotocol.io/) endpoint to let AI agents edit your schemas through the same repository the web editor uses — no separate file lock, no round-tripping through the UI.
-
-Add `mcp` to your `vtseditor.json`:
-
-```json
+```jsonc
+// vtseditor.json
 {
   "projects": [ /* ... */ ],
   "mcp": {
@@ -198,9 +261,9 @@ Add `mcp` to your `vtseditor.json`:
 }
 ```
 
-Start the editor (`npx vtseditor`); the endpoint is served at `http://localhost:5173/mcp`. Point Claude CLI at it:
+Start the editor (`npx vtseditor`); the endpoint lives at `http://localhost:5173/mcp`. Point Claude CLI at it:
 
-```json
+```jsonc
 {
   "mcpServers": {
     "vtseditor": {
@@ -211,50 +274,62 @@ Start the editor (`npx vtseditor`); the endpoint is served at `http://localhost:
 }
 ```
 
-The server exposes 27 `vts_*` tools (list projects, get tree, create/update/delete/move containers, schemas, fields, enums, enum values, links, plus explicit code generation). Mutations go through the same commit pipeline as browser edits, so the open editor tab picks them up automatically over the SSE event stream.
+**27 `vts_*` tools** are exposed — list projects, walk the tree, create/update/delete/move folders · files · schemas · fields · enums · enum values · links, force regeneration. Every mutation goes through the same commit pipeline as the browser; an open editor tab picks remote changes up automatically via SSE.
 
-Read more by [Config-MCP-Description](doc/ConfigMcp.md).
+Full list & wiring → **[`doc/ConfigMcp.md`](doc/ConfigMcp.md)**.
 
+---
 
-### 🛠️ Contributing
-Contributions welcome! Feel free to submit issues, suggestions, or pull requests.
+## 🧱 Built on VTS
 
-# Supported by
-Special thanks to the following companys:
+VTS is a tiny, strict, TypeScript-native data-type validator. Schemas are composable classes, field checks are type guards, and boundary validation (`Schema.validate()`) is the only runtime cost. VTS Editor is the graphical front-end; the library stands on its own:
+
+➡️ **[github.com/OpenSourcePKG/vts](https://github.com/OpenSourcePKG/vts)**
+
+---
+
+## 🤝 Contributing
+
+Issues, suggestions, and pull requests are welcome — join the [Discord](https://discord.gg/52PQ2mbWQD) to chat first if you're planning a bigger change.
+
+---
+
+## 💙 Supported by
+
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
 <table>
-	<tr>
-		<td align="center">
-            <a href="https://jb.gg/OpenSourceSupport">
-				<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" width="80" alt=""/>
-				<br /><sub><b>JetBrains</b></sub>
-			</a>
-        </td>
-        <td align="center">
-            <a href="https://github.com/OpenSourcePKG">
-				<img src="https://raw.githubusercontent.com/OpenSourcePKG/.github/main/profile/pegenaulogo250.png" width="80" alt=""/>
-				<br /><sub><b>Pegenau GmbH & Co. KG</b></sub>
-			</a>
-        </td>
-	</tr>
+<tr>
+<td align="center">
+<a href="https://jb.gg/OpenSourceSupport">
+<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" width="80" alt=""/>
+<br /><sub><b>JetBrains</b></sub>
+</a>
+</td>
+<td align="center">
+<a href="https://github.com/OpenSourcePKG">
+<img src="https://raw.githubusercontent.com/OpenSourcePKG/.github/main/profile/pegenaulogo250.png" width="80" alt=""/>
+<br /><sub><b>Pegenau GmbH & Co. KG</b></sub>
+</a>
+</td>
+</tr>
 </table>
+<!-- markdownlint-enable -->
+<!-- prettier-ignore-end -->
 
-# Contributors
-
-Special thanks to the following contributors:
+## 👥 Contributors
 
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
 <table>
-	<tr>
-		<td align="center">
-			<a href="https://github.com/Choppel">
-				<img src="https://avatars.githubusercontent.com/u/14126324?v=4" width="80" alt=""/>
-				<br /><sub><b>Choppel</b></sub>
-			</a>
-		</td>
-	</tr>
+<tr>
+<td align="center">
+<a href="https://github.com/Choppel">
+<img src="https://avatars.githubusercontent.com/u/14126324?v=4" width="80" alt=""/>
+<br /><sub><b>Choppel</b></sub>
+</a>
+</td>
+</tr>
 </table>
 <!-- markdownlint-enable -->
 <!-- prettier-ignore-end -->

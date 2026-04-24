@@ -12,6 +12,13 @@ import {SchemaGenerator} from './SchemaGenerator/SchemaGenerator.js';
 import {SchemaProject} from './SchemaProject/SchemaProject.js';
 import {StreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {registerSchemaApiRoutes} from './SchemaApi/SchemaApiRoutes.js';
+import {
+    McpApprovalBus,
+    McpApprovalEvent,
+    McpApprovalRemember
+} from './SchemaMcp/SchemaMcpApprovalBus.js';
+import {compileMcpPolicy} from './SchemaMcp/SchemaMcpPolicy.js';
+import {persistPolicyRule} from './SchemaMcp/SchemaMcpPolicyPersister.js';
 import {createSchemaMcpServer} from './SchemaMcp/SchemaMcpServer.js';
 import {SchemaFsRepository} from './SchemaRepository/SchemaFsRepository.js';
 import {SchemaRepositoryEvent} from './SchemaRepository/SchemaRepositoryEventBus.js';
@@ -263,7 +270,83 @@ function expressMiddleware(): Plugin {
             // -----------------------------------------------------------------
             if (mcpSection?.enabled) {
                 const mcpPath = mcpSection.path ?? '/mcp';
+                const mcpDecide = compileMcpPolicy(mcpSection.policy);
+                const mcpApprovalBus = new McpApprovalBus();
                 const mcpTransports = new Map<string, StreamableHTTPServerTransport>();
+
+                if (configFile) {
+                    mcpApprovalBus.setForeverPersister((toolName, action) =>
+                        persistPolicyRule(configFile, toolName, action)
+                    );
+                }
+
+                // Approval SSE stream — dedicated channel separate from the
+                // per-project repository bus because approvals can target
+                // any project (or none, for list tools).
+                app.get('/api/mcp/approvals/events', (req, res): void => {
+                    res.status(200);
+                    res.setHeader('Content-Type', 'text/event-stream');
+                    res.setHeader('Cache-Control', 'no-cache, no-transform');
+                    res.setHeader('Connection', 'keep-alive');
+                    res.setHeader('X-Accel-Buffering', 'no');
+                    res.flushHeaders();
+
+                    const writeEvent = (ev: McpApprovalEvent): void => {
+                        res.write(`event: ${ev.type === 'request' ? 'approval_request' : 'approval_resolved'}\n`);
+                        res.write(`data: ${JSON.stringify(ev)}\n\n`);
+                    };
+
+                    const unsubscribe = mcpApprovalBus.subscribe(writeEvent);
+
+                    const pingTimer = setInterval(() => {
+                        res.write(`: ping ${Date.now()}\n\n`);
+                    }, 30000);
+
+                    const cleanup = (): void => {
+                        clearInterval(pingTimer);
+                        unsubscribe();
+                    };
+
+                    req.on('close', cleanup);
+                    req.on('aborted', cleanup);
+                });
+
+                // Decision endpoint — body {allow, remember?}. Unknown or
+                // already-decided requestIds return 404 so a duplicate
+                // click from a second tab does not double-resolve.
+                // `remember='session'` caches the decision for the
+                // server's lifetime; `remember='forever'` also patches
+                // `vtseditor.json` via the persister.
+                app.post('/api/mcp/approvals/:requestId', async (req, res): Promise<void> => {
+                    const requestId = req.params.requestId;
+                    const body = req.body as {allow?: unknown; remember?: unknown};
+
+                    if (typeof body.allow !== 'boolean') {
+                        res.status(400).json({success: false, msg: '`allow` must be a boolean'});
+                        return;
+                    }
+
+                    let remember: McpApprovalRemember|undefined;
+
+                    if (body.remember === 'session' || body.remember === 'forever') {
+                        remember = body.remember;
+                    } else if (body.remember !== undefined && body.remember !== null) {
+                        res.status(400).json({
+                            success: false,
+                            msg: '`remember` must be "session", "forever", or omitted'
+                        });
+                        return;
+                    }
+
+                    const ok = await mcpApprovalBus.decide(requestId, body.allow, remember);
+
+                    if (!ok) {
+                        res.status(404).json({success: false, msg: `Unknown or already-decided request ${requestId}`});
+                        return;
+                    }
+
+                    res.status(200).json({success: true});
+                });
 
                 const isInitializeRequest = (body: unknown): boolean => {
                     if (Array.isArray(body)) {
@@ -302,7 +385,16 @@ function expressMiddleware(): Plugin {
                             }
                         };
 
-                        const mcpServer = createSchemaMcpServer({repositories, runGenerate});
+                        const mcpServer = createSchemaMcpServer(
+                            {repositories, runGenerate},
+                            {
+                                decide: mcpDecide,
+                                onApprovalRequest: (toolName, args) =>
+                                    mcpApprovalBus.request(toolName, args),
+                                getSessionOverride: (toolName) =>
+                                    mcpApprovalBus.getSessionOverride(toolName)
+                            }
+                        );
                         await mcpServer.connect(transport);
                     } else {
                         res.status(400).json({

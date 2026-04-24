@@ -3,12 +3,15 @@ import {EditorInit, ProjectsData, SchemaProjectsResponse} from '../SchemaProject
 import {SchemaRepositoryEvent} from '../SchemaRepository/SchemaRepositoryEventTypes.js';
 import {SchemaApiClient, SchemaApiError} from './Api/SchemaApiClient.js';
 import {SchemaEditorApiCall, SchemaEditorUpdateDataDetail} from './Api/SchemaEditorApiCall.js';
+import {SchemaMcpApprovalClient} from './Api/SchemaMcpApprovalClient.js';
 import {SchemaSseClient} from './Api/SchemaSseClient.js';
 import {AlertDialog, AlertDialogTypes} from './Base/AlertDialog.js';
 import {AutoLayout} from './Base/AutoLayout.js';
 import {BaseTable} from './Base/BaseTable.js';
 import {ConfirmDialog} from './Base/ConfirmDialog.js';
+import {McpApprovalDialog} from './Base/McpApprovalDialog.js';
 import {EditorEvents} from './Base/EditorEvents.js';
+import {highlightRemoteNew} from './Base/RemoteNewHighlight.js';
 import {EnumTable} from './Enum/EnumTable.js';
 import {JsonDataFS, JsonEditorSettings, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js';
 import jsPlumbInstance from './jsPlumbInstance.js';
@@ -19,6 +22,7 @@ import {SchemaCreateDialog} from './SchemaCreateDialog.js';
 import {SchemaValidateDialog} from './Schema/SchemaValidateDialog.js';
 import {Searchbar, SearchbarResultEntry} from './Search/Searchbar.js';
 import {Treeview} from './Treeview/Treeview.js';
+import {TreeviewEntry} from './Treeview/TreeviewEntry.js';
 
 /**
  * SchemaEditor move event detail
@@ -160,6 +164,22 @@ export class SchemaEditor {
     protected _sseClients: Map<string, SchemaSseClient> = new Map();
 
     /**
+     * MCP tool-call approval client. Pops up a confirmation dialog for
+     * any tool call the server-side policy flags as `ask`. Active only
+     * when `mcp.enabled` in `vtseditor.json`; otherwise stops itself
+     * silently on the first connection error.
+     * @protected
+     */
+    protected _mcpApprovalClient: SchemaMcpApprovalClient|null = null;
+
+    /**
+     * Open approval dialogs indexed by requestId so a server-side
+     * resolution (timeout, other tab) can dismiss them.
+     * @protected
+     */
+    protected _mcpApprovalDialogs: Map<string, McpApprovalDialog> = new Map();
+
+    /**
      * Debounce timer for `loadData()` triggered by SSE events.
      * @protected
      */
@@ -181,6 +201,17 @@ export class SchemaEditor {
      * @protected
      */
     protected _restoringSelection: boolean = false;
+
+    /**
+     * Unids of schemas / enums / links that were created or edited by a
+     * remote mutation (MCP or another browser tab) since the last
+     * resync. After `loadData()` rebuilds the view, the active entry is
+     * switched to the owning file (if needed) and the matching canvas
+     * element gets a short pulse plus a centred scroll so the user sees
+     * where the change landed. Cleared after the flash is applied.
+     * @protected
+     */
+    protected _pendingRemoteNew: Set<string> = new Set();
 
     /**
      * Add a new Schema
@@ -306,6 +337,8 @@ export class SchemaEditor {
         SchemaEditor._active = this;
         this._jsPlumbInstance = jsPlumbInstance;
         this._container = jsPlumbInstance.getContainer();
+
+        this._startMcpApprovalClient();
 
         const buttonBar = document.getElementById('buttonbar');
 
@@ -1075,6 +1108,10 @@ export class SchemaEditor {
 
             for (const table of sTables) {
                 this._container!.appendChild(table.getElement());
+                // Apply deferred fields now that the element is attached so
+                // width is measured against the live flex container, not
+                // the detached intrinsic size.
+                table.flushPendingData();
 
                 requestAnimationFrame(() => {
                     this._jsPlumbInstance!.revalidate(table.getElement());
@@ -1086,6 +1123,7 @@ export class SchemaEditor {
 
             for (const tenum of sEnums) {
                 this._container!.appendChild(tenum.getElement());
+                tenum.flushPendingData();
 
                 requestAnimationFrame(() => {
                     this._jsPlumbInstance!.revalidate(tenum.getElement());
@@ -1165,6 +1203,133 @@ export class SchemaEditor {
         }
 
         this._updateResizer();
+        this._flushRemoteNewHighlights();
+    }
+
+    /**
+     * After a remote-mutation resync has rebuilt the view, pulse every
+     * canvas-visible schema / enum / link whose unid was collected by
+     * {@link _trackRemoteNew} and scroll the canvas so the most recent
+     * one is centred. {@link _resolveRemoteJumpTarget} has already
+     * switched the active entry to the owning file when necessary, so
+     * items outside the active entry here are genuinely stale (e.g. a
+     * container_create whose folder has no canvas element) and are
+     * dropped silently.
+     * @protected
+     */
+    protected _flushRemoteNewHighlights(): void {
+        if (this._pendingRemoteNew.size === 0) {
+            return;
+        }
+
+        const entry = Treeview.getActiveEntry();
+        let lastElement: HTMLElement|null = null;
+
+        if (entry !== null) {
+            for (const table of entry.getSchemaTables()) {
+                if (this._pendingRemoteNew.has(table.getUnid())) {
+                    const el = table.getElement();
+                    highlightRemoteNew(el);
+                    lastElement = el;
+                }
+            }
+
+            for (const tenum of entry.getEnumTables()) {
+                if (this._pendingRemoteNew.has(tenum.getUnid())) {
+                    const el = tenum.getElement();
+                    highlightRemoteNew(el);
+                    lastElement = el;
+                }
+            }
+
+            for (const link of entry.getLinkTables()) {
+                if (!this._pendingRemoteNew.has(link.getUnid())) {
+                    continue;
+                }
+
+                const linkEl = link.getElement();
+
+                if (linkEl) {
+                    highlightRemoteNew(linkEl);
+                    lastElement = linkEl;
+                }
+            }
+        }
+
+        this._pendingRemoteNew.clear();
+
+        if (lastElement !== null) {
+            const target = lastElement;
+            // Defer one frame so the just-appended tables have been
+            // measured and jsPlumb has applied its positions — scroll
+            // math uses getBoundingClientRect on both.
+            requestAnimationFrame(() => this._scrollCanvasToElement(target));
+        }
+    }
+
+    /**
+     * Resolve the schema / enum entry a pending remote mutation points
+     * at. Insertion order matters: the last unid still resolvable to a
+     * schema or enum wins, so a burst of MCP ops lands on whichever
+     * item was touched most recently. Container / link unids are
+     * skipped — they're tracked for the highlight pass but aren't
+     * meaningful jump targets for the treeview.
+     * @protected
+     */
+    protected _resolveRemoteJumpTarget(): TreeviewEntry|null {
+        if (this._pendingRemoteNew.size === 0) {
+            return null;
+        }
+
+        const rootEntry = this._treeview?.getRoot();
+
+        if (!rootEntry) {
+            return null;
+        }
+
+        let chosen: TreeviewEntry|null = null;
+
+        for (const unid of this._pendingRemoteNew) {
+            const entry = rootEntry.getEntryById(unid);
+
+            if (entry === null) {
+                continue;
+            }
+
+            const type = entry.getType();
+
+            if (type === SchemaJsonDataFSType.schema || type === SchemaJsonDataFSType.enum) {
+                chosen = entry;
+            }
+        }
+
+        return chosen;
+    }
+
+    /**
+     * Centre the given canvas element in the schemagrid viewport. Uses
+     * `scrollTo` on the grid directly (not `scrollIntoView`) so only the
+     * canvas scrolls — the surrounding editor layout stays put.
+     * @protected
+     */
+    protected _scrollCanvasToElement(element: HTMLElement): void {
+        const grid = this._container;
+
+        if (!grid) {
+            return;
+        }
+
+        const gridRect = grid.getBoundingClientRect();
+        const elRect = element.getBoundingClientRect();
+
+        const targetLeft = grid.scrollLeft + (elRect.left - gridRect.left) - (gridRect.width - elRect.width) / 2;
+        const targetTop = grid.scrollTop + (elRect.top - gridRect.top) - (gridRect.height - elRect.height) / 2;
+
+        grid.scrollTo({
+            left: Math.max(0, targetLeft),
+            top: Math.max(0, targetTop),
+            behavior: 'smooth'
+        });
     }
 
     /**
@@ -1331,6 +1496,20 @@ export class SchemaEditor {
         const rootEntry = this._treeview?.getRoot();
 
         if (!rootEntry) {
+            return;
+        }
+
+        // A pending remote mutation (MCP / other tab) wins over the
+        // persisted selection — we want the user to see what just
+        // changed, not whatever they last looked at. _restoringSelection
+        // stays false here so the override is persisted as the new
+        // selection through the normal selectionChanged path.
+        const remoteTarget = this._resolveRemoteJumpTarget();
+
+        if (remoteTarget) {
+            Treeview.setActivEntry(null);
+            Treeview.setActivEntryTable(remoteTarget);
+            window.dispatchEvent(new CustomEvent(EditorEvents.updateView, {}));
             return;
         }
 
@@ -1510,6 +1689,55 @@ export class SchemaEditor {
     }
 
     /**
+     * Boots the MCP approval SSE client exactly once. A missing
+     * endpoint (MCP disabled) causes the client to stop itself on
+     * first error — no retry loop, no console noise.
+     */
+    protected _startMcpApprovalClient(): void {
+        if (this._mcpApprovalClient !== null) {
+            return;
+        }
+
+        const client = new SchemaMcpApprovalClient();
+        client.onRequest((ev) => this._handleMcpApprovalRequest(ev.requestId, ev.tool, ev.args));
+        client.onResolved((ev) => this._handleMcpApprovalResolved(ev.requestId));
+        client.connect();
+        this._mcpApprovalClient = client;
+    }
+
+    protected _handleMcpApprovalRequest(requestId: string, tool: string, args: unknown): void {
+        if (this._mcpApprovalDialogs.has(requestId)) {
+            return;
+        }
+
+        const dialog = new McpApprovalDialog(requestId, tool, args, async (decision) => {
+            this._mcpApprovalDialogs.delete(requestId);
+
+            try {
+                await this._mcpApprovalClient?.decide(requestId, decision.allow, decision.remember);
+            } catch (err) {
+                console.warn('MCP approval decision failed:', err);
+            }
+
+            dialog.destroy();
+        });
+
+        this._mcpApprovalDialogs.set(requestId, dialog);
+        dialog.show();
+    }
+
+    protected _handleMcpApprovalResolved(requestId: string): void {
+        const dialog = this._mcpApprovalDialogs.get(requestId);
+
+        if (dialog === undefined) {
+            return;
+        }
+
+        this._mcpApprovalDialogs.delete(requestId);
+        dialog.dismiss();
+    }
+
+    /**
      * Tears down clients/SSE for projects no longer loaded and spins up new
      * ones for freshly-seen project unids. Idempotent — calling with the
      * same set of unids is a no-op.
@@ -1573,7 +1801,58 @@ export class SchemaEditor {
             return;
         }
 
+        this._trackRemoteNew(event);
         this._scheduleRemoteResync();
+    }
+
+    /**
+     * Record schemas / enums / links that a remote mutation just touched
+     * so the next `_updateView()` pulse can highlight them and scroll
+     * them into view. Field / enum-value ops resolve to the owning
+     * schema or enum — the granular child isn't a canvas element on
+     * its own. Pure deletes are ignored (nothing left to point at).
+     * @protected
+     */
+    protected _trackRemoteNew(event: SchemaRepositoryEvent): void {
+        switch (event.op) {
+            case 'schema_create':
+                this._pendingRemoteNew.add(event.payload.schema.unid);
+                return;
+            case 'schema_update':
+            case 'schema_move':
+                this._pendingRemoteNew.add(event.payload.unid);
+                return;
+            case 'enum_create':
+                this._pendingRemoteNew.add(event.payload.enumeration.unid);
+                return;
+            case 'enum_update':
+            case 'enum_move':
+                this._pendingRemoteNew.add(event.payload.unid);
+                return;
+            case 'link_create':
+                this._pendingRemoteNew.add(event.payload.link.unid);
+                return;
+            case 'link_update':
+                this._pendingRemoteNew.add(event.payload.unid);
+                return;
+            case 'container_create':
+                this._pendingRemoteNew.add(event.payload.node.unid);
+                return;
+            case 'field_create':
+            case 'field_update':
+            case 'field_delete':
+            case 'field_reorder':
+                this._pendingRemoteNew.add(event.payload.schemaUnid);
+                return;
+            case 'enum_value_create':
+            case 'enum_value_update':
+            case 'enum_value_delete':
+            case 'enum_value_reorder':
+                this._pendingRemoteNew.add(event.payload.enumUnid);
+                return;
+            default:
+                return;
+        }
     }
 
     protected _scheduleRemoteResync(): void {

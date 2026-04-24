@@ -4,7 +4,12 @@ import {Vts} from 'vts';
 import {JsonSchemaFieldType} from '../SchemaEditor/JsonData.js';
 import {SchemaFsRepository} from '../SchemaRepository/SchemaFsRepository.js';
 import {SchemaMcpContext} from './SchemaMcpServer.js';
-import {defineVtsMcpTool, registerVtsMcpTools, VtsMcpTool} from './SchemaMcpToolRegistry.js';
+import {
+    defineVtsMcpTool,
+    RegisterVtsMcpToolsOptions,
+    registerVtsMcpTools,
+    VtsMcpTool
+} from './SchemaMcpToolRegistry.js';
 
 /**
  * Formats an arbitrary value as a JSON text block — MCP tool results ship
@@ -113,7 +118,11 @@ function normalizeFieldType(
  * with `vts_` so they remain distinguishable when Claude CLI loads multiple
  * MCP servers simultaneously.
  */
-export function registerSchemaMcpTools(server: McpServer, ctx: SchemaMcpContext): void {
+export function registerSchemaMcpTools(
+    server: McpServer,
+    ctx: SchemaMcpContext,
+    options: RegisterVtsMcpToolsOptions = {}
+): void {
     const tools: VtsMcpTool[] = [
 
         // Read ---------------------------------------------------------------------
@@ -557,5 +566,29 @@ export function registerSchemaMcpTools(server: McpServer, ctx: SchemaMcpContext)
 
     ];
 
-    registerVtsMcpTools(server, tools);
+    // Introspection — must be pushed after `tools` is built so it can
+    // report on every sibling tool. Defaults to `allow` under the
+    // standard policy (matches `vts_get_*`).
+    tools.push(defineVtsMcpTool({
+        name: 'vts_get_policy',
+        description: 'Return the effective policy action (allow|ask|deny) for every registered tool, including any active session/forever overrides granted by the user.',
+        inputSchema: Vts.object({}),
+        handler: async () => {
+            const rows = tools.map((t) => {
+                const base = options.decide ? options.decide(t.name) : 'allow';
+                const override = options.getSessionOverride?.(t.name);
+
+                return {
+                    tool: t.name,
+                    action: override ?? base,
+                    policy: base,
+                    override: override ?? null
+                };
+            });
+
+            return json({tools: rows});
+        }
+    }));
+
+    registerVtsMcpTools(server, tools, options);
 }

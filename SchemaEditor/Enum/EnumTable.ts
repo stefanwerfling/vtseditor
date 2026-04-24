@@ -47,6 +47,14 @@ export class EnumTable extends BaseTable {
     protected _values: Map<string, EnumTableValue> = new Map<string, EnumTableValue>();
 
     /**
+     * Data stashed by setPendingData() and applied by flushPendingData()
+     * once the element is attached to the DOM — avoids detached
+     * intrinsic-sizing inflating the table width.
+     * @protected
+     */
+    protected _pendingData: JsonEnumDescription|null = null;
+
+    /**
      * Context menu (Add / Edit / Delete)
      * @protected
      */
@@ -415,6 +423,25 @@ export class EnumTable extends BaseTable {
         this.setName(data.name);
         this._position = data.pos;
         this.setValues(data.values);
+    }
+
+    /**
+     * Stash data to be applied once the element is attached to the DOM.
+     * @param {JsonEnumDescription} data
+     */
+    public setPendingData(data: JsonEnumDescription): void {
+        this._pendingData = data;
+    }
+
+    /**
+     * Apply previously stashed pending data. No-op if none pending.
+     */
+    public flushPendingData(): void {
+        if (this._pendingData !== null) {
+            const data = this._pendingData;
+            this._pendingData = null;
+            this.setData(data);
+        }
     }
 
     public override getContextMenu(): ContextMenu {

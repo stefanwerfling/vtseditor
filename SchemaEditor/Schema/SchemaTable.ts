@@ -99,6 +99,16 @@ export class SchemaTable extends BaseTable {
     protected _fields: Map<string, SchemaTableField> = new Map<string, SchemaTableField>();
 
     /**
+     * Data stashed by setPendingData() and applied by flushPendingData()
+     * once the element is attached to the DOM. Populating fields while
+     * detached causes intrinsic-sizing to lock the table to the widest
+     * nowrap child (e.g. long type-badge text), leaving it oversized
+     * until some later incidental reflow fires.
+     * @protected
+     */
+    protected _pendingData: JsonSchemaDescription|null = null;
+
+    /**
      * Schema extend
      * @protected
      */
@@ -853,6 +863,27 @@ export class SchemaTable extends BaseTable {
         this.addFields(data.fields);
         this.setPosition(data.pos.x, data.pos.y);
         this._description = data.description;
+    }
+
+    /**
+     * Stash data to be applied once the element is attached to the DOM.
+     * @param {JsonSchemaDescription} data
+     */
+    public setPendingData(data: JsonSchemaDescription): void {
+        this._pendingData = data;
+    }
+
+    /**
+     * Apply previously stashed pending data. No-op if none pending.
+     * Called by SchemaEditor._updateView right after appendChild so
+     * field layout is measured against the live flex container.
+     */
+    public flushPendingData(): void {
+        if (this._pendingData !== null) {
+            const data = this._pendingData;
+            this._pendingData = null;
+            this.setData(data);
+        }
     }
 
     /**
