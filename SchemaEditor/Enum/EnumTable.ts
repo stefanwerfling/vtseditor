@@ -1,3 +1,4 @@
+import {SchemaEditorUpdateDataDetail} from '../Api/SchemaEditorApiCall.js';
 import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {ConfirmDialog} from '../Base/ConfirmDialog.js';
@@ -177,13 +178,25 @@ export class EnumTable extends BaseTable {
                 return false;
             }
 
+            const valueStr = tdialog.getValue();
+
             this.setValues([{
                 unid: uid,
                 name: name,
-                value: tdialog.getValue()
+                value: valueStr
             }]);
 
-            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+            window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                detail: {
+                    apiCall: {
+                        op: 'enum_value_create',
+                        enumUnid: this._unid,
+                        unid: uid,
+                        name,
+                        value: valueStr
+                    }
+                }
+            }));
 
             return true;
         });
@@ -210,7 +223,15 @@ export class EnumTable extends BaseTable {
                 }
             }));
 
-            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+            window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                detail: {
+                    apiCall: {
+                        op: 'enum_update',
+                        unid: this.getUnid(),
+                        patch: {name: enumName}
+                    }
+                }
+            }));
 
             return true;
         });
@@ -237,11 +258,22 @@ export class EnumTable extends BaseTable {
                     return false;
                 }
 
+                const newValue = dialog.getValue();
+
                 value1.setName(name);
-                value1.setValue(dialog.getValue());
+                value1.setValue(newValue);
                 value1.updateView();
 
-                window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                    detail: {
+                        apiCall: {
+                            op: 'enum_value_update',
+                            enumUnid: this._unid,
+                            valueUnid: value1.getId(),
+                            patch: {name, value: newValue}
+                        }
+                    }
+                }));
 
                 return true;
             });
@@ -251,10 +283,20 @@ export class EnumTable extends BaseTable {
                     'Delete field',
                     `Do you really want to delete field '${field1.getName()}'?`,
                     () => {
-                        field1.remove();
-                        this._values.delete(field1.getId());
+                        const valueId = field1.getId();
 
-                        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                        field1.remove();
+                        this._values.delete(valueId);
+
+                        window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                            detail: {
+                                apiCall: {
+                                    op: 'enum_value_delete',
+                                    enumUnid: this._unid,
+                                    valueUnid: valueId
+                                }
+                            }
+                        }));
                     }
                 );
             });
@@ -312,7 +354,15 @@ export class EnumTable extends BaseTable {
 
         this._values = reordered;
 
-        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+        window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+            detail: {
+                apiCall: {
+                    op: 'enum_value_reorder',
+                    enumUnid: this._unid,
+                    order: Array.from(this._values.keys())
+                }
+            }
+        }));
         jsPlumbInstance.repaintEverything();
     }
 
@@ -367,11 +417,16 @@ export class EnumTable extends BaseTable {
         this.setValues(data.values);
     }
 
+    public override getContextMenu(): ContextMenu {
+        return this._contextMenu;
+    }
+
     /**
      * Update view
      */
     public override updateView(): void {
         super.updateView();
+        this._contextMenu.clearLinkMode();
         this.getIconElement().textContent = EditorIcons.enum;
         this.setOnDelete(EnumTableEventOnDelete);
     }
@@ -438,6 +493,14 @@ export class EnumTable extends BaseTable {
         } else {
             this._table.classList.remove('selected');
         }
+    }
+
+    protected override _buildPositionUpdateApiCall() {
+        return {
+            op: 'enum_update' as const,
+            unid: this._unid,
+            patch: {pos: {x: this._position.x, y: this._position.y}}
+        };
     }
 
 }

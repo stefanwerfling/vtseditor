@@ -6,7 +6,7 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stefanwerfling/vtseditor) 
 ![Node Version](https://img.shields.io/badge/Node-%3E%3D%2020-green)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
-![Version](https://img.shields.io/badge/Version-Beta%201.0.4-orange)
+![Version](https://img.shields.io/badge/Version-Beta%201.0.8-orange)
 
 <hr>
 
@@ -44,7 +44,9 @@ With the editor, you can:
 * 🔍 Get an overview of schema structure and dependencies at a glance.
 * ⚙️ Automatically generate TypeScript schema and type files
 * ✅ Drag and Drop
+* 🔖 Remembers your workspace — active schema/file and folder collapse state are restored across reloads.
 * 🧠 AI Provider support
+* 🤖 Expose an [MCP](https://modelcontextprotocol.io/) server so Claude CLI (and other MCP clients) can read and mutate your schemas directly.
 
 This is especially useful for large projects, team collaboration, or when sharing schema definitions with non-developers.
 
@@ -176,8 +178,42 @@ Currently supported providers are:
 - **Gemini (Google AI Studio)**
 - **LocalAI (self-hosted)**
 - **OpenAI**
+- **Anthropic**
+- **Claude Code**
 
 Read more by [Config-AI-Description](doc/ConfigAI.md).
+
+### 🤖 MCP server (Claude CLI & other agents)
+
+Opt in to the [Model Context Protocol](https://modelcontextprotocol.io/) endpoint to let AI agents edit your schemas through the same repository the web editor uses — no separate file lock, no round-tripping through the UI.
+
+Add `mcp` to your `vtseditor.json`:
+
+```json
+{
+  "projects": [ /* ... */ ],
+  "mcp": {
+    "enabled": true
+  }
+}
+```
+
+Start the editor (`npx vtseditor`); the endpoint is served at `http://localhost:5173/mcp`. Point Claude CLI at it:
+
+```json
+{
+  "mcpServers": {
+    "vtseditor": {
+      "type": "http",
+      "url": "http://localhost:5173/mcp"
+    }
+  }
+}
+```
+
+The server exposes 27 `vts_*` tools (list projects, get tree, create/update/delete/move containers, schemas, fields, enums, enum values, links, plus explicit code generation). Mutations go through the same commit pipeline as browser edits, so the open editor tab picks them up automatically over the SSE event stream.
+
+Read more by [Config-MCP-Description](doc/ConfigMcp.md).
 
 
 ### 🛠️ Contributing

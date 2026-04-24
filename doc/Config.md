@@ -14,6 +14,7 @@ Configuration is handled via the **`vtseditor.json`** file.
     - [Scripts](#scripts)
     - [Server](#server)
     - [Browser](#browser)
+    - [MCP](#mcp)
 3. [Workflow](#workflow)
 4. [Example Workflow](#example-workflow-with-the-provided-config)
 
@@ -118,6 +119,18 @@ Controls browser behavior when starting the editor.
 | Field       | Type      | Description |
 |-------------|-----------|-------------|
 | **`open`**  | `boolean` | If `true`, the editor opens automatically in the browser. |
+
+---
+
+### `mcp`
+Opt-in Model Context Protocol endpoint so AI agents (e.g. Claude CLI) can edit the same repository the web editor uses. Disabled unless the section is present.
+
+| Field         | Type      | Description |
+|---------------|-----------|-------------|
+| **`enabled`** | `boolean` | Required. `true` mounts the MCP endpoint on the dev server. |
+| **`path`**    | `string`  | Optional URL path (default `/mcp`). |
+
+See [ConfigMcp.md](ConfigMcp.md) for the full tool list and Claude CLI setup.
 
 ---
 

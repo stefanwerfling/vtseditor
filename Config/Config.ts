@@ -95,13 +95,27 @@ export const SchemaConfigEditor = Vts.object({
 });
 
 /**
+ * Schema of config MCP. When `enabled` is true the Vite dev server exposes a
+ * Model Context Protocol endpoint at `path` (default `/mcp`) so Claude CLI
+ * and other MCP clients can mutate the schema tree through the same
+ * repository the web editor uses.
+ */
+export const SchemaConfigMcp = Vts.object({
+    enabled: Vts.boolean(),
+    path: Vts.optional(Vts.string())
+});
+
+export type ConfigMcp = ExtractSchemaResultType<typeof SchemaConfigMcp>;
+
+/**
  * Schema of Config
  */
 export const SchemaConfig = Vts.object({
     projects: Vts.array(SchemaConfigProject),
     editor: Vts.optional(SchemaConfigEditor),
     server: Vts.optional(SchemaConfigServer),
-    browser: Vts.optional(SchemaConfigBrowser)
+    browser: Vts.optional(SchemaConfigBrowser),
+    mcp: Vts.optional(SchemaConfigMcp)
 });
 
 /**

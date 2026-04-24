@@ -1,3 +1,4 @@
+import {SchemaEditorUpdateDataDetail} from '../Api/SchemaEditorApiCall.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
 import {JsonLinkDescription, JsonSchemaPositionDescription} from '../JsonData.js';
@@ -96,7 +97,15 @@ export class LinkTable {
         this._linkObject.setOnPositionMove((table, offsetTop, offsetLeft) => {
             this.setPosition(offsetLeft, offsetTop);
 
-            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+            window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                detail: {
+                    apiCall: {
+                        op: 'link_update',
+                        unid: this._unid,
+                        patch: {pos: {x: this._position.x, y: this._position.y}}
+                    }
+                }
+            }));
         });
 
         this._linkObject.getElement().classList.add('vts-link-table');
@@ -104,6 +113,22 @@ export class LinkTable {
         // Keep the original icon (🧬 / 🧩) so the user can still tell whether
         // the link refers to a schema or an enum. The "LINK" chip and the
         // dashed violet border announce the link semantics separately.
+
+        this._applyLinkContextMenu();
+    }
+
+    /**
+     * Replace the wrapped table's context menu with link-only actions
+     * (Validate JSON for schemas, Remove link for both). The regular
+     * schema/enum actions do not apply to a link view.
+     * @protected
+     */
+    protected _applyLinkContextMenu(): void {
+        const menu = this._linkObject?.getContextMenu();
+
+        if (menu && this._linkObject) {
+            menu.setLinkMode(this._linkObject.buildLinkModeItems());
+        }
     }
 
     /**
@@ -119,6 +144,10 @@ export class LinkTable {
             this._linkObject.getElement().style.left = `${x}px`;
             this._linkObject.getElement().style.top = `${y}px`;
         }
+    }
+
+    public getPosition(): JsonSchemaPositionDescription {
+        return {x: this._position.x, y: this._position.y};
     }
 
     /**
@@ -150,6 +179,8 @@ export class LinkTable {
             // to remain so users can tell what the link wraps.
             this._linkObject.setOnDelete(LinkTableOnDelete);
             this._linkObject.updateConnection();
+
+            this._applyLinkContextMenu();
         }
     }
 

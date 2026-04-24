@@ -26,6 +26,7 @@ export class Treeview {
      */
     public static setActivEntry(entry: TreeviewEntry|null): void {
         this._activEntry = entry;
+        window.dispatchEvent(new CustomEvent(EditorEvents.selectionChanged));
     }
 
     /**
@@ -42,6 +43,7 @@ export class Treeview {
      */
     public static setActivEntryTable(entry: TreeviewEntry|null): void {
         this._activeEntryTable = entry;
+        window.dispatchEvent(new CustomEvent(EditorEvents.selectionChanged));
     }
 
     /**

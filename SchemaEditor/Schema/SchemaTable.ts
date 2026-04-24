@@ -1,10 +1,11 @@
 import {Connection} from '@jsplumb/browser-ui';
 import {PaintStyle} from '@jsplumb/browser-ui/types/common/paint-style.js';
 import {SchemaJsonDataUtil} from '../../SchemaUtil/SchemaJsonDataUtil.js';
+import {SchemaEditorUpdateDataDetail} from '../Api/SchemaEditorApiCall.js';
 import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {BaseTable, BaseTableOnDelete} from '../Base/BaseTable.js';
 import {ConfirmDialog} from '../Base/ConfirmDialog.js';
-import {ContextMenu} from '../Base/ContextMenu.js';
+import {ContextMenu, ContextMenuEntry} from '../Base/ContextMenu.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import {ExtendTypeBadge} from '../Base/ExtendType/ExtendTypeBadge.js';
@@ -183,7 +184,15 @@ export class SchemaTable extends BaseTable {
                     () => {
                         this.sortingFields();
                         this.updateView();
-                        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                        window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                            detail: {
+                                apiCall: {
+                                    op: 'field_reorder',
+                                    schemaUnid: this._unid,
+                                    order: Array.from(this._fields.keys())
+                                }
+                            }
+                        }));
                     },
                     AlertDialogTypes.info
                 );
@@ -372,7 +381,19 @@ export class SchemaTable extends BaseTable {
                 }
             }));
 
-            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+            window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                detail: {
+                    apiCall: {
+                        op: 'schema_update',
+                        unid: this.getUnid(),
+                        patch: {
+                            name: schemaName,
+                            description: this._description,
+                            extend: dialog1.getSchemaExtend()
+                        }
+                    }
+                }
+            }));
 
             return true;
         });
@@ -426,14 +447,28 @@ export class SchemaTable extends BaseTable {
                 return false;
             }
 
+            const fieldType = dialog1.getFieldType();
+            const fieldDescription = dialog1.getDescription();
+
             this.addFields([{
-                type: dialog1.getFieldType(),
+                type: fieldType,
                 name: fieldName,
-                description: dialog1.getDescription(),
+                description: fieldDescription,
                 unid: uid
             }]);
 
-            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+            window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                detail: {
+                    apiCall: {
+                        op: 'field_create',
+                        schemaUnid: this._unid,
+                        unid: uid,
+                        name: fieldName,
+                        type: fieldType,
+                        description: fieldDescription
+                    }
+                }
+            }));
 
             return true;
         });
@@ -476,12 +511,29 @@ export class SchemaTable extends BaseTable {
                 return false;
             }
 
-            field1.setName(dialog.getFieldName());
-            field1.setType(dialog.getFieldType());
-            field1.setDescription(dialog.getDescription());
+            const newName = dialog.getFieldName();
+            const newType = dialog.getFieldType();
+            const newDescription = dialog.getDescription();
+
+            field1.setName(newName);
+            field1.setType(newType);
+            field1.setDescription(newDescription);
             field1.updateView();
 
-            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+            window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                detail: {
+                    apiCall: {
+                        op: 'field_update',
+                        schemaUnid: this._unid,
+                        fieldUnid: field1.getId(),
+                        patch: {
+                            name: newName,
+                            type: newType,
+                            description: newDescription
+                        }
+                    }
+                }
+            }));
 
             return true;
         });
@@ -491,11 +543,21 @@ export class SchemaTable extends BaseTable {
                 'Delete field',
                 `Do you really want to delete field '${field1.getName()}'?`,
                 () => {
+                    const fieldId = field1.getId();
+
                     field1.remove();
-                    this._fields.delete(field1.getId());
+                    this._fields.delete(fieldId);
                     this._updateEmptyState();
 
-                    window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                    window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                        detail: {
+                            apiCall: {
+                                op: 'field_delete',
+                                schemaUnid: this._unid,
+                                fieldUnid: fieldId
+                            }
+                        }
+                    }));
                 }
             );
         });
@@ -565,7 +627,15 @@ export class SchemaTable extends BaseTable {
 
         this._fields = reordered;
 
-        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+        window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+            detail: {
+                apiCall: {
+                    op: 'field_reorder',
+                    schemaUnid: this._unid,
+                    order: Array.from(this._fields.keys())
+                }
+            }
+        }));
         jsPlumbInstance.repaintEverything();
     }
 
@@ -617,11 +687,40 @@ export class SchemaTable extends BaseTable {
         this._schemaExtend.appendChild(badge.getElement());
     }
 
+    public override getContextMenu(): ContextMenu {
+        return this._contextMenu;
+    }
+
+    public override buildLinkModeItems(): ContextMenuEntry[] {
+        return [
+            {
+                icon: EditorIcons.info,
+                label: 'Validate JSON',
+                onClick: () => {
+                    const dialog = new SchemaValidateDialog(this._unid, this._name);
+                    dialog.show();
+                }
+            },
+            {separator: true},
+            {
+                icon: EditorIcons.delete,
+                label: 'Remove link',
+                danger: true,
+                onClick: () => {
+                    if (this._onDelete) {
+                        this._onDelete(this);
+                    }
+                }
+            }
+        ];
+    }
+
     /**
      * Update view
      */
     public override updateView(): void {
         super.updateView();
+        this._contextMenu.clearLinkMode();
 
         this.getIconElement().textContent = EditorIcons.schema;
         this.setOnDelete(SchemaTableEventOnDelete);
@@ -910,6 +1009,14 @@ export class SchemaTable extends BaseTable {
         this._fields = new Map(
             sortedFields.map(field => [field.getId(), field])
         );
+    }
+
+    protected override _buildPositionUpdateApiCall() {
+        return {
+            op: 'schema_update' as const,
+            unid: this._unid,
+            patch: {pos: {x: this._position.x, y: this._position.y}}
+        };
     }
 
 }

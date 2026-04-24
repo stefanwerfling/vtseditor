@@ -3,10 +3,12 @@ import {
     SchemaProjectGenerateSchemaResponse
 } from '../SchemaProject/SchemaProjectGenerateSchema.js';
 import {ConversationPartRole} from '../SchemaProvider/SchemaProviderConversationPart.js';
+import {SchemaEditorApiCall, SchemaEditorUpdateDataDetail} from './Api/SchemaEditorApiCall.js';
 import {AlertDialog, AlertDialogTypes} from './Base/AlertDialog.js';
 import {BaseDialog} from './Base/BaseDialog.js';
 import {ChatContainer} from './Base/ChatContainer/ChatContainer.js';
 import {EditorEvents} from './Base/EditorEvents.js';
+import {SchemaEditor} from './SchemaEditor.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
 import {Treeview} from './Treeview/Treeview.js';
 
@@ -45,7 +47,9 @@ export class SchemaCreateDialog extends BaseDialog {
         });
 
         this._chatContainer.setOnApplyTableClick((table): void => {
-            if (Treeview.getActiveEntry() === null) {
+            const activeEntry = Treeview.getActiveEntry();
+
+            if (activeEntry === null) {
                 AlertDialog.showAlert(
                     'Add schema',
                     'No active entry is selected — please open a project / file first.',
@@ -60,14 +64,51 @@ export class SchemaCreateDialog extends BaseDialog {
             const newTable = new SchemaTable(tableData.unid, tableData.name);
             newTable.setData(tableData);
 
-            Treeview.getActiveEntry()!.addSchemaTable(newTable);
+            activeEntry.addSchemaTable(newTable);
 
-            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {
-                detail: {
-                    updateView: true,
-                    updateTreeView: true
+            // Build a single batch: schema_create + field_create per field.
+            // Field unids arrive from the AI path already minted (see
+            // `_setConversationResponse`); preserve them so SSE echoes match
+            // the local DOM tree.
+            const ops: SchemaEditorApiCall[] = [
+                {
+                    op: 'schema_create',
+                    containerUnid: activeEntry.getUnid(),
+                    unid: tableData.unid,
+                    name: tableData.name,
+                    description: tableData.description,
+                    extend: tableData.extend,
+                    pos: tableData.pos
                 }
-            }));
+            ];
+
+            for (const field of tableData.fields) {
+                ops.push({
+                    op: 'field_create',
+                    schemaUnid: tableData.unid,
+                    unid: field.unid ?? crypto.randomUUID(),
+                    name: field.name,
+                    type: field.type,
+                    description: field.description
+                });
+            }
+
+            const editor = SchemaEditor.getActive();
+            const client = editor?.getEditorClient() ?? null;
+
+            if (client !== null) {
+                client.batch(ops).then(() => {
+                    window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                        detail: {updateView: true, updateTreeView: true}
+                    }));
+                }).catch((err) => {
+                    AlertDialog.showAlert(
+                        'Add schema',
+                        err instanceof Error ? err.message : String(err),
+                        AlertDialogTypes.error
+                    );
+                });
+            }
 
             this.destroy();
         });

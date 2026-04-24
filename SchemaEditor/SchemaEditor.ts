@@ -1,6 +1,9 @@
 import {BrowserJsPlumbInstance} from '@jsplumb/browser-ui';
-import {ProjectSave} from '../SchemaProject/SchemaProjectSave.js';
 import {EditorInit, ProjectsData, SchemaProjectsResponse} from '../SchemaProject/SchemaProjectsResponse.js';
+import {SchemaRepositoryEvent} from '../SchemaRepository/SchemaRepositoryEventTypes.js';
+import {SchemaApiClient, SchemaApiError} from './Api/SchemaApiClient.js';
+import {SchemaEditorApiCall, SchemaEditorUpdateDataDetail} from './Api/SchemaEditorApiCall.js';
+import {SchemaSseClient} from './Api/SchemaSseClient.js';
 import {AlertDialog, AlertDialogTypes} from './Base/AlertDialog.js';
 import {AutoLayout} from './Base/AutoLayout.js';
 import {BaseTable} from './Base/BaseTable.js';
@@ -58,6 +61,8 @@ type SchemaEditorValidateEventDetail = {
     schema: string;
     json: string;
 };
+
+export type {SchemaEditorApiCall, SchemaEditorUpdateDataDetail} from './Api/SchemaEditorApiCall.js';
 
 /**
  * Schema Editor
@@ -135,6 +140,49 @@ export class SchemaEditor {
     };
 
     /**
+     * Stable clientId for this session. Every mutation goes out with this
+     * in `X-Client-Id`; the SSE handler uses it to recognize our own echoes.
+     * @protected
+     */
+    protected _clientId: string = crypto.randomUUID();
+
+    /**
+     * One client per loaded project. Populated in {@link setData}.
+     * @protected
+     */
+    protected _clients: Map<string, SchemaApiClient> = new Map();
+
+    /**
+     * One live SSE stream per loaded project. Remote mutations (other tabs,
+     * MCP) trigger a debounced reload via {@link _scheduleRemoteResync}.
+     * @protected
+     */
+    protected _sseClients: Map<string, SchemaSseClient> = new Map();
+
+    /**
+     * Debounce timer for `loadData()` triggered by SSE events.
+     * @protected
+     */
+    protected _resyncTimer: ReturnType<typeof setTimeout>|null = null;
+
+    /**
+     * Debounce timer for persisting the active-selection change back to
+     * editor_settings. Clicking a schema can trigger two updates in a row
+     * (e.g. `setActivEntry(null)` + `setActivEntryTable(entry)`); coalesce
+     * them into one save.
+     * @protected
+     */
+    protected _selectionPersistTimer: ReturnType<typeof setTimeout>|null = null;
+
+    /**
+     * True while the editor programmatically restores selection from
+     * editor_settings on load. Suppresses the save-back path so a fresh
+     * load never writes the same values it just read.
+     * @protected
+     */
+    protected _restoringSelection: boolean = false;
+
+    /**
      * Add a new Schema
      * @protected
      */
@@ -195,9 +243,10 @@ export class SchemaEditor {
                 }
 
                 if (table !== null) {
+                    const activeEntry = Treeview.getActiveEntry()!;
                     const link = new LinkTable(crypto.randomUUID(), table.getUnid(), table);
 
-                    Treeview.getActiveEntry()!.addLinkTable(link);
+                    activeEntry.addLinkTable(link);
 
                     const linkElement = link.getElement();
 
@@ -205,7 +254,17 @@ export class SchemaEditor {
                         this._container!.appendChild(linkElement);
                         this._jsPlumbInstance!.revalidate(linkElement);
 
-                        this._updateView();
+                        window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                            detail: {
+                                updateView: true,
+                                apiCall: {
+                                    op: 'link_create',
+                                    containerUnid: activeEntry.getUnid(),
+                                    link_unid: table.getUnid(),
+                                    unid: link.getUnid()
+                                }
+                            }
+                        }));
                     }
                 }
             }
@@ -231,7 +290,20 @@ export class SchemaEditor {
     /**
      * Init
      */
+    /**
+     * Active editor instance. `main.ts` creates a single `SchemaEditor` and
+     * calls `init()`; the last one to do so wins. Dialogs (e.g.
+     * `SchemaCreateDialog`) that need to call batched API ops reach the
+     * client registry through this handle.
+     */
+    protected static _active: SchemaEditor|null = null;
+
+    public static getActive(): SchemaEditor|null {
+        return SchemaEditor._active;
+    }
+
     public init() {
+        SchemaEditor._active = this;
         this._jsPlumbInstance = jsPlumbInstance;
         this._container = jsPlumbInstance.getContainer();
 
@@ -331,11 +403,43 @@ export class SchemaEditor {
 
             this._jsPlumbInstance?.repaintEverything();
 
-            window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {
-                detail: {
-                    updateView: true
-                }
-            }));
+            const ops: SchemaEditorApiCall[] = [];
+
+            for (const schema of schemas) {
+                ops.push({
+                    op: 'schema_update',
+                    unid: schema.getUnid(),
+                    patch: {pos: schema.getPosition()}
+                });
+            }
+
+            for (const enumeration of enums) {
+                ops.push({
+                    op: 'enum_update',
+                    unid: enumeration.getUnid(),
+                    patch: {pos: enumeration.getPosition()}
+                });
+            }
+
+            for (const link of links) {
+                ops.push({
+                    op: 'link_update',
+                    unid: link.getUnid(),
+                    patch: {pos: link.getPosition()}
+                });
+            }
+
+            const client = this._getEditorClient();
+
+            if (client !== null && ops.length > 0) {
+                client.batch(ops).then(() => {
+                    this._updateView();
+                }).catch((err) => {
+                    this._handleApiError(err, 'Arrange tables');
+                });
+            } else {
+                this._updateView();
+            }
         });
 
         // searchbar ---------------------------------------------------------------------------------------------------
@@ -413,10 +517,8 @@ export class SchemaEditor {
         // listener update events --------------------------------------------------------------------------------------
 
         window.addEventListener(EditorEvents.updateData, (event: Event) => {
-            const customEvent = event as CustomEvent<{
-                updateView?: boolean,
-                updateTreeView?: boolean;
-            }>;
+            const customEvent = event as CustomEvent<SchemaEditorUpdateDataDetail|undefined>;
+            const detail = customEvent.detail;
 
             const rootEntry = this._treeview?.getRoot();
 
@@ -424,17 +526,23 @@ export class SchemaEditor {
                 rootEntry.sortingEntrys();
             }
 
-            this.saveData().then(() => {
-                if (customEvent.detail) {
-                    if (customEvent.detail.updateTreeView === true) {
+            const persist = detail?.apiCall
+                ? this.dispatchApiCall(detail.apiCall)
+                : Promise.resolve();
+
+            persist
+                .catch((err) => {
+                    this._handleApiError(err, 'Save');
+                })
+                .finally(() => {
+                    if (detail?.updateTreeView === true) {
                         this._updateTreeview();
                     }
 
-                    if (customEvent.detail.updateView === true) {
+                    if (detail?.updateView === true) {
                         this._updateView();
                     }
-                }
-            });
+                });
         });
 
         // listener update view ----------------------------------------------------------------------------------------
@@ -463,10 +571,11 @@ export class SchemaEditor {
                     if (rootEntry.removeSchemaTable(customEvent.detail.id)) {
                         rootEntry.removeEntry(customEvent.detail.id);
 
-                        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {
+                        window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
                             detail: {
                                 updateView: true,
-                                updateTreeView: true
+                                updateTreeView: true,
+                                apiCall: {op: 'schema_delete', unid: customEvent.detail.id}
                             }
                         }));
                     }
@@ -494,10 +603,11 @@ export class SchemaEditor {
                     if (rootEntry.removeEnumTable(customEvent.detail.id)) {
                         rootEntry.removeEntry(customEvent.detail.id);
 
-                        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {
+                        window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
                             detail: {
                                 updateView: true,
-                                updateTreeView: true
+                                updateTreeView: true,
+                                apiCall: {op: 'enum_delete', unid: customEvent.detail.id}
                             }
                         }));
                     }
@@ -516,10 +626,11 @@ export class SchemaEditor {
                     ConfirmDialog.showConfirm('Delete link', 'Do you really want to delete link?', () => {
                         activEntry.removeLinkTable(customEvent.detail.id);
 
-                        window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {
+                        window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
                             detail: {
                                 updateView: true,
-                                updateTreeView: true
+                                updateTreeView: true,
+                                apiCall: {op: 'link_delete', unid: customEvent.detail.id}
                             }
                         }));
                     });
@@ -544,10 +655,11 @@ export class SchemaEditor {
                             if (parentEntry) {
                                 parentEntry.removeEntry(entry.getUnid());
 
-                                window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {
+                                window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
                                     detail: {
                                         updateView: true,
-                                        updateTreeView: true
+                                        updateTreeView: true,
+                                        apiCall: {op: 'container_delete', unid: entry.getUnid()}
                                     }
                                 }));
                             }
@@ -602,22 +714,41 @@ export class SchemaEditor {
             const treeview = this._treeview;
 
             if (treeview) {
+                let apiCall: SchemaEditorApiCall|undefined;
+
                 switch (customEvent.detail.sourceType) {
                     case SchemaJsonDataFSType.folder:
                     case SchemaJsonDataFSType.file:
                         treeview.moveToEntry(customEvent.detail.sourceId, customEvent.detail.detionationId);
+                        apiCall = {
+                            op: 'container_move',
+                            unid: customEvent.detail.sourceId,
+                            toParentUnid: customEvent.detail.detionationId
+                        };
                         break;
 
                     case SchemaJsonDataFSType.schema:
                         treeview.moveTableToEntry(customEvent.detail.sourceId, customEvent.detail.detionationId);
+                        apiCall = {
+                            op: 'schema_move',
+                            unid: customEvent.detail.sourceId,
+                            toContainerUnid: customEvent.detail.detionationId
+                        };
                         break;
 
                     case SchemaJsonDataFSType.enum:
                         treeview.moveEnumToEntry(customEvent.detail.sourceId, customEvent.detail.detionationId);
+                        apiCall = {
+                            op: 'enum_move',
+                            unid: customEvent.detail.sourceId,
+                            toContainerUnid: customEvent.detail.detionationId
+                        };
                         break;
                 }
 
-                window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                    detail: apiCall ? {apiCall} : {}
+                }));
             }
         });
 
@@ -794,6 +925,35 @@ export class SchemaEditor {
             const dialog = new SchemaValidateDialog(target.getUnid(), target.getName());
             dialog.show();
             dialog.validateNow(jsonString);
+        });
+
+        // listener selection changed ---------------------------------------------------------------------------------
+        // Persist the active entry / active entry table so the next reload
+        // opens the same view. Debounced so a paired setActivEntry(null) +
+        // setActivEntryTable(entry) coalesces into one save.
+
+        window.addEventListener(EditorEvents.selectionChanged, () => {
+            if (this._restoringSelection) {
+                return;
+            }
+
+            if (this._selectionPersistTimer !== null) {
+                clearTimeout(this._selectionPersistTimer);
+            }
+
+            this._selectionPersistTimer = setTimeout(() => {
+                this._selectionPersistTimer = null;
+
+                const entry = Treeview.getActiveEntry();
+                const entryTable = Treeview.getActivEntryTable();
+
+                this._editorSettings.active_entry_unid = entry?.getUnid();
+                this._editorSettings.active_entry_table_unid = entryTable?.getUnid();
+
+                this.saveEditorSettings().catch((err) => {
+                    console.warn('persist selection failed', err);
+                });
+            }, 50);
         });
 
         // resizer -----------------------------------------------------------------------------------------------------
@@ -1100,6 +1260,8 @@ export class SchemaEditor {
      * @param {ProjectsResponse} data
      */
     public setData(data: ProjectsData): void {
+        this._resetClients(data.projects.map((p) => p.unid));
+
         const rootEntry: JsonDataFS = {
             unid: 'root',
             name: 'Root',
@@ -1154,32 +1316,303 @@ export class SchemaEditor {
         }
 
         this._treeview?.getRoot().updateView(true);
+
+        this._restoreActiveSelection();
     }
 
     /**
-     * Save data to vite server
+     * Apply the persisted active-entry / active-entry-table from
+     * editor_settings. The table id takes precedence — it's what the
+     * user sees highlighted. Falls back to the containing folder/file
+     * entry if no table was selected.
+     * @protected
      */
-    public async saveData(): Promise<void> {
-        const save: ProjectSave = {
-            data: this.getData()
-        };
+    protected _restoreActiveSelection(): void {
+        const rootEntry = this._treeview?.getRoot();
 
-        await fetch('/api/save-schema', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(save)
-        });
+        if (!rootEntry) {
+            return;
+        }
+
+        this._restoringSelection = true;
+
+        try {
+            const tableUnid = this._editorSettings.active_entry_table_unid;
+            const entryUnid = this._editorSettings.active_entry_unid;
+
+            if (tableUnid) {
+                const tableEntry = rootEntry.getEntryById(tableUnid);
+
+                if (tableEntry) {
+                    Treeview.setActivEntry(null);
+                    Treeview.setActivEntryTable(tableEntry);
+                    window.dispatchEvent(new CustomEvent(EditorEvents.updateView, {}));
+                    return;
+                }
+            }
+
+            if (entryUnid) {
+                const entry = rootEntry.getEntryById(entryUnid);
+
+                if (entry) {
+                    Treeview.setActivEntryTable(null);
+                    Treeview.setActivEntry(entry);
+                    window.dispatchEvent(new CustomEvent(EditorEvents.updateView, {}));
+                }
+            }
+        } finally {
+            this._restoringSelection = false;
+        }
+    }
+
+    /**
+     * Dispatch a granular mutation to the project's API client. Consumed
+     * by the `EditorEvents.updateData` listener when `detail.apiCall` is
+     * set.
+     */
+    public async dispatchApiCall(call: SchemaEditorApiCall): Promise<void> {
+        const client = this._getEditorClient();
+
+        if (client === null) {
+            throw new Error('No active project client');
+        }
+
+        switch (call.op) {
+            // Containers -----------------------------------------------------
+            case 'container_create':
+                await client.createContainer({
+                    parentUnid: call.parentUnid,
+                    name: call.name,
+                    type: call.type,
+                    icon: call.icon,
+                    unid: call.unid
+                });
+                return;
+
+            case 'container_update':
+                await client.updateContainer(call.unid, call.patch);
+                return;
+
+            case 'container_delete':
+                await client.deleteContainer(call.unid);
+                return;
+
+            case 'container_move':
+                await client.moveContainer(call.unid, {
+                    toParentUnid: call.toParentUnid,
+                    index: call.index
+                });
+                return;
+
+            // Schemas --------------------------------------------------------
+            case 'schema_create':
+                await client.createSchema({
+                    containerUnid: call.containerUnid,
+                    name: call.name,
+                    description: call.description,
+                    extend: call.extend,
+                    pos: call.pos,
+                    unid: call.unid
+                });
+                return;
+
+            case 'schema_update':
+                await client.updateSchema(call.unid, call.patch);
+                return;
+
+            case 'schema_delete':
+                await client.deleteSchema(call.unid);
+                return;
+
+            case 'schema_move':
+                await client.moveSchema(call.unid, {toContainerUnid: call.toContainerUnid});
+                return;
+
+            // Fields ---------------------------------------------------------
+            case 'field_create':
+                await client.createField(call.schemaUnid, {
+                    name: call.name,
+                    type: call.type,
+                    optional: call.optional,
+                    array: call.array,
+                    types: call.types,
+                    description: call.description,
+                    index: call.index,
+                    unid: call.unid
+                });
+                return;
+
+            case 'field_update':
+                await client.updateField(call.schemaUnid, call.fieldUnid, call.patch);
+                return;
+
+            case 'field_delete':
+                await client.deleteField(call.schemaUnid, call.fieldUnid);
+                return;
+
+            case 'field_reorder':
+                await client.reorderFields(call.schemaUnid, call.order);
+                return;
+
+            // Enums ----------------------------------------------------------
+            case 'enum_update':
+                await client.updateEnum(call.unid, call.patch);
+                return;
+
+            case 'enum_delete':
+                await client.deleteEnum(call.unid);
+                return;
+
+            case 'enum_move':
+                await client.moveEnum(call.unid, {toContainerUnid: call.toContainerUnid});
+                return;
+
+            // Enum values ----------------------------------------------------
+            case 'enum_value_create':
+                await client.createEnumValue(call.enumUnid, {
+                    name: call.name,
+                    value: call.value,
+                    index: call.index,
+                    unid: call.unid
+                });
+                return;
+
+            case 'enum_value_update':
+                await client.updateEnumValue(call.enumUnid, call.valueUnid, call.patch);
+                return;
+
+            case 'enum_value_delete':
+                await client.deleteEnumValue(call.enumUnid, call.valueUnid);
+                return;
+
+            case 'enum_value_reorder':
+                await client.reorderEnumValues(call.enumUnid, call.order);
+                return;
+
+            // Links ----------------------------------------------------------
+            case 'link_create':
+                await client.createLink({
+                    containerUnid: call.containerUnid,
+                    link_unid: call.link_unid,
+                    unid: call.unid,
+                    pos: call.pos
+                });
+                return;
+
+            case 'link_update':
+                await client.updateLink(call.unid, call.patch);
+                return;
+
+            case 'link_delete':
+                await client.deleteLink(call.unid);
+                return;
+        }
+    }
+
+    /**
+     * Tears down clients/SSE for projects no longer loaded and spins up new
+     * ones for freshly-seen project unids. Idempotent — calling with the
+     * same set of unids is a no-op.
+     */
+    protected _resetClients(projectUnids: string[]): void {
+        const incoming = new Set(projectUnids);
+
+        for (const [unid, sse] of this._sseClients.entries()) {
+            if (!incoming.has(unid)) {
+                sse.close();
+                this._sseClients.delete(unid);
+                this._clients.delete(unid);
+            }
+        }
+
+        for (const unid of projectUnids) {
+            if (this._clients.has(unid)) {
+                continue;
+            }
+
+            this._clients.set(unid, new SchemaApiClient(unid, this._clientId));
+
+            const sse = new SchemaSseClient(unid);
+            sse.onEvent((ev) => this._handleRemoteEvent(ev));
+            sse.onResync(() => this._scheduleRemoteResync());
+            sse.onError(() => this._scheduleRemoteResync());
+            sse.connect();
+            this._sseClients.set(unid, sse);
+        }
+    }
+
+    /**
+     * Returns the client for the active project. Currently single-project
+     * (first entry); multi-project routing would resolve the target project
+     * from the mutation context.
+     */
+    public getEditorClient(): SchemaApiClient|null {
+        const first = this._clients.values().next();
+        return first.done ? null : first.value;
+    }
+
+    /** @deprecated use {@link getEditorClient} */
+    protected _getEditorClient(): SchemaApiClient|null {
+        return this.getEditorClient();
+    }
+
+    /**
+     * Handles SSE events from the server. Our own mutations echo back with
+     * our clientId and are ignored here — UI is already up to date. Remote
+     * mutations (MCP, other browser tab) trigger a debounced full reload,
+     * except `editor_settings` which is applied directly.
+     */
+    protected _handleRemoteEvent(event: SchemaRepositoryEvent): void {
+        if (event.clientId === this._clientId) {
+            return;
+        }
+
+        if (event.op === 'editor_settings') {
+            this._editorSettings = event.payload;
+            this._updateResizer();
+            return;
+        }
+
+        this._scheduleRemoteResync();
+    }
+
+    protected _scheduleRemoteResync(): void {
+        if (this._resyncTimer !== null) {
+            return;
+        }
+
+        this._resyncTimer = setTimeout(() => {
+            this._resyncTimer = null;
+            this.loadData().catch((err) => {
+                console.warn('remote resync failed', err);
+            });
+        }, 150);
+    }
+
+    /**
+     * Presents a mutation error to the user. `SchemaApiError` carries an
+     * HTTP status and a short code; unknown errors fall back to their
+     * message.
+     */
+    protected _handleApiError(error: unknown, context: string): void {
+        const msg = error instanceof SchemaApiError
+            ? `${error.message}${error.code ? ` (${error.code})` : ''}`
+            : (error instanceof Error ? error.message : String(error));
+
+        AlertDialog.showAlert(context, msg, AlertDialogTypes.error);
     }
 
     /**
      * save editor settings
      */
     public async saveEditorSettings(): Promise<void> {
-        await fetch('/api/save-editor-setting', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(this._editorSettings)
-        });
+        const client = this.getEditorClient();
+
+        if (client === null) {
+            return;
+        }
+
+        await client.setEditorSettings(this._editorSettings);
     }
 
     /**

@@ -1,3 +1,4 @@
+import {encode} from '@toon-format/toon';
 import {ConfigProvider} from '../Config/Config.js';
 import {ASchemaProvider} from './ASchemaProvider.js';
 import {ProviderConversationJson, SchemaProviderConversationJson} from './SchemaProviderConversationJson.js';
@@ -58,8 +59,11 @@ export abstract class SchemaProviderAIBase extends ASchemaProvider {
             json: null
         });
 
-        // Provider-specific request
-        const text = await this._sendRequest(this._conversation);
+        // Provider-specific request. The conversation handed to the
+        // provider is a TOON-compressed copy so replayed model turns ride
+        // fewer tokens; the in-memory conversation keeps the raw JSON
+        // text for UI display.
+        const text = await this._sendRequest(this._compressConversation(this._conversation));
 
         if (!text) {
             throw new Error("No answer from model");
@@ -106,6 +110,29 @@ export abstract class SchemaProviderAIBase extends ASchemaProvider {
      */
     protected _trimHistory() {
         this._conversation = this._conversation.slice(-10);
+    }
+
+    /**
+     * Produce a transport-ready copy of the conversation where model
+     * turns carrying a validated JSON payload are re-encoded as TOON.
+     * TOON is ~25–30% smaller than pretty JSON for this schema shape,
+     * so replaying multi-turn history costs fewer input tokens. User
+     * turns and the system prompt are left untouched, as is any model
+     * turn whose response failed validation (its raw text is the only
+     * evidence we have of what the model actually said).
+     */
+    protected _compressConversation(conversation: ProviderConversationPart[]): ProviderConversationPart[] {
+        return conversation.map((part) => {
+            if (part.role !== ConversationPartRole.model || part.json === null) {
+                return part;
+            }
+
+            return {
+                role: part.role,
+                text: encode(part.json as unknown as Parameters<typeof encode>[0]),
+                json: part.json
+            };
+        });
     }
 
     /**

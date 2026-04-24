@@ -1,3 +1,4 @@
+import {SchemaEditorUpdateDataDetail} from '../Api/SchemaEditorApiCall.js';
 import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
@@ -146,7 +147,31 @@ export class TreeviewEntry {
         this._spanToggle.classList.add('toggle-icon');
         this._spanToggle.textContent = EditorIcons.toggle_open;
         this._spanToggle.addEventListener("click", () => {
-            this.setToggle(!this.isToggle());
+            const nextOpen = !this.isToggle();
+            this.setToggle(nextOpen);
+
+            // Only folder containers live as real server entities under
+            // the project root. The client-side synthetic root and project
+            // wrappers use unids that don't map back to the server FS, so
+            // persistence on them would 404. Readonly extern trees are
+            // skipped for the same reason.
+            if (this._readonly) {
+                return;
+            }
+
+            if (this._type !== SchemaJsonDataFSType.folder) {
+                return;
+            }
+
+            window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                detail: {
+                    apiCall: {
+                        op: 'container_update',
+                        unid: this.getUnid(),
+                        patch: {istoggle: nextOpen}
+                    }
+                }
+            }));
         });
 
         folderLine.appendChild(this._spanToggle);
@@ -238,20 +263,30 @@ export class TreeviewEntry {
 
                 dialog.setOnConfirm(dialog1 => {
                     const tdialog = dialog1 as unknown as TreeviewDialog;
+                    const newUnid = crypto.randomUUID();
+                    const newName = tdialog.getName();
+                    const newType = tdialog.getType();
+                    const newIcon = tdialog.getIcon();
 
-                    const entry = new TreeviewEntry(
-                        crypto.randomUUID(),
-                        tdialog.getName(),
-                        tdialog.getType(),
-                        tdialog.getIcon()
-                    );
+                    const entry = new TreeviewEntry(newUnid, newName, newType, newIcon);
 
                     this._list.set(entry.getUnid(), entry);
                     this._liElement.appendChild(entry.getElement());
 
                     folderLine.classList.remove('folder-line-hover');
 
-                    window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                    window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                        detail: {
+                            apiCall: {
+                                op: 'container_create',
+                                parentUnid: this.getUnid(),
+                                unid: newUnid,
+                                name: newName,
+                                type: newType,
+                                icon: newIcon
+                            }
+                        }
+                    }));
 
                     return true;
                 });
@@ -305,13 +340,29 @@ export class TreeviewEntry {
 
                 dialog.setOnConfirm(dialog1 => {
                     const tdialog = dialog1 as unknown as TreeviewDialog;
-                    this.setName(tdialog.getName());
-                    this.setType(tdialog.getType());
-                    this.setIcon(tdialog.getIcon());
+                    const newName = tdialog.getName();
+                    const newType = tdialog.getType();
+                    const newIcon = tdialog.getIcon();
+
+                    this.setName(newName);
+                    this.setType(newType);
+                    this.setIcon(newIcon);
 
                     folderLine.classList.remove('folder-line-hover');
 
-                    window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                    window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                        detail: {
+                            apiCall: {
+                                op: 'container_update',
+                                unid: this.getUnid(),
+                                patch: {
+                                    name: newName,
+                                    type: newType,
+                                    icon: newIcon
+                                }
+                            }
+                        }
+                    }));
 
                     return true;
                 });
@@ -823,6 +874,10 @@ export class TreeviewEntry {
      * @param {JsonDataFS} data
      */
     public setData(data: JsonDataFS): void {
+        // Clear any previous state so reloads (initial load, SSE resync,
+        // manual refresh) rebuild from scratch instead of appending.
+        this.removeEntrys();
+
         this._unid = data.unid;
         this.setType(data.type);
         this.setName(data.name);
@@ -1035,7 +1090,10 @@ export class TreeviewEntry {
     }
 
     /**
-     * Remove entrys
+     * Remove entrys. Resets this node back to an empty state so a subsequent
+     * {@link setData} call rebuilds cleanly — otherwise a reload (e.g. the
+     * SSE-triggered resync after a remote MCP edit) would duplicate every
+     * child because setData previously only appended.
      */
     public removeEntrys(): void {
         for (const aenum of this._enums) {
@@ -1053,6 +1111,7 @@ export class TreeviewEntry {
 
         this._enums = [];
         this._tables = [];
+        this._links = [];
         this._list.clear();
     }
 

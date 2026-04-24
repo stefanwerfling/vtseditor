@@ -17,6 +17,18 @@ export type ContextMenuItem = {
 };
 
 /**
+ * Separator marker usable inside a link-mode items list.
+ */
+export type ContextMenuSeparator = {
+    separator: true;
+};
+
+/**
+ * Either an actionable item or a horizontal separator.
+ */
+export type ContextMenuEntry = ContextMenuItem|ContextMenuSeparator;
+
+/**
  * Context menu — a trigger button (three vertical dots) that opens a
  * floating action menu. The menu is rendered in document.body so it is
  * not clipped by overflow on the triggering container (e.g. schema
@@ -70,6 +82,13 @@ export class ContextMenu {
      * @protected
      */
     protected _onReposition: () => void;
+
+    /**
+     * Items injected for the current link-mode override. When link mode is
+     * active the regular items are hidden and these replacements are shown.
+     * @protected
+     */
+    protected _linkModeItems: HTMLElement[] = [];
 
     /**
      * Constructor
@@ -239,6 +258,54 @@ export class ContextMenu {
             this.close();
         } else {
             this.open();
+        }
+    }
+
+    /**
+     * Replace the current menu with a link-mode override: hides every
+     * existing item/separator and shows only the passed entries. Used
+     * when the owning table is reused as a LinkTable — most regular
+     * actions (edit, delete, add field, …) do not apply to a link.
+     * @param {ContextMenuEntry[]} entries
+     */
+    public setLinkMode(entries: ContextMenuEntry[]): void {
+        this.clearLinkMode();
+
+        for (const child of Array.from(this._menu.children)) {
+            const el = child as HTMLElement;
+            el.dataset.linkModeHidden = 'true';
+            el.style.display = 'none';
+        }
+
+        for (const entry of entries) {
+            if ('separator' in entry) {
+                const sep = document.createElement('div');
+                sep.classList.add('context-menu-separator');
+                this._menu.appendChild(sep);
+                this._linkModeItems.push(sep);
+            } else {
+                const el = this.addItem(entry);
+                this._linkModeItems.push(el);
+            }
+        }
+    }
+
+    /**
+     * Undo setLinkMode — remove the injected link items and reveal the
+     * original ones. Safe to call when link mode is not active.
+     */
+    public clearLinkMode(): void {
+        for (const el of this._linkModeItems) {
+            el.remove();
+        }
+        this._linkModeItems = [];
+
+        for (const child of Array.from(this._menu.children)) {
+            const el = child as HTMLElement;
+            if (el.dataset.linkModeHidden === 'true') {
+                el.style.display = '';
+                delete el.dataset.linkModeHidden;
+            }
         }
     }
 

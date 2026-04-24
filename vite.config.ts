@@ -5,16 +5,21 @@ import fs from 'fs';
 import path from 'path';
 import {defineConfig, Plugin} from 'vite';
 import {SchemaErrors, Vts} from 'vts';
-import {ConfigAIProviderName, SchemaConfig} from './Config/Config.js';
-import {JsonData, SchemaJsonData, SchemaJsonEditorSettings} from './SchemaEditor/JsonData.js';
+import {ConfigAIProviderName, ConfigMcp, SchemaConfig} from './Config/Config.js';
+import {SchemaJsonData} from './SchemaEditor/JsonData.js';
 import {SchemaExternLoader} from './SchemaExtern/SchemaExternLoader.js';
 import {SchemaGenerator} from './SchemaGenerator/SchemaGenerator.js';
 import {SchemaProject} from './SchemaProject/SchemaProject.js';
+import {StreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import {registerSchemaApiRoutes} from './SchemaApi/SchemaApiRoutes.js';
+import {createSchemaMcpServer} from './SchemaMcp/SchemaMcpServer.js';
+import {SchemaFsRepository} from './SchemaRepository/SchemaFsRepository.js';
+import {SchemaRepositoryEvent} from './SchemaRepository/SchemaRepositoryEventBus.js';
+import {SchemaRepositoryRegistry} from './SchemaRepository/SchemaRepositoryRegistry.js';
 import {
     ProjectGenerateSchemaResponse,
     SchemaProjectGenerateSchema
 } from './SchemaProject/SchemaProjectGenerateSchema.js';
-import {SchemaProjectSave} from './SchemaProject/SchemaProjectSave.js';
 import {ProjectsData, ProjectsResponse} from './SchemaProject/SchemaProjectsResponse.js';
 import {SchemaProvider} from './SchemaProvider/SchemaProvider.js';
 import {SchemaProviderAIBase} from './SchemaProvider/SchemaProviderAIBase.js';
@@ -65,8 +70,9 @@ function expressMiddleware(): Plugin {
             }
 
             // config load ---------------------------------------------------------------------------------------------
-            const projects: Map<string, SchemaProject> = new Map<string, SchemaProject>();
+            const repositories = new SchemaRepositoryRegistry();
             let providerAiName: string|ConfigAIProviderName = ConfigAIProviderName.localai;
+            let mcpSection: ConfigMcp|undefined;
 
             if (configFile) {
                 const config = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
@@ -93,6 +99,10 @@ function expressMiddleware(): Plugin {
                         if (config.editor.aiProvider) {
                             providerAiName = config.editor.aiProvider;
                         }
+                    }
+
+                    if (config.mcp) {
+                        mcpSection = config.mcp;
                     }
 
                     for (const aSchemaProject of config.projects) {
@@ -165,7 +175,7 @@ function expressMiddleware(): Plugin {
                         console.log(' ');
                         console.log(' ');
 
-                        projects.set(crypto.randomUUID(), project);
+                        repositories.register(crypto.randomUUID(), project);
                     }
                 } else {
                     console.log('Your config file has an incorrect structure, please check the!');
@@ -177,114 +187,213 @@ function expressMiddleware(): Plugin {
             const loader = new SchemaExternLoader(projectRoot);
             loader.scan().then();
 
-            // ---------------------------------------------------------------------------------------------------------
+            // Flush any pending debounced writes on shutdown so granular
+            // mutations queued just before SIGINT are not lost.
+            const flushOnExit = (): void => {
+                void repositories.flushAll();
+            };
 
-            app.post('/api/save-editor-setting', (req, res) => {
-                const bodyData = req.body;
+            process.once('SIGINT', flushOnExit);
+            process.once('SIGTERM', flushOnExit);
+            process.once('beforeExit', flushOnExit);
 
-                if (SchemaJsonEditorSettings.validate(bodyData, [])) {
-                    let hasError = false;
+            // -----------------------------------------------------------------
+            // Code generation pipeline shared by the legacy /api/save-schema
+            // autoGenerate path and the explicit /api/projects/:pid/generate
+            // endpoint. Callers are expected to have flushed the repo first.
+            // -----------------------------------------------------------------
+            const runGenerate = async (repo: SchemaFsRepository): Promise<void> => {
+                const projectOption = repo.getProject();
 
-                    for (const project of projects.values()) {
-                        const content = fs.readFileSync(project.schemaPath, 'utf-8');
-                        const schemaData = JSON.parse(content);
+                const gen = new SchemaGenerator({
+                    schemaPrefix: projectOption.schemaPrefix,
+                    createTypes: projectOption.createTypes,
+                    createIndex: projectOption.createIndex,
+                    destinationPath: projectOption.destinationPath,
+                    destinationClear: projectOption.destinationClear,
+                    code_indent: projectOption.codeIndent,
+                    code_comment: projectOption.codeComment
+                });
 
-                        if (SchemaJsonData.validate(schemaData, [])) {
-                            const schema: JsonData = {
-                                fs: schemaData.fs,
-                                editor: bodyData
-                            };
+                const externFiles = loader.getList();
 
-                            fs.mkdirSync(path.dirname(project.schemaPath), { recursive: true });
-                            fs.writeFileSync(project.schemaPath, JSON.stringify(schema, null, 2), 'utf-8');
+                for (const [, externSource] of externFiles.entries()) {
+                    try {
+                        if (fs.existsSync(externSource.schemaFile)) {
+                            const content = fs.readFileSync(externSource.schemaFile, 'utf-8');
+                            const schemaData = JSON.parse(content);
 
-                            console.log(`Save editor setting for Project: ${project.schemaPath}`);
-                        } else {
-                            console.error(`Save editor setting corrupted schema file: ${project.schemaPath}`);
-                            hasError = true;
+                            if (SchemaJsonData.validate(schemaData, [])) {
+                                gen.setExternSource(externSource, schemaData.fs);
+                            }
                         }
+                    } catch (e) {
+                        console.log('Error: ');
+                        console.log(e);
                     }
+                }
 
-                    if (hasError) {
-                        res.status(500).json({ success: false, msg: '`Save editor setting corrupted schema file.'});
+                await SchemaScript.run(projectOption.scripts_before_generate);
+
+                gen.generate(repo.getFs());
+
+                await SchemaScript.run(projectOption.scripts_after_generate);
+            };
+
+            // Wire autoGenerate onto each repo's post-flush hook. Mutations
+            // go through the debounced flush, so a burst of granular edits
+            // coalesces into one write -> one regeneration.
+            for (const repo of repositories.values()) {
+                if (repo.getProject().autoGenerate) {
+                    repo.setPostFlushHook(() => runGenerate(repo));
+                }
+            }
+
+            // -----------------------------------------------------------------
+            // MCP server (opt-in via `vtseditor.json` -> `mcp.enabled`). Lives
+            // in the same process as the web editor and talks to the same
+            // `SchemaRepositoryRegistry`, so MCP edits and web edits share
+            // one source of truth and echo through the same SSE stream.
+            //
+            // Multi-session: the underlying `McpServer` from the SDK tracks a
+            // single initialize-state, so we allocate one server+transport
+            // per session. The first request from a new client (no session
+            // id + `initialize` body) creates the pair; subsequent requests
+            // route by `Mcp-Session-Id` header.
+            // -----------------------------------------------------------------
+            if (mcpSection?.enabled) {
+                const mcpPath = mcpSection.path ?? '/mcp';
+                const mcpTransports = new Map<string, StreamableHTTPServerTransport>();
+
+                const isInitializeRequest = (body: unknown): boolean => {
+                    if (Array.isArray(body)) {
+                        return body.some(isInitializeRequest);
+                    }
+                    return typeof body === 'object'
+                        && body !== null
+                        && (body as {method?: unknown}).method === 'initialize';
+                };
+
+                app.all(mcpPath, async (req, res): Promise<void> => {
+                    const headerSessionId = req.header('Mcp-Session-Id');
+                    let transport: StreamableHTTPServerTransport|undefined;
+
+                    if (headerSessionId) {
+                        transport = mcpTransports.get(headerSessionId);
+
+                        if (!transport) {
+                            res.status(404).json({
+                                jsonrpc: '2.0',
+                                error: {code: -32000, message: `Unknown MCP session ${headerSessionId}`},
+                                id: null
+                            });
+                            return;
+                        }
+                    } else if (req.method === 'POST' && isInitializeRequest(req.body)) {
+                        transport = new StreamableHTTPServerTransport({
+                            sessionIdGenerator: () => crypto.randomUUID(),
+                            onsessioninitialized: (sid) => {
+                                mcpTransports.set(sid, transport!);
+                            }
+                        });
+                        transport.onclose = (): void => {
+                            if (transport?.sessionId) {
+                                mcpTransports.delete(transport.sessionId);
+                            }
+                        };
+
+                        const mcpServer = createSchemaMcpServer({repositories, runGenerate});
+                        await mcpServer.connect(transport);
+                    } else {
+                        res.status(400).json({
+                            jsonrpc: '2.0',
+                            error: {code: -32000, message: 'No MCP session; send initialize first.'},
+                            id: null
+                        });
                         return;
                     }
 
-                    res.status(200).json({ success: true });
-                } else {
-                    res.status(500).json({ success: false, msg: 'Bad request body schema!'});
-                }
-            });
+                    await transport.handleRequest(req, res, req.body);
+                });
+
+                console.log(`🤖 MCP server mounted at ${mcpPath}`);
+            }
 
             // ---------------------------------------------------------------------------------------------------------
 
-            app.post('/api/save-schema', async(req, res): Promise<void> => {
-                const bodyData = req.body;
+            app.get('/api/projects/:pid/events', (req, res): void => {
+                const pid = req.params.pid;
+                const bus = repositories.getBus(pid);
 
-                if (SchemaProjectSave.validate(bodyData, [])) {
-                    const projectsData = bodyData.data;
+                if (!bus) {
+                    res.status(404).json({success: false, msg: `Unknown project ${pid}`});
+                    return;
+                }
 
-                    for (const project of projectsData.projects) {
-                        const projectOption = projects.get(project.unid);
+                res.status(200);
+                res.setHeader('Content-Type', 'text/event-stream');
+                res.setHeader('Cache-Control', 'no-cache, no-transform');
+                res.setHeader('Connection', 'keep-alive');
+                res.setHeader('X-Accel-Buffering', 'no');
+                res.flushHeaders();
 
-                        if (projectOption) {
-                            const schema: JsonData = {
-                                fs: project.fs,
-                                editor: projectsData.editor ?? {
-                                    controls_width: 300
-                                }
-                            };
+                const writeEvent = (ev: SchemaRepositoryEvent): void => {
+                    res.write(`id: ${ev.rev}\n`);
+                    res.write(`event: ${ev.op}\n`);
+                    res.write(`data: ${JSON.stringify(ev)}\n\n`);
+                };
 
-                            fs.mkdirSync(path.dirname(projectOption.schemaPath), { recursive: true });
-                            fs.writeFileSync(projectOption.schemaPath, JSON.stringify(schema, null, 2), 'utf-8');
+                const writeResync = (): void => {
+                    res.write('event: resync\n');
+                    res.write('data: {}\n\n');
+                };
 
-                            if (projectOption.autoGenerate) {
-                                const gen = new SchemaGenerator({
-                                    schemaPrefix: projectOption.schemaPrefix,
-                                    createTypes: projectOption.createTypes,
-                                    createIndex: projectOption.createIndex,
-                                    destinationPath: projectOption.destinationPath,
-                                    destinationClear: projectOption.destinationClear,
-                                    code_indent: projectOption.codeIndent,
-                                    code_comment: projectOption.codeComment
-                                });
+                // Resume from Last-Event-ID header (EventSource reconnect) or
+                // ?last_event_id= query param (first connect from a client
+                // that already holds a baseline). Absent header -> start from
+                // scratch, no replay, only live events.
+                const headerVal = req.header('Last-Event-ID');
+                const queryVal = req.query.last_event_id;
+                const raw = headerVal ?? (typeof queryVal === 'string' ? queryVal : undefined);
 
-                                try {
-                                    const externFiles = loader.getList();
+                if (raw !== undefined) {
+                    const sinceRev = Number.parseInt(raw, 10);
 
-                                    for (const [, externSource] of externFiles.entries()) {
-                                        try {
-                                            if (fs.existsSync(externSource.schemaFile)) {
-                                                const content = fs.readFileSync(externSource.schemaFile, 'utf-8');
-                                                const schemaData = JSON.parse(content);
+                    if (!Number.isFinite(sinceRev)) {
+                        writeResync();
+                    } else {
+                        const replay = bus.replaySince(sinceRev);
 
-                                                if (SchemaJsonData.validate(schemaData, [])) {
-                                                    gen.setExternSource(externSource, schemaData.fs);
-                                                }
-                                            }
-                                        } catch (e) {
-                                            console.log('Error: ');
-                                            console.log(e);
-                                        }
-                                    }
-
-                                    await SchemaScript.run(projectOption.scripts_before_generate);
-
-                                    gen.generate(schema.fs);
-
-                                    await SchemaScript.run(projectOption.scripts_after_generate);
-                                } catch (e) {
-                                    console.log(e);
-                                }
+                        if (replay === null) {
+                            writeResync();
+                        } else {
+                            for (const ev of replay) {
+                                writeEvent(ev);
                             }
                         }
                     }
-                } else {
-                    console.log('Body is not validate!');
                 }
 
-                res.status(200).json({ success: true });
+                const unsubscribe = bus.subscribe(writeEvent);
+
+                // SSE keep-alive comment so proxies / clients with idle
+                // timeouts do not drop the stream between real events.
+                const pingTimer = setInterval(() => {
+                    res.write(`: ping ${Date.now()}\n\n`);
+                }, 30000);
+
+                const cleanup = (): void => {
+                    clearInterval(pingTimer);
+                    unsubscribe();
+                };
+
+                req.on('close', cleanup);
+                req.on('aborted', cleanup);
             });
+
+            // Legacy /api/save-schema and /api/save-editor-setting endpoints
+            // were removed in Phase 5. All mutations now go through the
+            // granular routes registered by `registerSchemaApiRoutes` below.
 
             // ---------------------------------------------------------------------------------------------------------
 
@@ -303,41 +412,14 @@ function expressMiddleware(): Plugin {
 
                 // load projects schemas -------------------------------------------------------------------------------
 
-                for (const [punid, project] of projects.entries()) {
-                    try {
-                        if (fs.existsSync(project.schemaPath)) {
-                            const content = fs.readFileSync(project.schemaPath, 'utf-8');
-                            const schemaData = JSON.parse(content);
+                for (const [punid, repo] of repositories.entries()) {
+                    projectsData.projects.push({
+                        unid: punid,
+                        name: repo.getProject().name,
+                        fs: repo.getFs()
+                    });
 
-                            if (SchemaJsonData.validate(schemaData, [])) {
-                                projectsData.projects.push({
-                                    unid: punid,
-                                    name: project.name,
-                                    fs: schemaData.fs
-                                });
-
-                                projectsData.editor = schemaData.editor;
-                            }
-                        } else {
-                            projectsData.projects.push({
-                                unid: punid,
-                                name: project.name,
-                                fs: {
-                                    unid: 'root',
-                                    name: 'root',
-                                    istoggle: true,
-                                    icon: 'root',
-                                    type: 'root',
-                                    entrys: [],
-                                    schemas: [],
-                                    enums: []
-                                }
-                            });
-                        }
-                    } catch (e) {
-                        console.log('Error: ');
-                        console.log(e);
-                    }
+                    projectsData.editor = repo.getEditorSettings();
                 }
 
                 // extern schemas --------------------------------------------------------------------------------------
@@ -377,33 +459,19 @@ function expressMiddleware(): Plugin {
 
             // ---------------------------------------------------------------------------------------------------------
 
-            // Build a SchemaValidator spanning every saved project file. Used
-            // by both validate-schema and schema-example. Externs are not yet
-            // included (MVP scope).
+            // Build a SchemaValidator spanning every project's in-memory fs.
+            // Used by both validate-schema and schema-example. Externs are not
+            // yet included (MVP scope).
             const buildCombinedValidator = (): SchemaValidator|null => {
                 let validator: SchemaValidator|null = null;
 
-                for (const project of projects.values()) {
-                    try {
-                        if (!fs.existsSync(project.schemaPath)) {
-                            continue;
-                        }
+                for (const repo of repositories.values()) {
+                    const projectFs = repo.getFs();
 
-                        const content = fs.readFileSync(project.schemaPath, 'utf-8');
-                        const schemaData = JSON.parse(content);
-
-                        if (!SchemaJsonData.validate(schemaData, [])) {
-                            continue;
-                        }
-
-                        if (validator === null) {
-                            validator = new SchemaValidator(schemaData.fs);
-                        } else {
-                            validator.addFs(schemaData.fs);
-                        }
-                    } catch (e) {
-                        console.log('buildCombinedValidator: failed to load project file');
-                        console.log(e);
+                    if (validator === null) {
+                        validator = new SchemaValidator(projectFs);
+                    } else {
+                        validator.addFs(projectFs);
                     }
                 }
 
@@ -542,6 +610,11 @@ function expressMiddleware(): Plugin {
             });
 
             // ---------------------------------------------------------------------------------------------------------
+
+            registerSchemaApiRoutes(app, {
+                repositories,
+                runGenerate
+            });
 
             server.middlewares.use(app);
         }

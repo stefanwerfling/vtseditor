@@ -1,8 +1,11 @@
 import {Connection} from '@jsplumb/browser-ui';
+import {SchemaEditorApiCall, SchemaEditorUpdateDataDetail} from '../Api/SchemaEditorApiCall.js';
 import {JsonSchemaPositionDescription} from '../JsonData.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
 import './BaseTable.css';
+import {ContextMenu, ContextMenuEntry} from './ContextMenu.js';
 import {EditorEvents} from './EditorEvents.js';
+import {EditorIcons} from './EditorIcons.js';
 import {Wiggle} from './Wiggle.js';
 
 /**
@@ -178,10 +181,24 @@ export class BaseTable {
                     this._position.y = this._table.offsetTop;
                     this._position.x = this._table.offsetLeft;
 
-                    window.dispatchEvent(new CustomEvent(EditorEvents.updateData, {}));
+                    const apiCall = this._buildPositionUpdateApiCall();
+
+                    window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+                        detail: apiCall ? {apiCall} : {}
+                    }));
                 }
             }
         });
+    }
+
+    /**
+     * Subclasses override to describe the granular mutation for the drag-end
+     * position persist. Default returns `null`, causing the bulk-save
+     * fallback to run in {@link SchemaEditor}'s updateData listener.
+     * @protected
+     */
+    protected _buildPositionUpdateApiCall(): SchemaEditorApiCall|null {
+        return null;
     }
 
     /**
@@ -290,6 +307,10 @@ export class BaseTable {
         this._table.style.top = `${y}px`;
     }
 
+    public getPosition(): JsonSchemaPositionDescription {
+        return {x: this._position.x, y: this._position.y};
+    }
+
     /**
      * Set activ view
      * @param {boolean} active
@@ -350,6 +371,38 @@ export class BaseTable {
 
     public updateConnection(): void {
         // overwrite
+    }
+
+    /**
+     * Return the context menu owned by this table, or null if the subclass
+     * has no context menu (e.g. a plain BaseTable without actions). Used by
+     * LinkTable to swap menu entries when this table is reused as a link.
+     * @return {ContextMenu|null}
+     */
+    public getContextMenu(): ContextMenu|null {
+        return null;
+    }
+
+    /**
+     * Build the context-menu entries shown when this table is displayed as
+     * a LinkTable (replacing the regular actions). Default is just "Remove
+     * link"; SchemaTable overrides to prepend "Validate JSON".
+     * @return {ContextMenuEntry[]}
+     */
+    public buildLinkModeItems(): ContextMenuEntry[] {
+        return [
+            {separator: true},
+            {
+                icon: EditorIcons.delete,
+                label: 'Remove link',
+                danger: true,
+                onClick: () => {
+                    if (this._onDelete) {
+                        this._onDelete(this);
+                    }
+                }
+            }
+        ];
     }
 
     /**

@@ -228,7 +228,9 @@ export type JsonDataFS = ExtractSchemaResultType<typeof SchemaJsonDataFS>;
  * Schema json editor settings
  */
 export const SchemaJsonEditorSettings = Vts.object({
-    controls_width: Vts.number()
+    controls_width: Vts.number(),
+    active_entry_unid: Vts.optional(Vts.string()),
+    active_entry_table_unid: Vts.optional(Vts.string())
 });
 
 /**
