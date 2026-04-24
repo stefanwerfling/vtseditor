@@ -111,13 +111,7 @@ export class BaseDialog {
         this._btnCloseX.classList.add('dialog-close');
         this._btnCloseX.ariaLabel = 'Close';
         this._btnCloseX.innerHTML = '&times;';
-        this._btnCloseX.addEventListener('click', () => {
-            if (this._onClose) {
-                this._onClose();
-            }
-
-            this.destroy();
-        });
+        this._btnCloseX.addEventListener('click', () => this._handleCloseX());
 
         this._divHeader.appendChild(this._btnCloseX);
 
@@ -135,28 +129,14 @@ export class BaseDialog {
         this._btnCancel = document.createElement('button');
         this._btnCancel.textContent = 'Cancel';
         this._btnCancel.classList.add('dialog-button', 'dialog-button-cancel');
-        this._btnCancel.addEventListener('click', () => {
-            if (this._onClose) {
-                this._onClose();
-            }
-
-            this.destroy();
-        });
+        this._btnCancel.addEventListener('click', () => this._handleCancel());
 
         btns.appendChild(this._btnCancel);
 
         this._btnConfirm = document.createElement('button');
         this._btnConfirm.textContent = 'Save';
         this._btnConfirm.classList.add('dialog-button', 'dialog-button-primary');
-        this._btnConfirm.addEventListener('click', () => {
-            if (this._onConfirm) {
-                if (this._onConfirm(this)) {
-                    this.destroy();
-                }
-            } else {
-                this.destroy();
-            }
-        });
+        this._btnConfirm.addEventListener('click', () => this._handleConfirm());
 
 
         btns.appendChild(this._btnConfirm);
@@ -233,6 +213,49 @@ export class BaseDialog {
         this._dialog.remove();
 
         BaseDialog._dialogStack = BaseDialog._dialogStack.filter(d => d !== this._dialog);
+    }
+
+    /**
+     * Cancel-button default behaviour. Subclasses override this to emit
+     * a semantic decision (e.g. "deny") without racing the base
+     * destroy(). The base implementation runs the close callback and
+     * destroys the dialog.
+     * @protected
+     */
+    protected _handleCancel(): void {
+        if (this._onClose) {
+            this._onClose();
+        }
+
+        this.destroy();
+    }
+
+    /**
+     * Confirm-button default behaviour. Subclasses override this to
+     * emit a semantic decision (e.g. "allow") before destroying.
+     * @protected
+     */
+    protected _handleConfirm(): void {
+        if (this._onConfirm) {
+            if (this._onConfirm(this)) {
+                this.destroy();
+            }
+        } else {
+            this.destroy();
+        }
+    }
+
+    /**
+     * Close-X default behaviour. Treated as a cancel by most dialogs;
+     * subclasses can differentiate (e.g. "deny without remember").
+     * @protected
+     */
+    protected _handleCloseX(): void {
+        if (this._onClose) {
+            this._onClose();
+        }
+
+        this.destroy();
     }
 
 }

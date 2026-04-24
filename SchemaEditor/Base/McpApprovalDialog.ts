@@ -20,6 +20,7 @@ export type McpApprovalDecision = {
 export class McpApprovalDialog extends BaseDialog {
 
     private readonly _requestId: string;
+    private readonly _onDecision: (decision: McpApprovalDecision) => void;
     private _resolved = false;
     private readonly _rememberInputs: HTMLInputElement[] = [];
 
@@ -32,6 +33,7 @@ export class McpApprovalDialog extends BaseDialog {
         super();
 
         this._requestId = requestId;
+        this._onDecision = onDecision;
 
         this.setDialogTitle('MCP tool approval');
         this._dialog.classList.add('mcp-approval-dialog');
@@ -108,35 +110,31 @@ export class McpApprovalDialog extends BaseDialog {
 
         this._btnCancel.textContent = 'Deny';
         this._btnConfirm.textContent = 'Allow';
+    }
 
-        this._btnCancel.addEventListener('click', () => {
-            if (this._resolved) {
-                return;
-            }
+    protected override _handleCancel(): void {
+        this._emitDecision({allow: false, remember: this._getRemember()});
+    }
 
-            this._resolved = true;
-            onDecision({allow: false, remember: this._getRemember()});
-        });
+    protected override _handleConfirm(): void {
+        this._emitDecision({allow: true, remember: this._getRemember()});
+    }
 
-        this._btnConfirm.addEventListener('click', () => {
-            if (this._resolved) {
-                return;
-            }
+    /**
+     * Close-X is treated as deny, but never remembered — an accidental
+     * X click should not persist a policy rule.
+     */
+    protected override _handleCloseX(): void {
+        this._emitDecision({allow: false});
+    }
 
-            this._resolved = true;
-            onDecision({allow: true, remember: this._getRemember()});
-        });
+    private _emitDecision(decision: McpApprovalDecision): void {
+        if (this._resolved) {
+            return;
+        }
 
-        this._btnCloseX.addEventListener('click', () => {
-            if (this._resolved) {
-                return;
-            }
-
-            this._resolved = true;
-            // Closing the dialog is a deny, but never a remembered one —
-            // an accidental X click shouldn't persist a denial.
-            onDecision({allow: false});
-        });
+        this._resolved = true;
+        this._onDecision(decision);
     }
 
     private _getRemember(): McpApprovalRemember|undefined {
@@ -158,11 +156,6 @@ export class McpApprovalDialog extends BaseDialog {
      * other tab, etc.). Closes the dialog without re-posting a decision.
      */
     public dismiss(): void {
-        if (this._resolved) {
-            this.destroy();
-            return;
-        }
-
         this._resolved = true;
         this.destroy();
     }

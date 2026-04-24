@@ -31,7 +31,7 @@ type SchemaEditorMoveEventDetail = {
     sourceType: string;
     destinationType: string;
     sourceId: string;
-    detionationId: string;
+    destinationId: string;
 };
 
 /**
@@ -752,29 +752,29 @@ export class SchemaEditor {
                 switch (customEvent.detail.sourceType) {
                     case SchemaJsonDataFSType.folder:
                     case SchemaJsonDataFSType.file:
-                        treeview.moveToEntry(customEvent.detail.sourceId, customEvent.detail.detionationId);
+                        treeview.moveToEntry(customEvent.detail.sourceId, customEvent.detail.destinationId);
                         apiCall = {
                             op: 'container_move',
                             unid: customEvent.detail.sourceId,
-                            toParentUnid: customEvent.detail.detionationId
+                            toParentUnid: customEvent.detail.destinationId
                         };
                         break;
 
                     case SchemaJsonDataFSType.schema:
-                        treeview.moveTableToEntry(customEvent.detail.sourceId, customEvent.detail.detionationId);
+                        treeview.moveTableToEntry(customEvent.detail.sourceId, customEvent.detail.destinationId);
                         apiCall = {
                             op: 'schema_move',
                             unid: customEvent.detail.sourceId,
-                            toContainerUnid: customEvent.detail.detionationId
+                            toContainerUnid: customEvent.detail.destinationId
                         };
                         break;
 
                     case SchemaJsonDataFSType.enum:
-                        treeview.moveEnumToEntry(customEvent.detail.sourceId, customEvent.detail.detionationId);
+                        treeview.moveEnumToEntry(customEvent.detail.sourceId, customEvent.detail.destinationId);
                         apiCall = {
                             op: 'enum_move',
                             unid: customEvent.detail.sourceId,
-                            toContainerUnid: customEvent.detail.detionationId
+                            toContainerUnid: customEvent.detail.destinationId
                         };
                         break;
                 }
@@ -1712,14 +1712,28 @@ export class SchemaEditor {
 
         const dialog = new McpApprovalDialog(requestId, tool, args, async (decision) => {
             this._mcpApprovalDialogs.delete(requestId);
+            dialog.destroy();
 
             try {
-                await this._mcpApprovalClient?.decide(requestId, decision.allow, decision.remember);
-            } catch (err) {
-                console.warn('MCP approval decision failed:', err);
-            }
+                const accepted = await this._mcpApprovalClient?.decide(
+                    requestId,
+                    decision.allow,
+                    decision.remember
+                );
 
-            dialog.destroy();
+                // false means the server already resolved the request —
+                // timed out, or another tab clicked first. Tell the user
+                // so a lost click doesn't look like the editor ate it.
+                if (accepted === false) {
+                    AlertDialog.showAlert(
+                        'MCP approval',
+                        `The approval window for '${tool}' had already closed (timeout or another tab). Your decision was not applied.`,
+                        AlertDialogTypes.warning
+                    );
+                }
+            } catch (err) {
+                this._handleApiError(err, 'MCP approval');
+            }
         });
 
         this._mcpApprovalDialogs.set(requestId, dialog);
@@ -1796,7 +1810,9 @@ export class SchemaEditor {
         }
 
         if (event.op === 'editor_settings') {
-            this._editorSettings = event.payload;
+            // Merge — a partial payload (another tab persisted just one
+            // key) must not drop local keys like active_entry_unid.
+            this._editorSettings = {...this._editorSettings, ...event.payload};
             this._updateResizer();
             return;
         }

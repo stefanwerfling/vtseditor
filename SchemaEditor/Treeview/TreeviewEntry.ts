@@ -526,7 +526,7 @@ export class TreeviewEntry {
                                     sourceType: dragData.type,
                                     destinationType: selfType,
                                     sourceId: dragData.unid,
-                                    detionationId: this.getUnid()
+                                    destinationId: this.getUnid()
                                 }
                             }));
                         }
@@ -539,7 +539,7 @@ export class TreeviewEntry {
                                     sourceType: dragData.type,
                                     destinationType: selfType,
                                     sourceId: dragData.unid,
-                                    detionationId: this.getUnid()
+                                    destinationId: this.getUnid()
                                 }
                             }));
                         }
@@ -552,7 +552,7 @@ export class TreeviewEntry {
                                     sourceType: dragData.type,
                                     destinationType: selfType,
                                     sourceId: dragData.unid,
-                                    detionationId: this.getUnid()
+                                    destinationId: this.getUnid()
                                 }
                             }));
                         }
