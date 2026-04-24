@@ -180,7 +180,9 @@ export class SchemaEditor {
     protected _mcpApprovalDialogs: Map<string, McpApprovalDialog> = new Map();
 
     /**
-     * Debounce timer for `loadData()` triggered by SSE events.
+     * Cooldown timer for `loadData()` triggered by SSE events. See
+     * {@link _scheduleRemoteResync} for the leading-edge throttle
+     * semantics.
      * @protected
      */
     protected _resyncTimer: ReturnType<typeof setTimeout>|null = null;
@@ -203,15 +205,17 @@ export class SchemaEditor {
     protected _restoringSelection: boolean = false;
 
     /**
-     * Unids of schemas / enums / links that were created or edited by a
-     * remote mutation (MCP or another browser tab) since the last
-     * resync. After `loadData()` rebuilds the view, the active entry is
-     * switched to the owning file (if needed) and the matching canvas
-     * element gets a short pulse plus a centred scroll so the user sees
-     * where the change landed. Cleared after the flash is applied.
+     * Unids of schemas / enums / links that were created, updated,
+     * moved, or even deleted by a remote mutation (MCP or another
+     * browser tab) since the last resync. After `loadData()` rebuilds
+     * the view, the active entry is switched to the owning file (if
+     * needed) and the matching canvas element gets a short pulse plus
+     * a centred scroll so the user sees where the change landed. The
+     * set tracks "touched" unids, not only newly-created ones.
+     * Cleared after the flash is applied.
      * @protected
      */
-    protected _pendingRemoteNew: Set<string> = new Set();
+    protected _pendingRemoteTouched: Set<string> = new Set();
 
     /**
      * Add a new Schema
@@ -304,8 +308,9 @@ export class SchemaEditor {
 
     /**
      * create schema
+     * @protected
      */
-    public _createSchema(): void {
+    protected _createSchema(): void {
         if (Treeview.getActiveEntry() === null) {
             return;
         }
@@ -333,6 +338,23 @@ export class SchemaEditor {
         return SchemaEditor._active;
     }
 
+    /**
+     * Fetch a required DOM element by id or throw a descriptive error.
+     * The editor's init path hard-depends on these elements; failing
+     * loudly with the missing id beats a cryptic TypeError on `.style`
+     * ten lines later.
+     * @protected
+     */
+    protected static _requireElement(id: string): HTMLElement {
+        const el = document.getElementById(id);
+
+        if (el === null) {
+            throw new Error(`SchemaEditor: required element #${id} not found in DOM`);
+        }
+
+        return el;
+    }
+
     public init() {
         SchemaEditor._active = this;
         this._jsPlumbInstance = jsPlumbInstance;
@@ -340,13 +362,13 @@ export class SchemaEditor {
 
         this._startMcpApprovalClient();
 
-        const buttonBar = document.getElementById('buttonbar');
+        const buttonBar = SchemaEditor._requireElement('buttonbar');
 
         // add schema button -------------------------------------------------------------------------------------------
 
-        this._btnAddSchema = document.getElementById('addSchemaBtn');
-        this._btnAddSchema!.style.display = 'none';
-        this._btnAddSchema!.addEventListener('click', () => {
+        this._btnAddSchema = SchemaEditor._requireElement('addSchemaBtn');
+        this._btnAddSchema.style.display = 'none';
+        this._btnAddSchema.addEventListener('click', () => {
             if (Treeview.getActiveEntry() !== null) {
                 this._addSchema();
             } else {
@@ -360,9 +382,9 @@ export class SchemaEditor {
 
         // add enum button ---------------------------------------------------------------------------------------------
 
-        this._btnAddEnum = document.getElementById('addEnumBtn');
-        this._btnAddEnum!.style.display = 'none';
-        this._btnAddEnum!.addEventListener('click', () => {
+        this._btnAddEnum = SchemaEditor._requireElement('addEnumBtn');
+        this._btnAddEnum.style.display = 'none';
+        this._btnAddEnum.addEventListener('click', () => {
             if (Treeview.getActiveEntry() !== null) {
                 this._addEnum();
             } else {
@@ -376,9 +398,9 @@ export class SchemaEditor {
 
         // create schema button ----------------------------------------------------------------------------------------
 
-        this._btnCreateSchema = document.getElementById('createSchemaBtn');
-        this._btnCreateSchema!.style.display = 'none';
-        this._btnCreateSchema!.addEventListener('click', () => {
+        this._btnCreateSchema = SchemaEditor._requireElement('createSchemaBtn');
+        this._btnCreateSchema.style.display = 'none';
+        this._btnCreateSchema.addEventListener('click', () => {
             if (!this._editorInit.enable_schema_create) {
                 return;
             }
@@ -396,9 +418,9 @@ export class SchemaEditor {
 
         // arrange tables button ---------------------------------------------------------------------------------------
 
-        this._btnArrangeTables = document.getElementById('arrangeTablesBtn');
-        this._btnArrangeTables!.style.display = 'none';
-        this._btnArrangeTables!.addEventListener('click', () => {
+        this._btnArrangeTables = SchemaEditor._requireElement('arrangeTablesBtn');
+        this._btnArrangeTables.style.display = 'none';
+        this._btnArrangeTables.addEventListener('click', () => {
             const activeEntry = Treeview.getActiveEntry();
 
             if (activeEntry === null) {
@@ -462,7 +484,7 @@ export class SchemaEditor {
                 });
             }
 
-            const client = this._getEditorClient();
+            const client = this.getEditorClient();
 
             if (client !== null && ops.length > 0) {
                 client.batch(ops).then(() => {
@@ -991,9 +1013,9 @@ export class SchemaEditor {
 
         // resizer -----------------------------------------------------------------------------------------------------
 
-        const resizer = document.getElementById('resizer')!;
-        const resizerTop = document.getElementById('resizer-topbar')!;
-        this._controls = document.getElementById('controls')!;
+        const resizer = SchemaEditor._requireElement('resizer');
+        const resizerTop = SchemaEditor._requireElement('resizer-topbar');
+        this._controls = SchemaEditor._requireElement('controls');
 
         let isResizing = false;
 
@@ -1040,7 +1062,7 @@ export class SchemaEditor {
      */
     protected _updateResizer(): void {
         if (this._controls) {
-            const topbarheader = document.getElementById('topbarheader')!;
+            const topbarheader = SchemaEditor._requireElement('topbarheader');
 
             this._controls.style.width = `${this._editorSettings.controls_width}px`;
             topbarheader.style.width = `${this._editorSettings.controls_width}px`;
@@ -1203,13 +1225,13 @@ export class SchemaEditor {
         }
 
         this._updateResizer();
-        this._flushRemoteNewHighlights();
+        this._flushRemoteTouchedHighlights();
     }
 
     /**
      * After a remote-mutation resync has rebuilt the view, pulse every
      * canvas-visible schema / enum / link whose unid was collected by
-     * {@link _trackRemoteNew} and scroll the canvas so the most recent
+     * {@link _trackRemoteTouched} and scroll the canvas so the most recent
      * one is centred. {@link _resolveRemoteJumpTarget} has already
      * switched the active entry to the owning file when necessary, so
      * items outside the active entry here are genuinely stale (e.g. a
@@ -1217,8 +1239,8 @@ export class SchemaEditor {
      * dropped silently.
      * @protected
      */
-    protected _flushRemoteNewHighlights(): void {
-        if (this._pendingRemoteNew.size === 0) {
+    protected _flushRemoteTouchedHighlights(): void {
+        if (this._pendingRemoteTouched.size === 0) {
             return;
         }
 
@@ -1227,7 +1249,7 @@ export class SchemaEditor {
 
         if (entry !== null) {
             for (const table of entry.getSchemaTables()) {
-                if (this._pendingRemoteNew.has(table.getUnid())) {
+                if (this._pendingRemoteTouched.has(table.getUnid())) {
                     const el = table.getElement();
                     highlightRemoteNew(el);
                     lastElement = el;
@@ -1235,7 +1257,7 @@ export class SchemaEditor {
             }
 
             for (const tenum of entry.getEnumTables()) {
-                if (this._pendingRemoteNew.has(tenum.getUnid())) {
+                if (this._pendingRemoteTouched.has(tenum.getUnid())) {
                     const el = tenum.getElement();
                     highlightRemoteNew(el);
                     lastElement = el;
@@ -1243,7 +1265,7 @@ export class SchemaEditor {
             }
 
             for (const link of entry.getLinkTables()) {
-                if (!this._pendingRemoteNew.has(link.getUnid())) {
+                if (!this._pendingRemoteTouched.has(link.getUnid())) {
                     continue;
                 }
 
@@ -1256,7 +1278,7 @@ export class SchemaEditor {
             }
         }
 
-        this._pendingRemoteNew.clear();
+        this._pendingRemoteTouched.clear();
 
         if (lastElement !== null) {
             const target = lastElement;
@@ -1277,7 +1299,7 @@ export class SchemaEditor {
      * @protected
      */
     protected _resolveRemoteJumpTarget(): TreeviewEntry|null {
-        if (this._pendingRemoteNew.size === 0) {
+        if (this._pendingRemoteTouched.size === 0) {
             return null;
         }
 
@@ -1289,7 +1311,7 @@ export class SchemaEditor {
 
         let chosen: TreeviewEntry|null = null;
 
-        for (const unid of this._pendingRemoteNew) {
+        for (const unid of this._pendingRemoteTouched) {
             const entry = rootEntry.getEntryById(unid);
 
             if (entry === null) {
@@ -1334,8 +1356,9 @@ export class SchemaEditor {
 
     /**
      * Update tree view
+     * @protected
      */
-    public _updateTreeview(): void {
+    protected _updateTreeview(): void {
         const data = this.getData();
         this._treeview?.getRoot().removeEntrys();
         this.setData(data);
@@ -1550,7 +1573,7 @@ export class SchemaEditor {
      * set.
      */
     public async dispatchApiCall(call: SchemaEditorApiCall): Promise<void> {
-        const client = this._getEditorClient();
+        const client = this.getEditorClient();
 
         if (client === null) {
             throw new Error('No active project client');
@@ -1793,11 +1816,6 @@ export class SchemaEditor {
         return first.done ? null : first.value;
     }
 
-    /** @deprecated use {@link getEditorClient} */
-    protected _getEditorClient(): SchemaApiClient|null {
-        return this.getEditorClient();
-    }
-
     /**
      * Handles SSE events from the server. Our own mutations echo back with
      * our clientId and are ignored here — UI is already up to date. Remote
@@ -1817,7 +1835,7 @@ export class SchemaEditor {
             return;
         }
 
-        this._trackRemoteNew(event);
+        this._trackRemoteTouched(event);
         this._scheduleRemoteResync();
     }
 
@@ -1829,48 +1847,62 @@ export class SchemaEditor {
      * its own. Pure deletes are ignored (nothing left to point at).
      * @protected
      */
-    protected _trackRemoteNew(event: SchemaRepositoryEvent): void {
+    protected _trackRemoteTouched(event: SchemaRepositoryEvent): void {
         switch (event.op) {
             case 'schema_create':
-                this._pendingRemoteNew.add(event.payload.schema.unid);
+                this._pendingRemoteTouched.add(event.payload.schema.unid);
                 return;
             case 'schema_update':
             case 'schema_move':
-                this._pendingRemoteNew.add(event.payload.unid);
+                this._pendingRemoteTouched.add(event.payload.unid);
                 return;
             case 'enum_create':
-                this._pendingRemoteNew.add(event.payload.enumeration.unid);
+                this._pendingRemoteTouched.add(event.payload.enumeration.unid);
                 return;
             case 'enum_update':
             case 'enum_move':
-                this._pendingRemoteNew.add(event.payload.unid);
+                this._pendingRemoteTouched.add(event.payload.unid);
                 return;
             case 'link_create':
-                this._pendingRemoteNew.add(event.payload.link.unid);
+                this._pendingRemoteTouched.add(event.payload.link.unid);
                 return;
             case 'link_update':
-                this._pendingRemoteNew.add(event.payload.unid);
+                this._pendingRemoteTouched.add(event.payload.unid);
                 return;
             case 'container_create':
-                this._pendingRemoteNew.add(event.payload.node.unid);
+                this._pendingRemoteTouched.add(event.payload.node.unid);
                 return;
             case 'field_create':
             case 'field_update':
             case 'field_delete':
             case 'field_reorder':
-                this._pendingRemoteNew.add(event.payload.schemaUnid);
+                this._pendingRemoteTouched.add(event.payload.schemaUnid);
                 return;
             case 'enum_value_create':
             case 'enum_value_update':
             case 'enum_value_delete':
             case 'enum_value_reorder':
-                this._pendingRemoteNew.add(event.payload.enumUnid);
+                this._pendingRemoteTouched.add(event.payload.enumUnid);
                 return;
             default:
                 return;
         }
     }
 
+    /**
+     * Leading-edge throttle with a 150 ms cooldown, not a trailing-edge
+     * debounce. The first remote event arms a timer; any events
+     * arriving during the cooldown are coalesced into that same
+     * pending reload. When the timer fires, `loadData()` re-fetches
+     * the full state (which already reflects every intermediate
+     * event), so nothing is lost.
+     *
+     * Leading-edge is deliberate: under a steady stream of edits in
+     * another tab, a trailing-edge debounce would defer the reload
+     * forever. Users need to see changes within ~150 ms, not "once
+     * the other tab stops typing".
+     * @protected
+     */
     protected _scheduleRemoteResync(): void {
         if (this._resyncTimer !== null) {
             return;
