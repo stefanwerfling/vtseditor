@@ -37,6 +37,7 @@ export class SchemaValidateDialog extends BaseDialog {
     protected _schemaUnid: string;
     protected _textareaJson: HTMLTextAreaElement;
     protected _logArea: HTMLDivElement;
+    protected _isArrayMode: boolean = false;
 
     /**
      * Constructor
@@ -103,9 +104,15 @@ export class SchemaValidateDialog extends BaseDialog {
      * validation. Used by external triggers (e.g. the JetBrains plugin
      * posting a `validateSchema` event) so the result is visible without
      * the user clicking anything.
+     *
+     * When `isArray` is true the JSON is expected to be an array — each
+     * element is validated individually against the schema and the errors
+     * are aggregated per index.
      * @param {string} jsonString
+     * @param {boolean} isArray
      */
-    public validateNow(jsonString: string): void {
+    public validateNow(jsonString: string, isArray: boolean = false): void {
+        this._isArrayMode = isArray;
         this._textareaJson.value = jsonString;
         this._runValidation();
     }
@@ -207,6 +214,7 @@ export class SchemaValidateDialog extends BaseDialog {
 
     /**
      * POST the current JSON to the backend and render the response.
+     * Dispatches to the array-mode pathway when `_isArrayMode` is set.
      * @protected
      */
     protected async _runValidation(): Promise<void> {
@@ -218,6 +226,109 @@ export class SchemaValidateDialog extends BaseDialog {
         loading.textContent = 'Validating …';
         this._logArea.appendChild(loading);
 
+        if (this._isArrayMode) {
+            await this._runArrayValidation(json);
+            return;
+        }
+
+        await this._runSingleValidation(json);
+    }
+
+    /**
+     * POSTs a single JSON payload to the backend and renders the response.
+     * @param {string} json
+     * @protected
+     */
+    protected async _runSingleValidation(json: string): Promise<void> {
+        const data = await this._postValidate(json);
+
+        if (typeof data === 'string') {
+            this._renderFailureMessage(data);
+            return;
+        }
+
+        if (data.result.valid) {
+            this._renderSuccess();
+            return;
+        }
+
+        this._renderErrorTree(data.result.errors);
+    }
+
+    /**
+     * Parses the JSON as an array and validates each element individually
+     * against the schema. Failures are aggregated under a synthetic root
+     * whose children are keyed `[i]` for each failing index.
+     * @param {string} json
+     * @protected
+     */
+    protected async _runArrayValidation(json: string): Promise<void> {
+        let parsed: unknown;
+
+        try {
+            parsed = JSON.parse(json);
+        } catch (e) {
+            this._renderFailureMessage(`Invalid JSON: ${(e as Error).message}`);
+            return;
+        }
+
+        if (!Array.isArray(parsed)) {
+            this._renderFailureMessage('Expected a JSON array — the variable was flagged as an array type.');
+            return;
+        }
+
+        if (parsed.length === 0) {
+            this._renderSuccess();
+            return;
+        }
+
+        const responses = await Promise.all(
+            parsed.map(element => this._postValidate(JSON.stringify(element)))
+        );
+
+        const failedChildren: ValidationErrorNode[] = [];
+        let transportError: string | null = null;
+
+        responses.forEach((data, index) => {
+            if (typeof data === 'string') {
+                transportError = transportError ?? data;
+                return;
+            }
+
+            if (!data.result.valid) {
+                failedChildren.push({
+                    key: `[${index}]`,
+                    messages: data.result.errors.messages,
+                    children: data.result.errors.children
+                });
+            }
+        });
+
+        if (transportError !== null && failedChildren.length === 0) {
+            this._renderFailureMessage(transportError);
+            return;
+        }
+
+        if (failedChildren.length === 0) {
+            this._renderSuccess();
+            return;
+        }
+
+        this._renderErrorTree({
+            key: '',
+            messages: [`${failedChildren.length} of ${parsed.length} elements failed validation.`],
+            children: failedChildren
+        });
+    }
+
+    /**
+     * Low-level single POST to `/api/validate-schema`. Returns the parsed
+     * response on success, or an error message string on transport / protocol
+     * failure so callers can decide how to render or aggregate it.
+     * @param {string} json
+     * @protected
+     */
+    protected async _postValidate(json: string): Promise<ValidateResponse & { result: NonNullable<ValidateResponse['result']> } | string> {
         let response: Response;
 
         try {
@@ -230,8 +341,7 @@ export class SchemaValidateDialog extends BaseDialog {
                 })
             });
         } catch (e) {
-            this._renderFailureMessage(`Request failed: ${(e as Error).message}`);
-            return;
+            return `Request failed: ${(e as Error).message}`;
         }
 
         let data: ValidateResponse;
@@ -239,21 +349,14 @@ export class SchemaValidateDialog extends BaseDialog {
         try {
             data = await response.json();
         } catch {
-            this._renderFailureMessage(`Server returned non-JSON response (HTTP ${response.status}).`);
-            return;
+            return `Server returned non-JSON response (HTTP ${response.status}).`;
         }
 
         if (!response.ok || !data.success || !data.result) {
-            this._renderFailureMessage(data.msg ?? `Validation request failed (HTTP ${response.status}).`);
-            return;
+            return data.msg ?? `Validation request failed (HTTP ${response.status}).`;
         }
 
-        if (data.result.valid) {
-            this._renderSuccess();
-            return;
-        }
-
-        this._renderErrorTree(data.result.errors);
+        return data as ValidateResponse & { result: NonNullable<ValidateResponse['result']> };
     }
 
     /**

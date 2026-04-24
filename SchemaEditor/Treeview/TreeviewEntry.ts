@@ -179,6 +179,16 @@ export class TreeviewEntry {
         // set span name -----------------------------------------------------------------------------------------------
 
         const clickSetActiv = () => {
+            if (this.getType() === SchemaJsonDataFSType.root) {
+                // Clicking Root clears the selection so the canvas
+                // falls back to the welcome / what's-new panel.
+                Treeview.setActivEntryTable(null);
+                Treeview.setActivEntry(null);
+
+                window.dispatchEvent(new CustomEvent(EditorEvents.updateView, {}));
+                return;
+            }
+
             if (this.getType() === SchemaJsonDataFSType.file) {
                 Treeview.setActivEntryTable(null);
                 Treeview.setActivEntry(this);

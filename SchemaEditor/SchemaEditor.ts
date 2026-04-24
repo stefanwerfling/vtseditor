@@ -23,6 +23,7 @@ import {SchemaValidateDialog} from './Schema/SchemaValidateDialog.js';
 import {Searchbar, SearchbarResultEntry} from './Search/Searchbar.js';
 import {Treeview} from './Treeview/Treeview.js';
 import {TreeviewEntry} from './Treeview/TreeviewEntry.js';
+import {WelcomePanel} from './Welcome/WelcomePanel.js';
 
 /**
  * SchemaEditor move event detail
@@ -64,6 +65,7 @@ type SchemaEditorInvokeEventDetail = {
 type SchemaEditorValidateEventDetail = {
     schema: string;
     json: string;
+    isArray?: boolean;
 };
 
 export type {SchemaEditorApiCall, SchemaEditorUpdateDataDetail} from './Api/SchemaEditorApiCall.js';
@@ -178,6 +180,15 @@ export class SchemaEditor {
      * @protected
      */
     protected _mcpApprovalDialogs: Map<string, McpApprovalDialog> = new Map();
+
+    /**
+     * Welcome / "what's new" panel shown in the canvas when no schema
+     * or enum entry is active. Built once in {@link init} and
+     * re-attached on demand by {@link _updateView}; fetches the
+     * CHANGELOG and product info exactly once.
+     * @protected
+     */
+    protected _welcomePanel: WelcomePanel|null = null;
 
     /**
      * Cooldown timer for `loadData()` triggered by SSE events. See
@@ -361,6 +372,12 @@ export class SchemaEditor {
         this._container = jsPlumbInstance.getContainer();
 
         this._startMcpApprovalClient();
+
+        // Welcome panel — built up front so the first render of the
+        // empty canvas already has content; the fetch runs in the
+        // background and fills the changelog area once it returns.
+        this._welcomePanel = new WelcomePanel();
+        this._welcomePanel.load();
 
         const buttonBar = SchemaEditor._requireElement('buttonbar');
 
@@ -936,6 +953,7 @@ export class SchemaEditor {
             const customEvent = event as CustomEvent<SchemaEditorValidateEventDetail>;
             const schemaName = customEvent.detail.schema;
             const jsonString = customEvent.detail.json;
+            const isArray = customEvent.detail.isArray === true;
 
             const rootEntry = this._treeview?.getRoot();
 
@@ -979,7 +997,7 @@ export class SchemaEditor {
 
             const dialog = new SchemaValidateDialog(target.getUnid(), target.getName());
             dialog.show();
-            dialog.validateNow(jsonString);
+            dialog.validateNow(jsonString, isArray);
         });
 
         // listener selection changed ---------------------------------------------------------------------------------
@@ -1218,6 +1236,16 @@ export class SchemaEditor {
             }
 
             entry.setActiveName();
+        } else if (this._welcomePanel !== null && this._container !== null) {
+            // No active entry → show the welcome / what's-new panel
+            // and hide the toolbar buttons that operate on an entry.
+            this._container.appendChild(this._welcomePanel.getElement());
+
+            this._btnAddSchema?.style.setProperty('display', 'none');
+            this._btnAddEnum?.style.setProperty('display', 'none');
+            this._btnArrangeTables?.style.setProperty('display', 'none');
+            this._btnCreateSchema?.style.setProperty('display', 'none');
+            this._searchbar?.hide();
         }
 
         if (entryTable) {
@@ -1548,7 +1576,6 @@ export class SchemaEditor {
                 if (tableEntry) {
                     Treeview.setActivEntry(null);
                     Treeview.setActivEntryTable(tableEntry);
-                    window.dispatchEvent(new CustomEvent(EditorEvents.updateView, {}));
                     return;
                 }
             }
@@ -1559,11 +1586,23 @@ export class SchemaEditor {
                 if (entry) {
                     Treeview.setActivEntryTable(null);
                     Treeview.setActivEntry(entry);
-                    window.dispatchEvent(new CustomEvent(EditorEvents.updateView, {}));
+                    return;
                 }
             }
+
+            // Neither persisted uid resolved (fresh install, stale
+            // uids, or cleared settings) — clear any lingering
+            // selection so the welcome panel renders on first paint.
+            Treeview.setActivEntryTable(null);
+            Treeview.setActivEntry(null);
         } finally {
             this._restoringSelection = false;
+
+            // Always fire updateView so _updateView runs exactly once
+            // at the end of the restore — either painting the
+            // restored selection or falling through to the welcome
+            // panel when nothing was persisted.
+            window.dispatchEvent(new CustomEvent(EditorEvents.updateView, {}));
         }
     }
 

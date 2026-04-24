@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import {fileURLToPath} from 'url';
 import {defineConfig, Plugin} from 'vite';
 import {SchemaErrors, Vts} from 'vts';
 import {ConfigAIProviderName, ConfigMcp, SchemaConfig} from './Config/Config.js';
@@ -486,6 +487,53 @@ function expressMiddleware(): Plugin {
             // Legacy /api/save-schema and /api/save-editor-setting endpoints
             // were removed in Phase 5. All mutations now go through the
             // granular routes registered by `registerSchemaApiRoutes` below.
+
+            // ---------------------------------------------------------------------------------------------------------
+
+            // Welcome screen data: product name/version/description from
+            // the editor's own package.json plus the raw CHANGELOG.md
+            // text. Both files live next to this vite.config.ts in the
+            // editor install, not in the user project. import.meta.url
+            // resolves to the editor's source regardless of CWD.
+            const editorRoot = path.dirname(fileURLToPath(import.meta.url));
+
+            app.get('/api/welcome', async (_req, res): Promise<void> => {
+                try {
+                    const pkgRaw = await fs.promises.readFile(
+                        path.resolve(editorRoot, 'package.json'),
+                        'utf-8'
+                    );
+                    const pkg = JSON.parse(pkgRaw) as {
+                        name?: string;
+                        version?: string;
+                        description?: string;
+                    };
+
+                    const [changelog, readme] = await Promise.all([
+                        fs.promises.readFile(
+                            path.resolve(editorRoot, 'CHANGELOG.md'),
+                            'utf-8'
+                        ).catch(() => ''),
+                        fs.promises.readFile(
+                            path.resolve(editorRoot, 'README.md'),
+                            'utf-8'
+                        ).catch(() => '')
+                    ]);
+
+                    res.status(200).json({
+                        name: pkg.name ?? 'vtseditor',
+                        version: pkg.version ?? '',
+                        description: pkg.description ?? '',
+                        changelog,
+                        readme
+                    });
+                } catch (err) {
+                    res.status(500).json({
+                        success: false,
+                        msg: err instanceof Error ? err.message : String(err)
+                    });
+                }
+            });
 
             // ---------------------------------------------------------------------------------------------------------
 

@@ -10,7 +10,7 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stefanwerfling/vtseditor)
 ![Node](https://img.shields.io/badge/Node-%E2%89%A5%2020-43853d?style=flat-square&logo=node.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![Version](https://img.shields.io/badge/Beta-1.0.8-f59e0b?style=flat-square)
+![Version](https://img.shields.io/badge/Beta-1.1.0-f59e0b?style=flat-square)
 ![License](https://img.shields.io/badge/License-ISC-blue?style=flat-square)
 
 [Getting started](#-getting-started) ·
@@ -18,6 +18,7 @@
 [Generated code](#-generated-output) ·
 [AI providers](#-ai-providers) ·
 [MCP server](#-mcp-server) ·
+[IDE plugin](#-ide-plugin) ·
 [Config reference](doc/Config.md)
 
 </div>
@@ -277,6 +278,20 @@ Start the editor (`npx vtseditor`); the endpoint lives at `http://localhost:5173
 **27 `vts_*` tools** are exposed — list projects, walk the tree, create/update/delete/move folders · files · schemas · fields · enums · enum values · links, force regeneration. Every mutation goes through the same commit pipeline as the browser; an open editor tab picks remote changes up automatically via SSE.
 
 Full list & wiring → **[`doc/ConfigMcp.md`](doc/ConfigMcp.md)**.
+
+---
+
+## 🧩 IDE plugin
+
+Edit schemas without leaving your IDE. The **[VTS Editor Plugin](https://github.com/stefanwerfling/vts-editor-plugin)** embeds vtseditor as a dockable tool window in **PhpStorm** and **IntelliJ IDEA Ultimate**:
+
+- **Embedded editor panel** — canvas lives inside the IDE, no extra browser tab
+- **Server lifecycle** — Start / Stop / Restart vtseditor from the toolbar, live log tab
+- **Schema navigation** — `Ctrl+Click` or `Alt+Shift+V` on any schema identifier jumps straight to the canvas
+- **Validate from the debugger** — while paused, right-click a variable → *Validate Against VTS Schema* to check its JSON against any schema in the project
+- **Auto-configuration** — reads the same `vtseditor.json`, reloads on change, offers `npm install` if the package is missing
+
+Grab it at **[github.com/stefanwerfling/vts-editor-plugin](https://github.com/stefanwerfling/vts-editor-plugin)** — requires IntelliJ 2025.1+ and JVM 21.
 
 ---
 

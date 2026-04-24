@@ -7,8 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-04-24
+
 ### Added
 
+- **Welcome panel** shown in the canvas whenever no schema / enum
+  entry is active (fresh install, stale selection, click on the
+  tree root). Fetches `/api/welcome`, renders a hero (product name,
+  version pill, tagline) and a tabbed content area with two tabs:
+  *What's new* (the CHANGELOG) and *Readme* (the README). Both are
+  rendered by a small in-house Markdown-to-DOM parser
+  (`SchemaEditor/Welcome/MiniMarkdown.ts`) — no external dependency,
+  output is real DOM nodes (no `innerHTML`). The parser handles
+  `#`-`###` headings, nested `-` lists, paragraphs, horizontal
+  rules, fenced code blocks, `**bold**` / `*italic*` / `` `code` ``,
+  `[text](url)`, `![alt](url)`, badge-links `[![alt](img)](href)`,
+  and lenient HTML passthrough (`<img>` becomes a markdown image,
+  other tags are stripped but their inner text survives).
+- **IDE plugin promo** on the welcome panel and a new
+  `## 🧩 IDE plugin` section in the README pointing at
+  [`vts-editor-plugin`](https://github.com/stefanwerfling/vts-editor-plugin)
+  — the JetBrains plugin that embeds this editor as a dockable
+  tool window with schema navigation (`Ctrl+Click` /
+  `Alt+Shift+V`), server lifecycle controls, and debugger-variable
+  validation.
+- **Click on the tree root** now clears the current selection and
+  re-renders the welcome panel — a one-click reset.
+- **Array-mode validation** in `SchemaValidateDialog.validateNow`:
+  when `isArray` is set on the `validateSchema` event, each element
+  of the supplied JSON array is validated individually against the
+  schema and errors are aggregated per index. Used by external
+  integrators (e.g. the JetBrains plugin) sending a collection of
+  payloads at once.
 - **MCP server with policy gate and user-approval flow.**
   A Model Context Protocol endpoint (opt-in via `mcp.enabled` in
   `vtseditor.json`) exposes ~28 `vts_*` tools that mutate the schema
@@ -82,6 +112,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Empty canvas on first page load**: `_restoreActiveSelection`
+  only dispatched `updateView` when a persisted entry resolved;
+  a fresh install (or a stale UID in `editor_settings`) left the
+  canvas blank because the welcome panel was never attached. The
+  restore now always clears stale selection and fires exactly one
+  `updateView` from its `finally` block, so the welcome panel
+  always shows up on load.
 - **Approval dialog race**: `McpApprovalDialog` used to register a
   second click-listener on top of the `BaseDialog` default, which
   fired after `destroy()` had already run. Default handlers are now
@@ -102,7 +139,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SchemaEditorMoveEventDetail` and the three `TreeviewEntry`
   dispatchers.
 
-## [1.0.8]
+## [1.0.8] - 2026-04-23
 
 Baseline for this changelog. Earlier releases do not have
 individual entries; consult the git history for detail.
