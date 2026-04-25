@@ -18,6 +18,7 @@ import {
     McpApprovalEvent,
     McpApprovalRemember
 } from './SchemaMcp/SchemaMcpApprovalBus.js';
+import {SchemaMcpLogger} from './SchemaMcp/SchemaMcpLogger.js';
 import {compileMcpPolicy} from './SchemaMcp/SchemaMcpPolicy.js';
 import {persistPolicyRule} from './SchemaMcp/SchemaMcpPolicyPersister.js';
 import {createSchemaMcpServer} from './SchemaMcp/SchemaMcpServer.js';
@@ -272,8 +273,22 @@ function expressMiddleware(): Plugin {
             if (mcpSection?.enabled) {
                 const mcpPath = mcpSection.path ?? '/mcp';
                 const mcpDecide = compileMcpPolicy(mcpSection.policy);
+                const mcpLogger = new SchemaMcpLogger(mcpSection.logging, projectRoot);
                 const mcpApprovalBus = new McpApprovalBus();
+                mcpApprovalBus.setLogger(mcpLogger);
                 const mcpTransports = new Map<string, StreamableHTTPServerTransport>();
+
+                if (mcpLogger.isEnabled()) {
+                    console.log(
+                        `🤖 MCP logging enabled${mcpSection.logging?.file ? ` -> ${mcpSection.logging.file}` : ' (stdout)'}`
+                    );
+                }
+
+                mcpLogger.log('server_boot', {
+                    path: mcpPath,
+                    projects: Array.from(repositories.values()).length,
+                    logFile: mcpSection.logging?.file ?? null
+                });
 
                 if (configFile) {
                     mcpApprovalBus.setForeverPersister((toolName, action) =>
@@ -378,11 +393,13 @@ function expressMiddleware(): Plugin {
                             sessionIdGenerator: () => crypto.randomUUID(),
                             onsessioninitialized: (sid) => {
                                 mcpTransports.set(sid, transport!);
+                                mcpLogger.log('session_initialized', {sessionId: sid});
                             }
                         });
                         transport.onclose = (): void => {
                             if (transport?.sessionId) {
                                 mcpTransports.delete(transport.sessionId);
+                                mcpLogger.log('session_closed', {sessionId: transport.sessionId});
                             }
                         };
 
@@ -393,7 +410,8 @@ function expressMiddleware(): Plugin {
                                 onApprovalRequest: (toolName, args) =>
                                     mcpApprovalBus.request(toolName, args),
                                 getSessionOverride: (toolName) =>
-                                    mcpApprovalBus.getSessionOverride(toolName)
+                                    mcpApprovalBus.getSessionOverride(toolName),
+                                logger: mcpLogger
                             }
                         );
                         await mcpServer.connect(transport);

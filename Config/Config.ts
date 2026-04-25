@@ -127,6 +127,20 @@ export const SchemaConfigMcpPolicy = Vts.object({
 export type ConfigMcpPolicy = ExtractSchemaResultType<typeof SchemaConfigMcpPolicy>;
 
 /**
+ * Logging for the MCP endpoint. When `enabled` is true every tool call,
+ * policy decision, approval request, and session event is recorded as a
+ * JSON-line. If `file` is set the line is appended to that file
+ * (resolved against the project root); otherwise it is written to stdout
+ * with an `[mcp]` prefix.
+ */
+export const SchemaConfigMcpLogging = Vts.object({
+    enabled: Vts.boolean(),
+    file: Vts.optional(Vts.string())
+});
+
+export type ConfigMcpLogging = ExtractSchemaResultType<typeof SchemaConfigMcpLogging>;
+
+/**
  * Schema of config MCP. When `enabled` is true the Vite dev server exposes a
  * Model Context Protocol endpoint at `path` (default `/mcp`) so Claude CLI
  * and other MCP clients can mutate the schema tree through the same
@@ -135,7 +149,8 @@ export type ConfigMcpPolicy = ExtractSchemaResultType<typeof SchemaConfigMcpPoli
 export const SchemaConfigMcp = Vts.object({
     enabled: Vts.boolean(),
     path: Vts.optional(Vts.string()),
-    policy: Vts.optional(SchemaConfigMcpPolicy)
+    policy: Vts.optional(SchemaConfigMcpPolicy),
+    logging: Vts.optional(SchemaConfigMcpLogging)
 });
 
 export type ConfigMcp = ExtractSchemaResultType<typeof SchemaConfigMcp>;

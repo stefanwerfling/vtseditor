@@ -57,8 +57,47 @@ The MCP endpoint is then available at `http://localhost:5173/mcp`.
 |---------------|-----------|-----------|-------------|
 | **`enabled`** | `boolean` | —         | **Required.** Set to `true` to mount the MCP endpoint. Omit the section (or set `false`) to disable it entirely. |
 | **`path`**    | `string`  | `"/mcp"`  | URL path under the dev server host where the MCP endpoint is mounted. Change it if you reverse-proxy the editor or want to isolate multiple MCP-enabled projects on one host. |
+| **`logging`** | `object`  | —         | Optional. Records every tool call, policy decision, approval flow event, and session lifecycle event. See [below](#logging). |
 
 Transport is the **MCP Streamable HTTP transport** (stateful mode, server-issued session IDs). The same endpoint handles both `POST` messages and the SSE response stream.
+
+---
+
+### `mcp.logging`
+
+Turns the MCP server into a verbose audit trail. Entries are emitted as single-line JSON objects (one per event) so the output stays grep- and `jq`-friendly.
+
+```json
+{
+  "mcp": {
+    "enabled": true,
+    "logging": {
+      "enabled": true,
+      "file": "./logs/mcp.log"
+    }
+  }
+}
+```
+
+| Field         | Type      | Default  | Description |
+|---------------|-----------|----------|-------------|
+| **`enabled`** | `boolean` | —        | **Required.** `true` turns logging on; if the whole `logging` block is omitted nothing is recorded. |
+| **`file`**    | `string`  | — / stdout | Optional path (resolved against the project root). If set, log lines are appended to that file; the directory is created on startup. If omitted, lines are printed to stdout with an `[mcp]` prefix. |
+
+Each log line contains at least `ts` (ISO timestamp) and `event`. Notable events:
+
+| Event | When |
+|-------|------|
+| `server_boot` | MCP endpoint mounted. |
+| `session_initialized` / `session_closed` | A new Streamable-HTTP transport is opened or closed. |
+| `tools_registered` / `tools_list` | Static registration + every `tools/list` request. |
+| `tool_call` | Before dispatch — includes `tool`, `args`, `policy`, `override`, effective `action`. |
+| `tool_approval_requested` / `tool_approval_resolved` | The gate delegated to the user, plus the outcome. |
+| `tool_result` / `tool_error` / `tool_denied` / `tool_invalid_args` / `tool_unknown` | Final disposition of the call (with `durationMs`). |
+| `approval_request` / `approval_decided` / `approval_timeout` | Raw approval-bus activity. |
+| `approval_override_set` / `approval_persisted` / `approval_persist_failed` | `remember: session` / `forever` decisions and disk writes. |
+
+Everything is logged synchronously on the same process; disable the block if you don't want the extra I/O.
 
 ---
 

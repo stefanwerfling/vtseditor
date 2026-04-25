@@ -6,6 +6,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import {ExtractSchemaResultType, Schema, SchemaErrors} from 'vts';
 import {ConfigMcpPolicyAction} from '../Config/Config.js';
+import {SchemaMcpLogger} from './SchemaMcpLogger.js';
 import {McpPolicyDecide} from './SchemaMcpPolicy.js';
 import {JsonSchemaNode, vtsDescriptionToJsonSchema} from './VtsToJsonSchema.js';
 
@@ -74,6 +75,7 @@ export type RegisterVtsMcpToolsOptions = {
     decide?: McpPolicyDecide;
     onApprovalRequest?: McpApprovalHandler;
     getSessionOverride?: McpSessionOverrideLookup;
+    logger?: SchemaMcpLogger;
 };
 
 /**
@@ -89,6 +91,7 @@ export function registerVtsMcpTools(
     options: RegisterVtsMcpToolsOptions = {}
 ): void {
     const byName = new Map<string, VtsMcpTool>();
+    const logger = options.logger;
 
     for (const tool of tools) {
         if (byName.has(tool.name)) {
@@ -105,11 +108,13 @@ export function registerVtsMcpTools(
     type ListedTool = {name: string; description: string; inputSchema: JsonSchemaNode};
 
     const toolList: ListedTool[] = [];
+    const hiddenTools: string[] = [];
 
     for (const t of tools) {
         const action = options.decide ? options.decide(t.name) : ConfigMcpPolicyAction.allow;
 
         if (action === ConfigMcpPolicyAction.deny) {
+            hiddenTools.push(t.name);
             continue;
         }
 
@@ -124,16 +129,24 @@ export function registerVtsMcpTools(
         });
     }
 
+    logger?.log('tools_registered', {
+        advertised: toolList.map((t) => t.name),
+        hidden: hiddenTools
+    });
+
     mcp.server.registerCapabilities({tools: {listChanged: false}});
 
-    mcp.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-        tools: toolList
-    }));
+    mcp.server.setRequestHandler(ListToolsRequestSchema, async () => {
+        logger?.log('tools_list', {count: toolList.length});
+        return {tools: toolList};
+    });
 
     mcp.server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
+        const startedAt = Date.now();
         const tool = byName.get(request.params.name);
 
         if (tool === undefined) {
+            logger?.log('tool_unknown', {tool: request.params.name});
             return {
                 content: [{type: 'text', text: `Unknown tool: ${request.params.name}`}],
                 isError: true
@@ -144,6 +157,7 @@ export function registerVtsMcpTools(
         const errors: SchemaErrors = [];
 
         if (!tool.inputSchema.validate(args, errors)) {
+            logger?.log('tool_invalid_args', {tool: tool.name, args, errors});
             return {
                 content: [{
                     type: 'text',
@@ -157,10 +171,23 @@ export function registerVtsMcpTools(
         // schema errors surface regardless of policy, and so handlers
         // never see a blocked call.
         const override = options.getSessionOverride?.(tool.name);
-        const action = override
-            ?? (options.decide ? options.decide(tool.name) : ConfigMcpPolicyAction.allow);
+        const policyAction = options.decide ? options.decide(tool.name) : ConfigMcpPolicyAction.allow;
+        const action = override ?? policyAction;
+
+        logger?.log('tool_call', {
+            tool: tool.name,
+            args,
+            policy: policyAction,
+            override: override ?? null,
+            action
+        });
 
         if (action === ConfigMcpPolicyAction.deny) {
+            logger?.log('tool_denied', {
+                tool: tool.name,
+                reason: override === ConfigMcpPolicyAction.deny ? 'remembered' : 'policy',
+                durationMs: Date.now() - startedAt
+            });
             return {
                 content: [{
                     type: 'text',
@@ -173,11 +200,20 @@ export function registerVtsMcpTools(
         }
 
         if (action === ConfigMcpPolicyAction.ask) {
+            logger?.log('tool_approval_requested', {tool: tool.name});
+
             const approved = options.onApprovalRequest
                 ? await options.onApprovalRequest(tool.name, args)
                 : false;
 
+            logger?.log('tool_approval_resolved', {tool: tool.name, approved});
+
             if (!approved) {
+                logger?.log('tool_denied', {
+                    tool: tool.name,
+                    reason: 'not_approved',
+                    durationMs: Date.now() - startedAt
+                });
                 return {
                     content: [{
                         type: 'text',
@@ -189,9 +225,20 @@ export function registerVtsMcpTools(
         }
 
         try {
-            return await tool.handler(args);
+            const result = await tool.handler(args);
+            logger?.log('tool_result', {
+                tool: tool.name,
+                ok: result.isError !== true,
+                durationMs: Date.now() - startedAt
+            });
+            return result;
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
+            logger?.log('tool_error', {
+                tool: tool.name,
+                error: message,
+                durationMs: Date.now() - startedAt
+            });
             return {
                 content: [{type: 'text', text: message}],
                 isError: true

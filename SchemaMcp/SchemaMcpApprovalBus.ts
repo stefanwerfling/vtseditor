@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import {ConfigMcpPolicyAction} from '../Config/Config.js';
+import {SchemaMcpLogger} from './SchemaMcpLogger.js';
 
 /**
  * Scope of a "remember this decision" choice made by the user.
@@ -79,6 +80,7 @@ export class McpApprovalBus {
         new Map<string, ConfigMcpPolicyAction.allow|ConfigMcpPolicyAction.deny>();
 
     private _persister: McpApprovalForeverPersister|null = null;
+    private _logger: SchemaMcpLogger|null = null;
 
     public constructor(defaultTimeoutMs = 60_000) {
         this._defaultTimeoutMs = defaultTimeoutMs;
@@ -86,6 +88,10 @@ export class McpApprovalBus {
 
     public setForeverPersister(persister: McpApprovalForeverPersister): void {
         this._persister = persister;
+    }
+
+    public setLogger(logger: SchemaMcpLogger): void {
+        this._logger = logger;
     }
 
     /**
@@ -113,6 +119,7 @@ export class McpApprovalBus {
             }, ttl);
 
             this._pending.set(requestId, {request: event, resolve, timer});
+            this._logger?.log('approval_request', {requestId, tool, args, ttlMs: ttl});
             this._emit(event);
         });
     }
@@ -142,18 +149,24 @@ export class McpApprovalBus {
 
         if (remember === 'session' || remember === 'forever') {
             this._sessionOverrides.set(toolName, action);
+            this._logger?.log('approval_override_set', {tool: toolName, action, scope: remember});
         }
 
         if (remember === 'forever' && this._persister) {
             try {
                 await this._persister(toolName, action);
+                this._logger?.log('approval_persisted', {tool: toolName, action});
             } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
                 console.error(`McpApprovalBus: persister failed for ${toolName}:`, err);
+                this._logger?.log('approval_persist_failed', {tool: toolName, action, error: message});
                 // Fall through — the session override still applies so
                 // the user isn't re-prompted this session even if disk
                 // persistence failed.
             }
         }
+
+        this._logger?.log('approval_decided', {requestId, tool: toolName, allow, remember: remember ?? null});
 
         return this._resolveInternal(requestId, allow, 'user');
     }
@@ -203,6 +216,10 @@ export class McpApprovalBus {
         clearTimeout(entry.timer);
         this._pending.delete(requestId);
         entry.resolve(allow);
+
+        if (reason === 'timeout') {
+            this._logger?.log('approval_timeout', {requestId, tool: entry.request.tool});
+        }
 
         this._emit({type: 'resolved', requestId, allow, reason});
 
