@@ -77,6 +77,14 @@ export class SchemaFsRepository {
     private _flushInFlight: Promise<void>|null = null;
     private _postFlush: (() => void|Promise<void>)|null = null;
     private readonly _flushDebounceMs: number;
+    /**
+     * True when at least one schema-content commit (anything except
+     * `editor_settings`) has happened since the last flush. The post-flush
+     * hook (codegen) only fires when this is true — pure UI-state flushes
+     * like changing the active selection persist to disk but do not
+     * regenerate `.ts` files or run pre/post scripts.
+     */
+    private _schemaDirtySinceFlush = false;
 
     public constructor(
         project: SchemaProject,
@@ -105,10 +113,11 @@ export class SchemaFsRepository {
     }
 
     /**
-     * Register a callback that fires (fire-and-forget) after every
-     * successful atomic write. Used to wire `autoGenerate` codegen onto the
-     * debounced flush — mutations coalesce into one write and trigger one
-     * regeneration. Pass `null` to clear.
+     * Register a callback that fires (fire-and-forget) after a successful
+     * atomic write that included at least one schema-content change.
+     * Editor-settings-only flushes (selection / UI state persistence) are
+     * skipped so `autoGenerate` does not retrigger `npm run compile` on
+     * every click. Pass `null` to clear.
      */
     public setPostFlushHook(hook: (() => void|Promise<void>)|null): void {
         this._postFlush = hook;
@@ -847,6 +856,12 @@ export class SchemaFsRepository {
 
     private _commit(body: SchemaRepositoryEventBody, clientId?: string): void {
         this._rev++;
+        // Only content-bearing ops mark the repo dirty for codegen purposes —
+        // `editor_settings` is pure UI state (active selection, panel widths)
+        // and must not retrigger `npm run compile` on every click.
+        if (body.op !== 'editor_settings') {
+            this._schemaDirtySinceFlush = true;
+        }
         this._scheduleFlush();
 
         if (!this._bus) {
@@ -971,6 +986,11 @@ export class SchemaFsRepository {
         }
 
         this._flushPending = false;
+        // Snapshot then reset before the write so any concurrent commit that
+        // arrives while we're writing correctly re-arms the flag for the
+        // next flush cycle.
+        const runHook = this._schemaDirtySinceFlush;
+        this._schemaDirtySinceFlush = false;
 
         const payload: JsonData = {
             fs: this._fs,
@@ -983,7 +1003,7 @@ export class SchemaFsRepository {
 
         await this._flushInFlight;
 
-        if (this._postFlush !== null) {
+        if (runHook && this._postFlush !== null) {
             try {
                 await this._postFlush();
             } catch (e) {
