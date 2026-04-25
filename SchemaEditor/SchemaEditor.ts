@@ -1148,13 +1148,6 @@ export class SchemaEditor {
             const entryReadOnly = entry.isReadOnly();
 
             for (const table of sTables) {
-                // Restore the natural read-only state — a LinkTable in
-                // another entry may have flipped this table to read-only
-                // while it was being shown as a link. Now we are back in
-                // its home entry, so editing must be re-enabled (unless
-                // the entry itself is read-only, e.g. an extern package).
-                table.setReadOnly(entryReadOnly);
-
                 this._container!.appendChild(table.getElement());
                 // Apply deferred fields now that the element is attached so
                 // width is measured against the live flex container, not
@@ -1170,8 +1163,6 @@ export class SchemaEditor {
             const sEnums = entry.getEnumTables();
 
             for (const tenum of sEnums) {
-                tenum.setReadOnly(entryReadOnly);
-
                 this._container!.appendChild(tenum.getElement());
                 tenum.flushPendingData();
 
@@ -1227,7 +1218,19 @@ export class SchemaEditor {
             this._jsPlumbInstance!.repaintEverything();
 
             // updates view --------------------------------------------------------------------------------------------
+            // link.updateView flips the wrapped table's `_readOnly` to true
+            // via _applyLinkReadOnly, which would clobber the home schemas
+            // / enums that share the same instance (a self-link inside this
+            // entry, or the very next render after the user navigated back
+            // from a link viewer). Run links first, then reset the home
+            // tables' read-only state from `entryReadOnly` so they accept
+            // edits / drops again. Extern entries stay read-only.
+            for (const link of links) {
+                link.updateView();
+            }
+
             for (const tenum of sEnums) {
+                tenum.setReadOnly(entryReadOnly);
                 tenum.updateView();
 
                 if (entryTable) {
@@ -1239,11 +1242,8 @@ export class SchemaEditor {
                 }
             }
 
-            for (const link of links) {
-                link.updateView();
-            }
-
             for (const table of sTables) {
+                table.setReadOnly(entryReadOnly);
                 table.showDropArea(false);
                 table.updateView();
 
