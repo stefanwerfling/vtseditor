@@ -6,6 +6,7 @@ import path from 'path';
 import {fileURLToPath} from 'url';
 import {defineConfig, Plugin} from 'vite';
 import {SchemaErrors, Vts} from 'vts';
+import {WebSocketServer, WebSocket as WsClient} from 'ws';
 import {ConfigAIProviderName, ConfigMcp, SchemaConfig} from './Config/Config.js';
 import {SchemaJsonData} from './SchemaEditor/JsonData.js';
 import {SchemaExternLoader} from './SchemaExtern/SchemaExternLoader.js';
@@ -41,6 +42,16 @@ import {SchemaValidator} from './SchemaValidator/SchemaValidator.js';
 const SchemaValidateRequest = Vts.object({
     schemaUnid: Vts.string(),
     json: Vts.string()
+});
+
+/**
+ * Request body schema for POST /api/push-event — the IDE plugin POSTs a
+ * CustomEvent payload here and the server fans it out to every connected
+ * editor tab via WebSocket.
+ */
+const SchemaPushEventRequest = Vts.object({
+    event: Vts.string(),
+    detail: Vts.unknown()
 });
 
 /**
@@ -772,6 +783,69 @@ function expressMiddleware(): Plugin {
             registerSchemaApiRoutes(app, {
                 repositories,
                 runGenerate
+            });
+
+            // -----------------------------------------------------------------
+            // Plugin bridge: the IDE plugin used to embed a JCEF browser and
+            // dispatch CustomEvents directly into it. The browser is now an
+            // ordinary external tab; the plugin POSTs the same payloads to
+            // /api/push-event and the server fans them out to every connected
+            // tab via WebSocket. The last broadcast is buffered so a tab
+            // opened just after the plugin sent does not miss the message.
+            // -----------------------------------------------------------------
+            const pluginWss = new WebSocketServer({noServer: true});
+            const pluginClients = new Set<WsClient>();
+            let lastPluginEvent: {event: string; detail: unknown}|null = null;
+
+            pluginWss.on('connection', (ws) => {
+                pluginClients.add(ws);
+                ws.on('close', () => pluginClients.delete(ws));
+                if (lastPluginEvent) {
+                    ws.send(JSON.stringify(lastPluginEvent));
+                }
+            });
+
+            server.httpServer?.on('upgrade', (req, socket, head) => {
+                if (!req.url) {
+                    return;
+                }
+                // req.url is path + query — Vite's HMR upgrade lives elsewhere,
+                // so we only handle our own path and let other listeners deal
+                // with the rest.
+                const pathname = req.url.split('?', 1)[0];
+                if (pathname !== '/ws/plugin') {
+                    return;
+                }
+                pluginWss.handleUpgrade(req, socket, head, (ws) => {
+                    pluginWss.emit('connection', ws, req);
+                });
+            });
+
+            app.post('/api/push-event', (req, res): void => {
+                const bodyData = req.body;
+
+                if (!SchemaPushEventRequest.validate(bodyData, [])) {
+                    res.status(400).json({
+                        success: false,
+                        msg: 'Bad request body — expected {event: string, detail: any}.'
+                    });
+                    return;
+                }
+
+                const message = {event: bodyData.event, detail: bodyData.detail};
+                lastPluginEvent = message;
+
+                const payload = JSON.stringify(message);
+                let delivered = 0;
+
+                for (const client of pluginClients) {
+                    if (client.readyState === client.OPEN) {
+                        client.send(payload);
+                        delivered++;
+                    }
+                }
+
+                res.status(200).json({success: true, delivered});
             });
 
             server.middlewares.use(app);
