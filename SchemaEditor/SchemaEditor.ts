@@ -1207,6 +1207,17 @@ export class SchemaEditor {
                 if (linkElement) {
                     this._container!.appendChild(linkElement);
 
+                    // Flush the wrapped table's pending fields/values now
+                    // that the element is attached. Without this, a link
+                    // pointing at an extern schema/enum that the user has
+                    // never opened would render an empty box — extern data
+                    // stays in `_pendingData` until its file is visited.
+                    const linkObject = link.getLinkObject();
+
+                    if (linkObject instanceof SchemaTable || linkObject instanceof EnumTable) {
+                        linkObject.flushPendingData();
+                    }
+
                     requestAnimationFrame(() => {
                         this._jsPlumbInstance!.revalidate(linkElement);
                     });

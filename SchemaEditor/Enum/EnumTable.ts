@@ -316,6 +316,7 @@ export class EnumTable extends BaseTable {
             this._columns.appendChild(value.getElement());
             this._values.set(uuid, value);
 
+            value.setReadOnly(this._readOnly);
             value.updateView();
         }
     }
