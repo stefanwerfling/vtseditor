@@ -1145,8 +1145,16 @@ export class SchemaEditor {
 
             // Schemas -------------------------------------------------------------------------------------------------
             const sTables = entry.getSchemaTables();
+            const entryReadOnly = entry.isReadOnly();
 
             for (const table of sTables) {
+                // Restore the natural read-only state — a LinkTable in
+                // another entry may have flipped this table to read-only
+                // while it was being shown as a link. Now we are back in
+                // its home entry, so editing must be re-enabled (unless
+                // the entry itself is read-only, e.g. an extern package).
+                table.setReadOnly(entryReadOnly);
+
                 this._container!.appendChild(table.getElement());
                 // Apply deferred fields now that the element is attached so
                 // width is measured against the live flex container, not
@@ -1162,6 +1170,8 @@ export class SchemaEditor {
             const sEnums = entry.getEnumTables();
 
             for (const tenum of sEnums) {
+                tenum.setReadOnly(entryReadOnly);
+
                 this._container!.appendChild(tenum.getElement());
                 tenum.flushPendingData();
 

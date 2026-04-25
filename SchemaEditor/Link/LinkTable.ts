@@ -114,7 +114,27 @@ export class LinkTable {
         // the link refers to a schema or an enum. The "LINK" chip and the
         // dashed violet border announce the link semantics separately.
 
+        this._applyLinkReadOnly();
         this._applyLinkContextMenu();
+    }
+
+    /**
+     * Force the wrapped table into read-only mode while it is presented as
+     * a link — fields/values must not be edited, reordered, or removed
+     * here; that has to happen in the table's home file. setReadOnly
+     * cascades to fields and enum values, hiding their drag handles and
+     * row context menus. The table-header context menu trigger is then
+     * re-shown so the link-mode actions ("Validate JSON", "Remove link")
+     * stay reachable.
+     * @protected
+     */
+    protected _applyLinkReadOnly(): void {
+        if (!this._linkObject) {
+            return;
+        }
+
+        this._linkObject.setReadOnly(true);
+        this._linkObject.getContextMenu()?.setTriggerVisible(true);
     }
 
     /**
@@ -180,6 +200,7 @@ export class LinkTable {
             this._linkObject.setOnDelete(LinkTableOnDelete);
             this._linkObject.updateConnection();
 
+            this._applyLinkReadOnly();
             this._applyLinkContextMenu();
         }
     }
