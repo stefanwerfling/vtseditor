@@ -91,6 +91,14 @@ export type SchemaEditorApiCall =
 
     // Enums
     | {
+        op: 'enum_create';
+        containerUnid: string;
+        name: string;
+        description?: string;
+        pos?: JsonSchemaPositionDescription;
+        unid: string;
+    }
+    | {
         op: 'enum_update';
         unid: string;
         patch: {

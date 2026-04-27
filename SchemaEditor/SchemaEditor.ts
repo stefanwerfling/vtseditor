@@ -233,16 +233,29 @@ export class SchemaEditor {
      * @protected
      */
     protected _addSchema(): void {
-        if (Treeview.getActiveEntry() === null) {
+        const activeEntry = Treeview.getActiveEntry();
+
+        if (activeEntry === null) {
             return;
         }
 
         const table = new SchemaTable(crypto.randomUUID(), 'NewSchema');
 
-        Treeview.getActiveEntry()!.addSchemaTable(table);
+        activeEntry.addSchemaTable(table);
 
         this._container!.appendChild(table.getElement());
         this._jsPlumbInstance!.revalidate(table.getElement());
+
+        window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+            detail: {
+                apiCall: {
+                    op: 'schema_create',
+                    containerUnid: activeEntry.getUnid(),
+                    unid: table.getUnid(),
+                    name: table.getName()
+                }
+            }
+        }));
 
         table.openEditDialog();
     }
@@ -252,16 +265,29 @@ export class SchemaEditor {
      * @protected
      */
     protected _addEnum(): void {
-        if (Treeview.getActiveEntry() === null) {
+        const activeEntry = Treeview.getActiveEntry();
+
+        if (activeEntry === null) {
             return;
         }
 
         const table = new EnumTable(crypto.randomUUID(), 'NewEnum');
 
-        Treeview.getActiveEntry()!.addEnumTable(table);
+        activeEntry.addEnumTable(table);
 
         this._container!.appendChild(table.getElement());
         this._jsPlumbInstance!.revalidate(table.getElement());
+
+        window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
+            detail: {
+                apiCall: {
+                    op: 'enum_create',
+                    containerUnid: activeEntry.getUnid(),
+                    unid: table.getUnid(),
+                    name: table.getName()
+                }
+            }
+        }));
 
         table.openEditDialog();
     }
@@ -1717,6 +1743,16 @@ export class SchemaEditor {
                 return;
 
             // Enums ----------------------------------------------------------
+            case 'enum_create':
+                await client.createEnum({
+                    containerUnid: call.containerUnid,
+                    name: call.name,
+                    description: call.description,
+                    pos: call.pos,
+                    unid: call.unid
+                });
+                return;
+
             case 'enum_update':
                 await client.updateEnum(call.unid, call.patch);
                 return;
