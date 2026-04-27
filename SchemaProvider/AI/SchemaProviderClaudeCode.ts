@@ -51,11 +51,12 @@ export class SchemaProviderClaudeCode extends SchemaProviderAIBase {
         const binary = SchemaEnvPlaceholderUtil.replace(this._config.apiUrl || '').trim() || 'claude';
         const apiKey = SchemaEnvPlaceholderUtil.replace(this._config.apiKey || '').trim();
 
+        // Kein --bare: damit der vorhandene OAuth-/Keychain-Login der lokalen
+        // Claude-Code-Installation genutzt wird. --bare würde das deaktivieren
+        // und einen ANTHROPIC_API_KEY erzwingen.
         const args: string[] = [
             '-p',
             '--output-format', 'json',
-            '--bare',
-            '--tools', '',
             '--system-prompt', systemPrompt
         ];
 
@@ -114,7 +115,13 @@ export class SchemaProviderClaudeCode extends SchemaProviderAIBase {
                 clearTimeout(timeout);
 
                 if (code !== 0) {
-                    reject(new Error(`claude CLI exited with code ${code}: ${stderr.trim() || '(no stderr)'}`));
+                    // Bei --output-format json schreibt claude den eigentlichen
+                    // Fehler (z.B. "Not logged in") in den JSON-Envelope auf
+                    // stdout, nicht nach stderr. Erst stdout parsen, sonst
+                    // sieht der User nur "(no stderr)".
+                    const stdoutError = this._extractError(stdout);
+                    const detail = stdoutError || stderr.trim() || '(no stderr)';
+                    reject(new Error(`claude CLI exited with code ${code}: ${detail}`));
                     return;
                 }
 
@@ -144,6 +151,34 @@ export class SchemaProviderClaudeCode extends SchemaProviderAIBase {
         }
 
         return lines.join('\n').trim();
+    }
+
+    /**
+     * Pull a human-readable error out of the JSON envelope claude emits when
+     * it fails (`is_error: true`, with the message in `result`). Returns an
+     * empty string if stdout isn't a parseable error envelope.
+     * @param {string} stdout
+     * @return {string}
+     * @protected
+     */
+    protected _extractError(stdout: string): string {
+        const trimmed = stdout.trim();
+
+        if (!trimmed) {
+            return '';
+        }
+
+        try {
+            const parsed = JSON.parse(trimmed);
+
+            if (parsed && typeof parsed === 'object' && parsed.is_error && typeof parsed.result === 'string') {
+                return parsed.result;
+            }
+        } catch {
+            // not JSON — caller will fall back to stderr
+        }
+
+        return '';
     }
 
     /**
