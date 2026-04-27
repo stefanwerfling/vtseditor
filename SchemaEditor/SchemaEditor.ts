@@ -246,10 +246,16 @@ export class SchemaEditor {
         this._container!.appendChild(table.getElement());
         this._jsPlumbInstance!.revalidate(table.getElement());
 
+        // No `updateTreeView`: it triggers `_updateTreeview()` →
+        // `setData()`, which reconstructs every SchemaTable instance.
+        // The edit dialog opened below holds a reference to *this*
+        // SchemaTable; if the rebuild lands while the dialog is open,
+        // setName() on save mutates the orphaned instance and the new
+        // (visible) one keeps the placeholder name. `_updateView`
+        // alone re-renders against the live `_tables`.
         window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
             detail: {
                 updateView: true,
-                updateTreeView: true,
                 apiCall: {
                     op: 'schema_create',
                     containerUnid: activeEntry.getUnid(),
@@ -280,10 +286,10 @@ export class SchemaEditor {
         this._container!.appendChild(table.getElement());
         this._jsPlumbInstance!.revalidate(table.getElement());
 
+        // See `_addSchema` for why `updateTreeView` is omitted.
         window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
             detail: {
                 updateView: true,
-                updateTreeView: true,
                 apiCall: {
                     op: 'enum_create',
                     containerUnid: activeEntry.getUnid(),
