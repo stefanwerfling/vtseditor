@@ -248,6 +248,8 @@ export class SchemaEditor {
 
         window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
             detail: {
+                updateView: true,
+                updateTreeView: true,
                 apiCall: {
                     op: 'schema_create',
                     containerUnid: activeEntry.getUnid(),
@@ -280,6 +282,8 @@ export class SchemaEditor {
 
         window.dispatchEvent(new CustomEvent<SchemaEditorUpdateDataDetail>(EditorEvents.updateData, {
             detail: {
+                updateView: true,
+                updateTreeView: true,
                 apiCall: {
                     op: 'enum_create',
                     containerUnid: activeEntry.getUnid(),
