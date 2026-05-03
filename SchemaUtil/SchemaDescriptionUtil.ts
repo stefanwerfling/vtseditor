@@ -11,7 +11,9 @@ export class SchemaDescriptionUtil {
     public static validateDescription(description: string): string {
         return description
         .replace(/(\r\n|\r|\n)+/g, ' ')
-        .trim();
+        .trim()
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'");
     }
 
 }
