@@ -91,7 +91,13 @@ export type ConfigProvider = ExtractSchemaResultType<typeof SchemaConfigProvider
  */
 export const SchemaConfigEditor = Vts.object({
     providers: Vts.array(SchemaConfigProvider),
-    aiProvider: Vts.optional(Vts.or([Vts.enum(ConfigAIProviderName), Vts.string()]))
+    aiProvider: Vts.optional(Vts.or([Vts.enum(ConfigAIProviderName), Vts.string()])),
+    // How many recently-opened file entries keep their canvas tables
+    // (SchemaTable/EnumTable instances + DOM) hydrated in the browser.
+    // Older ones are dehydrated on a LRU basis to keep memory bounded on
+    // large projects. The currently active entry never counts against
+    // the limit. Default 3 when omitted; minimum 1.
+    openEntryCacheSize: Vts.optional(Vts.number())
 });
 
 /**

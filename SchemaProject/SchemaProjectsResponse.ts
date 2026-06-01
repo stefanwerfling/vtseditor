@@ -14,7 +14,12 @@ export const SchemaExtern = Vts.object({
 });
 
 export const SchemaEditorInit = Vts.object({
-    enable_schema_create: Vts.boolean()
+    enable_schema_create: Vts.boolean(),
+    // How many recently-opened file entries the editor should keep
+    // hydrated in the browser (config.editor.openEntryCacheSize, default 3).
+    // Surfaced through `init` so the frontend reads it once on load and
+    // does not need a second config endpoint.
+    open_entry_cache_size: Vts.optional(Vts.number())
 });
 
 /**

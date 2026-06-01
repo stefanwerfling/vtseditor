@@ -12,6 +12,7 @@ import {SchemaJsonData} from './SchemaEditor/JsonData.js';
 import {SchemaExternLoader} from './SchemaExtern/SchemaExternLoader.js';
 import {SchemaGenerator} from './SchemaGenerator/SchemaGenerator.js';
 import {SchemaProject} from './SchemaProject/SchemaProject.js';
+import {buildJsonDataFSSkeleton} from './SchemaProject/SchemaProjectSkeleton.js';
 import {StreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {registerSchemaApiRoutes} from './SchemaApi/SchemaApiRoutes.js';
 import {
@@ -24,6 +25,7 @@ import {compileMcpPolicy} from './SchemaMcp/SchemaMcpPolicy.js';
 import {persistPolicyRule} from './SchemaMcp/SchemaMcpPolicyPersister.js';
 import {createSchemaMcpServer} from './SchemaMcp/SchemaMcpServer.js';
 import {SchemaFsRepository} from './SchemaRepository/SchemaFsRepository.js';
+import {SchemaFsTreeWalker} from './SchemaRepository/SchemaFsTreeWalker.js';
 import {SchemaRepositoryEvent} from './SchemaRepository/SchemaRepositoryEventBus.js';
 import {SchemaRepositoryRegistry} from './SchemaRepository/SchemaRepositoryRegistry.js';
 import {
@@ -93,6 +95,11 @@ function expressMiddleware(): Plugin {
             const repositories = new SchemaRepositoryRegistry();
             let providerAiName: string|ConfigAIProviderName = ConfigAIProviderName.localai;
             let mcpSection: ConfigMcp|undefined;
+            // editor.openEntryCacheSize from vtseditor.json — how many
+            // recently-opened files the browser keeps hydrated. Surfaced
+            // to the client via the load-schema responses. Falls back to
+            // a sane default; negative/zero values are clamped to 1.
+            let openEntryCacheSize = 3;
 
             if (configFile) {
                 const config = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
@@ -118,6 +125,10 @@ function expressMiddleware(): Plugin {
 
                         if (config.editor.aiProvider) {
                             providerAiName = config.editor.aiProvider;
+                        }
+
+                        if (typeof config.editor.openEntryCacheSize === 'number') {
+                            openEntryCacheSize = Math.max(1, Math.floor(config.editor.openEntryCacheSize));
                         }
                     }
 
@@ -575,7 +586,8 @@ function expressMiddleware(): Plugin {
                         controls_width: 300
                     },
                     init: {
-                        enable_schema_create: SchemaProvider.getInstance().count() > 0
+                        enable_schema_create: SchemaProvider.getInstance().count() > 0,
+                        open_entry_cache_size: openEntryCacheSize
                     }
                 };
 
@@ -624,6 +636,151 @@ function expressMiddleware(): Plugin {
                 };
 
                 res.status(200).json(response);
+            });
+
+            // ---------------------------------------------------------------------------------------------------------
+
+            // Lightweight variant of /api/load-schema: returns the tree
+            // structure with all heavy per-schema/per-enum content stripped
+            // (fields, enum values, pos, extend, descriptions, links). The
+            // frontend uses this to build the treeview + type registry on
+            // startup, then fetches individual entries on demand through
+            // /api/projects/:pid/entries/:unid (and the extern variant).
+            //
+            // Same response shape as /api/load-schema so the frontend can
+            // reuse the existing ProjectsResponse type — only the contents
+            // of the per-project `fs` are shrunk.
+            app.get('/api/load-schema/skeleton', (_req, res) => {
+                const projectsData: ProjectsData = {
+                    projects: [],
+                    extern: [],
+                    editor: {
+                        controls_width: 300
+                    },
+                    init: {
+                        enable_schema_create: SchemaProvider.getInstance().count() > 0,
+                        open_entry_cache_size: openEntryCacheSize
+                    }
+                };
+
+                for (const [punid, repo] of repositories.entries()) {
+                    projectsData.projects.push({
+                        unid: punid,
+                        name: repo.getProject().name,
+                        fs: buildJsonDataFSSkeleton(repo.getFs())
+                    });
+
+                    projectsData.editor = repo.getEditorSettings();
+                }
+
+                const externFiles = loader.getList();
+
+                for (const [eunid, externSource] of externFiles.entries()) {
+                    try {
+                        if (fs.existsSync(externSource.schemaFile)) {
+                            const content = fs.readFileSync(externSource.schemaFile, 'utf-8');
+                            const schemaData = JSON.parse(content);
+
+                            if (SchemaJsonData.validate(schemaData, [])) {
+                                projectsData.extern.push({
+                                    unid: eunid,
+                                    name: externSource.name,
+                                    fs: buildJsonDataFSSkeleton(schemaData.fs)
+                                });
+                            }
+                        } else {
+                            console.log(`File not found: ${externSource.schemaFile}`);
+                        }
+                    } catch (e) {
+                        console.log('Error: ');
+                        console.log(e);
+                    }
+                }
+
+                const response: ProjectsResponse = {
+                    data: projectsData
+                };
+
+                res.status(200).json(response);
+            });
+
+            // Hydrate a single container with its full contents. `unid`
+            // refers to any node in the project's FS — typically a `file`
+            // entry the user just opened, but a folder is also valid (the
+            // response includes its full subtree). Returns the JsonDataFS
+            // for that node as `data.fs`.
+            app.get('/api/projects/:pid/entries/:unid', (req, res): void => {
+                const repo = repositories.get(req.params.pid);
+
+                if (!repo) {
+                    res.status(404).json({success: false, msg: `Unknown project ${req.params.pid}`});
+                    return;
+                }
+
+                const ctx = SchemaFsTreeWalker.findContainer(repo.getFs(), req.params.unid);
+
+                if (ctx === null) {
+                    res.status(404).json({
+                        success: false,
+                        msg: `Unknown entry ${req.params.unid} in project ${req.params.pid}`
+                    });
+                    return;
+                }
+
+                res.status(200).json({success: true, data: {fs: ctx.container}});
+            });
+
+            // Same as /api/projects/:pid/entries/:unid but for read-only
+            // extern packages discovered by SchemaExternLoader. Extern
+            // schemas are not held in a repository; they are re-read from
+            // disk on each request (still cheap — the loader has the file
+            // path, the OS keeps it in page cache).
+            app.get('/api/extern/:eid/entries/:unid', (req, res): void => {
+                const externFiles = loader.getList();
+                const externSource = externFiles.get(req.params.eid);
+
+                if (!externSource) {
+                    res.status(404).json({success: false, msg: `Unknown extern ${req.params.eid}`});
+                    return;
+                }
+
+                try {
+                    if (!fs.existsSync(externSource.schemaFile)) {
+                        res.status(404).json({
+                            success: false,
+                            msg: `Extern source file missing: ${externSource.schemaFile}`
+                        });
+                        return;
+                    }
+
+                    const content = fs.readFileSync(externSource.schemaFile, 'utf-8');
+                    const schemaData = JSON.parse(content);
+
+                    if (!SchemaJsonData.validate(schemaData, [])) {
+                        res.status(500).json({
+                            success: false,
+                            msg: `Extern source has an invalid schema: ${externSource.schemaFile}`
+                        });
+                        return;
+                    }
+
+                    const ctx = SchemaFsTreeWalker.findContainer(schemaData.fs, req.params.unid);
+
+                    if (ctx === null) {
+                        res.status(404).json({
+                            success: false,
+                            msg: `Unknown entry ${req.params.unid} in extern ${req.params.eid}`
+                        });
+                        return;
+                    }
+
+                    res.status(200).json({success: true, data: {fs: ctx.container}});
+                } catch (e) {
+                    res.status(500).json({
+                        success: false,
+                        msg: e instanceof Error ? e.message : String(e)
+                    });
+                }
             });
 
             // ---------------------------------------------------------------------------------------------------------
