@@ -8,7 +8,6 @@ import {defineConfig, Plugin} from 'vite';
 import {SchemaErrors, Vts} from 'vts';
 import {WebSocketServer, WebSocket as WsClient} from 'ws';
 import {ConfigAIProviderName, ConfigMcp, SchemaConfig} from './Config/Config.js';
-import {SchemaJsonData} from './SchemaEditor/JsonData.js';
 import {SchemaExternLoader} from './SchemaExtern/SchemaExternLoader.js';
 import {SchemaGenerator} from './SchemaGenerator/SchemaGenerator.js';
 import {SchemaProject} from './SchemaProject/SchemaProject.js';
@@ -26,6 +25,7 @@ import {persistPolicyRule} from './SchemaMcp/SchemaMcpPolicyPersister.js';
 import {createSchemaMcpServer} from './SchemaMcp/SchemaMcpServer.js';
 import {SchemaFsRepository} from './SchemaRepository/SchemaFsRepository.js';
 import {SchemaFsTreeWalker} from './SchemaRepository/SchemaFsTreeWalker.js';
+import {loadJsonDataFromFile} from './SchemaRepository/SchemaJsonLoader.js';
 import {SchemaRepositoryEvent} from './SchemaRepository/SchemaRepositoryEventBus.js';
 import {SchemaRepositoryRegistry} from './SchemaRepository/SchemaRepositoryRegistry.js';
 import {
@@ -250,13 +250,10 @@ function expressMiddleware(): Plugin {
 
                 for (const [, externSource] of externFiles.entries()) {
                     try {
-                        if (fs.existsSync(externSource.schemaFile)) {
-                            const content = fs.readFileSync(externSource.schemaFile, 'utf-8');
-                            const schemaData = JSON.parse(content);
+                        const schemaData = loadJsonDataFromFile(externSource.schemaFile);
 
-                            if (SchemaJsonData.validate(schemaData, [])) {
-                                gen.setExternSource(externSource, schemaData.fs);
-                            }
+                        if (schemaData !== null) {
+                            gen.setExternSource(externSource, schemaData.fs);
                         }
                     } catch (e) {
                         console.log('Error: ');
@@ -609,18 +606,15 @@ function expressMiddleware(): Plugin {
 
                 for (const [eunid, externSource] of externFiles.entries()) {
                     try {
-                        if (fs.existsSync(externSource.schemaFile)) {
-                            const content = fs.readFileSync(externSource.schemaFile, 'utf-8');
-                            const schemaData = JSON.parse(content);
+                        const schemaData = loadJsonDataFromFile(externSource.schemaFile);
 
-                            if (SchemaJsonData.validate(schemaData, [])) {
-                                projectsData.extern.push({
-                                    unid: eunid,
-                                    name: externSource.name,
-                                    fs: schemaData.fs
-                                });
-                            }
-                        } else {
+                        if (schemaData !== null) {
+                            projectsData.extern.push({
+                                unid: eunid,
+                                name: externSource.name,
+                                fs: schemaData.fs
+                            });
+                        } else if (!fs.existsSync(externSource.schemaFile)) {
                             console.log(`File not found: ${externSource.schemaFile}`);
                         }
                     } catch (e) {
@@ -677,18 +671,15 @@ function expressMiddleware(): Plugin {
 
                 for (const [eunid, externSource] of externFiles.entries()) {
                     try {
-                        if (fs.existsSync(externSource.schemaFile)) {
-                            const content = fs.readFileSync(externSource.schemaFile, 'utf-8');
-                            const schemaData = JSON.parse(content);
+                        const schemaData = loadJsonDataFromFile(externSource.schemaFile);
 
-                            if (SchemaJsonData.validate(schemaData, [])) {
-                                projectsData.extern.push({
-                                    unid: eunid,
-                                    name: externSource.name,
-                                    fs: buildJsonDataFSSkeleton(schemaData.fs)
-                                });
-                            }
-                        } else {
+                        if (schemaData !== null) {
+                            projectsData.extern.push({
+                                unid: eunid,
+                                name: externSource.name,
+                                fs: buildJsonDataFSSkeleton(schemaData.fs)
+                            });
+                        } else if (!fs.existsSync(externSource.schemaFile)) {
                             console.log(`File not found: ${externSource.schemaFile}`);
                         }
                     } catch (e) {
@@ -753,10 +744,9 @@ function expressMiddleware(): Plugin {
                         return;
                     }
 
-                    const content = fs.readFileSync(externSource.schemaFile, 'utf-8');
-                    const schemaData = JSON.parse(content);
+                    const schemaData = loadJsonDataFromFile(externSource.schemaFile);
 
-                    if (!SchemaJsonData.validate(schemaData, [])) {
+                    if (schemaData === null) {
                         res.status(500).json({
                             success: false,
                             msg: `Extern source has an invalid schema: ${externSource.schemaFile}`

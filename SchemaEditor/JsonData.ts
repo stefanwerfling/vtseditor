@@ -241,14 +241,39 @@ export type JsonEditorSettings = ExtractSchemaResultType<typeof SchemaJsonEditor
 // ---------------------------------------------------------------------------------------------------------------------
 
 /**
- * Schema json data
+ * Schema json data.
+ *
+ * `version` distinguishes the on-disk layouts:
+ *   - missing / `1`: legacy single-file. `fs` carries every file's
+ *     schemas/enums/links inline.
+ *   - `2`: chunked. `fs` is an index — file-type entries have empty
+ *     `schemas`/`enums`/`links` arrays in the main file; their content
+ *     lives in `entries/<unid>.json` next to the main file.
  */
 export const SchemaJsonData = Vts.object({
     fs: SchemaJsonDataFS,
-    editor: SchemaJsonEditorSettings
+    editor: SchemaJsonEditorSettings,
+    version: Vts.optional(Vts.number())
 });
 
 /**
  * Type json data
  */
 export type JsonData = ExtractSchemaResultType<typeof SchemaJsonData>;
+
+/**
+ * Schema json entry chunk — the on-disk shape of one `entries/<unid>.json`
+ * file. Mirrors the per-file payload of a {@link JsonDataFS} so the
+ * load path can splice the chunk back into the corresponding file
+ * node without further reshaping.
+ */
+export const SchemaJsonEntryChunk = Vts.object({
+    schemas: Vts.array(SchemaJsonSchemaDescription),
+    enums: Vts.array(SchemaJsonEnumDescription),
+    links: Vts.optional(Vts.array(SchemaJsonLinkDescription))
+});
+
+/**
+ * Type of an entry chunk file.
+ */
+export type JsonEntryChunk = ExtractSchemaResultType<typeof SchemaJsonEntryChunk>;

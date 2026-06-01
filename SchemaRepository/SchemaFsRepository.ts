@@ -6,6 +6,7 @@ import {
     JsonData,
     JsonDataFS,
     JsonEditorSettings,
+    JsonEntryChunk,
     JsonEnumDescription,
     JsonEnumValueDescription,
     JsonLinkDescription,
@@ -14,8 +15,9 @@ import {
     JsonSchemaFieldDescription,
     JsonSchemaFieldTypeArray,
     JsonSchemaPositionDescription,
-    SchemaJsonData
+    SchemaJsonDataFSType
 } from '../SchemaEditor/JsonData.js';
+import {loadJsonDataFromFile} from './SchemaJsonLoader.js';
 import {SchemaProject} from '../SchemaProject/SchemaProject.js';
 import {SchemaFsTreeWalker} from './SchemaFsTreeWalker.js';
 import {
@@ -86,6 +88,16 @@ export class SchemaFsRepository {
      */
     private _schemaDirtySinceFlush = false;
 
+    /**
+     * True when {@link load} read a legacy single-file v1 schema. The
+     * next successful flush converts the on-disk layout to v2: writes
+     * a copy of the original file as `schema.v1.backup.json`, splits
+     * the tree into `entries/<unid>.json` chunks, and reduces the
+     * main file to the index. Cleared once the migration has run so
+     * subsequent flushes stay on the cheap v2 path.
+     */
+    private _migrateFromV1OnNextFlush = false;
+
     public constructor(
         project: SchemaProject,
         bus: SchemaRepositoryEventBus|null = null,
@@ -127,6 +139,19 @@ export class SchemaFsRepository {
      * Read `project.schemaPath` into memory. Missing file -> empty tree. An
      * existing but structurally invalid file logs a warning and falls back to
      * the empty tree (matches the prior silent behavior of /api/load-schema).
+     *
+     * Supports both on-disk formats:
+     *   - **v1** (legacy, no `version` field): the whole tree — including
+     *     every file's schemas/enums/links — sits inline in
+     *     `schemaPath`. Loaded as-is; the next flush migrates to v2
+     *     after dropping a `schema.v1.backup.json` next to the
+     *     original.
+     *   - **v2** (`version: 2`): `schemaPath` carries only the tree
+     *     skeleton (file-type nodes have empty schemas/enums/links).
+     *     Per-file content lives in `entries/<unid>.json` files
+     *     alongside. Loader walks the tree, merges each chunk back
+     *     into its file node so the in-memory representation matches
+     *     the v1 path.
      */
     public load(): void {
         if (!fs.existsSync(this._project.schemaPath)) {
@@ -135,27 +160,44 @@ export class SchemaFsRepository {
             return;
         }
 
-        try {
-            const content = fs.readFileSync(this._project.schemaPath, 'utf-8');
-            const parsed = JSON.parse(content);
+        const parsed = loadJsonDataFromFile(this._project.schemaPath);
 
-            if (SchemaJsonData.validate(parsed, [])) {
-                this._fs = parsed.fs;
-                this._editor = parsed.editor;
-                return;
-            }
-
+        if (parsed === null) {
             console.warn(
-                `SchemaFsRepository: invalid schema file at ${this._project.schemaPath}, using empty state`
+                `SchemaFsRepository: invalid or unreadable schema file at ${this._project.schemaPath}, using empty state`
             );
-        } catch (e) {
-            console.warn(
-                `SchemaFsRepository: failed to read ${this._project.schemaPath}: ${(e as Error).message}`
-            );
+            this._fs = makeEmptyFs();
+            this._editor = {...DEFAULT_EDITOR_SETTINGS};
+            return;
         }
 
-        this._fs = makeEmptyFs();
-        this._editor = {...DEFAULT_EDITOR_SETTINGS};
+        this._fs = parsed.fs;
+        this._editor = parsed.editor;
+
+        if (parsed.version !== 2) {
+            // No `version` (or `1`): the loader returned the inline
+            // v1 tree as-is. Record so the next flush writes the
+            // backup before converting to v2.
+            this._migrateFromV1OnNextFlush = true;
+        }
+    }
+
+    /**
+     * Directory holding the per-file chunks alongside the main
+     * schema file. `schemas/schema.json` -> `schemas/entries/`.
+     */
+    private _entriesDir(): string {
+        return path.join(path.dirname(this._project.schemaPath), 'entries');
+    }
+
+    /**
+     * Backup path for a v1 file that the loader has just migrated to
+     * v2. Sits next to the main schema file.
+     */
+    private _v1BackupPath(): string {
+        const dir = path.dirname(this._project.schemaPath);
+        const base = path.basename(this._project.schemaPath, path.extname(this._project.schemaPath));
+        return path.join(dir, `${base}.v1.backup.json`);
     }
 
     // -----------------------------------------------------------------------
@@ -992,12 +1034,10 @@ export class SchemaFsRepository {
         const runHook = this._schemaDirtySinceFlush;
         this._schemaDirtySinceFlush = false;
 
-        const payload: JsonData = {
-            fs: this._fs,
-            editor: this._editor
-        };
+        const migrateFromV1 = this._migrateFromV1OnNextFlush;
+        this._migrateFromV1OnNextFlush = false;
 
-        this._flushInFlight = this._writeAtomic(payload).finally(() => {
+        this._flushInFlight = this._writeV2(migrateFromV1).finally(() => {
             this._flushInFlight = null;
         });
 
@@ -1014,14 +1054,170 @@ export class SchemaFsRepository {
         }
     }
 
-    private async _writeAtomic(data: JsonData): Promise<void> {
+    /**
+     * Persist `_fs` + `_editor` in the v2 layout: per-file chunks
+     * under `entries/<unid>.json` plus a reduced index at the main
+     * `schemaPath`. Each chunk is written atomically (tmp + rename).
+     *
+     * When `migrateFromV1` is true the original single-file v1 is
+     * copied to `schema.v1.backup.json` before any chunk is written
+     * so an interrupted migration leaves the user with both copies
+     * recoverable. Stale chunks (files in `entries/` that no longer
+     * correspond to a live file-type entry) are deleted at the end.
+     */
+    private async _writeV2(migrateFromV1: boolean): Promise<void> {
         const target = this._project.schemaPath;
         const dir = path.dirname(target);
-        const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
+        const entriesDir = this._entriesDir();
 
         await fsp.mkdir(dir, {recursive: true});
-        await fsp.writeFile(tmp, JSON.stringify(data, null, 2), 'utf-8');
+
+        if (migrateFromV1 && fs.existsSync(target)) {
+            const backupPath = this._v1BackupPath();
+
+            if (!fs.existsSync(backupPath)) {
+                // copyFile so an interrupted run between rename and
+                // chunk-write leaves the v1 file intact.
+                await fsp.copyFile(target, backupPath);
+                console.log(`SchemaFsRepository: migrated v1 -> v2; backup saved to ${backupPath}`);
+            }
+        }
+
+        await fsp.mkdir(entriesDir, {recursive: true});
+
+        // Walk the tree to build the skeleton index and the chunk
+        // list in a single pass. The in-memory `_fs` stays untouched
+        // — file nodes are cloned with empty arrays into the index.
+        const chunks: {unid: string; chunk: JsonEntryChunk}[] = [];
+        const skeletonFs = this._splitTreeIntoSkeleton(this._fs, chunks);
+
+        const liveChunkUnids = new Set<string>(chunks.map((c) => c.unid));
+
+        // Fire chunk writes in parallel; fence before the index write
+        // so a torn write leaves either the old skeleton + old chunks
+        // or the new skeleton + new chunks, never the mixed state.
+        await Promise.all(
+            chunks.map(({unid, chunk}) => this._writeChunkAtomic(entriesDir, unid, chunk))
+        );
+
+        const payload: JsonData = {
+            version: 2,
+            fs: skeletonFs,
+            editor: this._editor
+        };
+
+        const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
+
+        await fsp.writeFile(tmp, JSON.stringify(payload, null, 2), 'utf-8');
         await fsp.rename(tmp, target);
+
+        await this._cleanupStaleChunks(entriesDir, liveChunkUnids);
+    }
+
+    private _splitTreeIntoSkeleton(
+        node: JsonDataFS,
+        chunks: {unid: string; chunk: JsonEntryChunk}[]
+    ): JsonDataFS {
+        const isFile = node.type === SchemaJsonDataFSType.file;
+
+        let schemas = node.schemas;
+        let enums = node.enums;
+        let links = node.links;
+
+        if (isFile) {
+            chunks.push({
+                unid: node.unid,
+                chunk: {
+                    schemas: node.schemas,
+                    enums: node.enums,
+                    links: node.links ?? []
+                }
+            });
+
+            schemas = [];
+            enums = [];
+            links = [];
+        }
+
+        const childEntrys: JsonDataFS[] = [];
+
+        for (const child of node.entrys as JsonDataFS[]) {
+            childEntrys.push(this._splitTreeIntoSkeleton(child, chunks));
+        }
+
+        const skeleton: JsonDataFS = {
+            unid: node.unid,
+            name: node.name,
+            type: node.type,
+            entrys: childEntrys,
+            schemas,
+            enums
+        };
+
+        if (node.icon !== undefined) {
+            skeleton.icon = node.icon;
+        }
+
+        if (node.istoggle !== undefined) {
+            skeleton.istoggle = node.istoggle;
+        }
+
+        if (links !== undefined) {
+            skeleton.links = links;
+        }
+
+        return skeleton;
+    }
+
+    private async _writeChunkAtomic(
+        entriesDir: string,
+        unid: string,
+        chunk: JsonEntryChunk
+    ): Promise<void> {
+        const target = path.join(entriesDir, `${unid}.json`);
+        const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
+
+        await fsp.writeFile(tmp, JSON.stringify(chunk, null, 2), 'utf-8');
+        await fsp.rename(tmp, target);
+    }
+
+    /**
+     * Delete chunk files in `entries/` whose unid no longer appears
+     * in the live tree (file entries that were deleted since the
+     * previous flush). Ignores anything that isn't a `<unid>.json`
+     * file so a user-placed sidecar (README, .gitkeep, ...) survives.
+     */
+    private async _cleanupStaleChunks(
+        entriesDir: string,
+        liveChunkUnids: Set<string>
+    ): Promise<void> {
+        let names: string[];
+
+        try {
+            names = await fsp.readdir(entriesDir);
+        } catch {
+            return;
+        }
+
+        await Promise.all(names.map(async (name) => {
+            if (!name.endsWith('.json')) {
+                return;
+            }
+
+            const unid = name.slice(0, -'.json'.length);
+
+            if (liveChunkUnids.has(unid)) {
+                return;
+            }
+
+            try {
+                await fsp.unlink(path.join(entriesDir, name));
+            } catch (e) {
+                console.warn(
+                    `SchemaFsRepository: failed to delete stale chunk ${name}: ${(e as Error).message}`
+                );
+            }
+        }));
     }
 
 }
