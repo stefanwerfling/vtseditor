@@ -217,6 +217,39 @@ export function registerSchemaApiRoutes(app: Express, ctx: SchemaApiContext): vo
         }
     });
 
+    app.get('/api/projects/:pid/schemas/:unid/history', (req, res): void => {
+        const repo = repoOf(req, res);
+        if (!repo) return;
+
+        try {
+            const history = repo.getSchemaHistory(req.params.unid);
+            ok(res, repo, {history, limit: repo.getHistorySize()});
+        } catch (e) {
+            handleError(e, res);
+        }
+    });
+
+    app.post('/api/projects/:pid/schemas/:unid/history/restore', (req, res): void => {
+        const repo = repoOf(req, res);
+        if (!repo) return;
+
+        const errors: SchemaErrors = [];
+        if (!Req.HistoryRestoreBody.validate(req.body, errors)) {
+            badBody(res);
+            return;
+        }
+
+        try {
+            repo.restoreSchema(
+                {unid: req.params.unid, ts: req.body.ts},
+                clientIdOf(req)
+            );
+            ok(res, repo);
+        } catch (e) {
+            handleError(e, res);
+        }
+    });
+
     // Fields -------------------------------------------------------------------
 
     app.post('/api/projects/:pid/schemas/:unid/fields', (req, res): void => {
@@ -377,6 +410,39 @@ export function registerSchemaApiRoutes(app: Express, ctx: SchemaApiContext): vo
         try {
             repo.moveEnum(
                 {unid: req.params.unid, toContainerUnid: req.body.toContainerUnid},
+                clientIdOf(req)
+            );
+            ok(res, repo);
+        } catch (e) {
+            handleError(e, res);
+        }
+    });
+
+    app.get('/api/projects/:pid/enums/:unid/history', (req, res): void => {
+        const repo = repoOf(req, res);
+        if (!repo) return;
+
+        try {
+            const history = repo.getEnumHistory(req.params.unid);
+            ok(res, repo, {history, limit: repo.getHistorySize()});
+        } catch (e) {
+            handleError(e, res);
+        }
+    });
+
+    app.post('/api/projects/:pid/enums/:unid/history/restore', (req, res): void => {
+        const repo = repoOf(req, res);
+        if (!repo) return;
+
+        const errors: SchemaErrors = [];
+        if (!Req.HistoryRestoreBody.validate(req.body, errors)) {
+            badBody(res);
+            return;
+        }
+
+        try {
+            repo.restoreEnum(
+                {unid: req.params.unid, ts: req.body.ts},
                 clientIdOf(req)
             );
             ok(res, repo);

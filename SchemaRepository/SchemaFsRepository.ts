@@ -9,15 +9,22 @@ import {
     JsonEntryChunk,
     JsonEnumDescription,
     JsonEnumValueDescription,
+    JsonHistoryChange,
+    JsonHistoryEntry,
+    JsonHistoryEntryWithChange,
     JsonLinkDescription,
     JsonSchemaDescription,
     JsonSchemaDescriptionExtend,
     JsonSchemaFieldDescription,
     JsonSchemaFieldTypeArray,
     JsonSchemaPositionDescription,
-    SchemaJsonDataFSType
+    SchemaJsonDataFSType,
+    SchemaJsonEntryChunk,
+    SchemaJsonEnumDescription,
+    SchemaJsonHistoryKind,
+    SchemaJsonSchemaDescription
 } from '../SchemaEditor/JsonData.js';
-import {loadJsonDataFromFile} from './SchemaJsonLoader.js';
+import {loadJsonDataWithHistory} from './SchemaJsonLoader.js';
 import {SchemaProject} from '../SchemaProject/SchemaProject.js';
 import {SchemaFsTreeWalker} from './SchemaFsTreeWalker.js';
 import {
@@ -30,6 +37,21 @@ import {
     RepoInvalidError,
     RepoNotFoundError
 } from './SchemaRepositoryErrors.js';
+
+/**
+ * Tuning knobs supplied by `SchemaRepositoryRegistry` (which reads them
+ * from `vtseditor.json`).
+ */
+export type SchemaFsRepositoryOptions = {
+    /**
+     * Cap on per-item history entries kept in chunk files. Older
+     * snapshots beyond the limit are dropped on flush. Default 20;
+     * clamped to a minimum of 1.
+     */
+    historySize?: number;
+};
+
+const DEFAULT_HISTORY_SIZE = 20;
 
 const DEFAULT_EDITOR_SETTINGS: JsonEditorSettings = {
     controls_width: 300
@@ -98,14 +120,26 @@ export class SchemaFsRepository {
      */
     private _migrateFromV1OnNextFlush = false;
 
+    /**
+     * Per-file history: outer key is the file-entry unid, inner key is
+     * the schema/enum unid. Each list is kept oldest-first so the
+     * "latest snapshot" is the last element. Mirrors what gets written
+     * back into the chunk's `history` field on flush.
+     */
+    private _history: Map<string, Map<string, JsonHistoryEntry[]>> = new Map();
+
+    private readonly _historySize: number;
+
     public constructor(
         project: SchemaProject,
         bus: SchemaRepositoryEventBus|null = null,
-        flushDebounceMs = 150
+        flushDebounceMs = 150,
+        options: SchemaFsRepositoryOptions = {}
     ) {
         this._project = project;
         this._bus = bus;
         this._flushDebounceMs = flushDebounceMs;
+        this._historySize = Math.max(1, Math.floor(options.historySize ?? DEFAULT_HISTORY_SIZE));
     }
 
     public getProject(): SchemaProject {
@@ -157,24 +191,37 @@ export class SchemaFsRepository {
         if (!fs.existsSync(this._project.schemaPath)) {
             this._fs = makeEmptyFs();
             this._editor = {...DEFAULT_EDITOR_SETTINGS};
+            this._history = new Map();
             return;
         }
 
-        const parsed = loadJsonDataFromFile(this._project.schemaPath);
+        const loaded = loadJsonDataWithHistory(this._project.schemaPath);
 
-        if (parsed === null) {
+        if (loaded === null) {
             console.warn(
                 `SchemaFsRepository: invalid or unreadable schema file at ${this._project.schemaPath}, using empty state`
             );
             this._fs = makeEmptyFs();
             this._editor = {...DEFAULT_EDITOR_SETTINGS};
+            this._history = new Map();
             return;
         }
 
-        this._fs = parsed.fs;
-        this._editor = parsed.editor;
+        this._fs = loaded.data.fs;
+        this._editor = loaded.data.editor;
+        this._history = new Map();
 
-        if (parsed.version !== 2) {
+        for (const [fileUnid, perItem] of loaded.history.entries()) {
+            const inner = new Map<string, JsonHistoryEntry[]>();
+
+            for (const [itemUnid, entries] of Object.entries(perItem)) {
+                inner.set(itemUnid, [...entries]);
+            }
+
+            this._history.set(fileUnid, inner);
+        }
+
+        if (loaded.data.version !== 2) {
             // No `version` (or `1`): the loader returned the inline
             // v1 tree as-is. Record so the next flush writes the
             // backup before converting to v2.
@@ -1093,6 +1140,18 @@ export class SchemaFsRepository {
 
         const liveChunkUnids = new Set<string>(chunks.map((c) => c.unid));
 
+        // For each chunk that has an existing on-disk counterpart, diff
+        // per item and append the previous version to `_history` before
+        // overwriting. Runs before the write fence so the history we
+        // serialize already includes this flush's snapshot.
+        await Promise.all(
+            chunks.map(({unid, chunk}) => this._captureHistoryForChunk(entriesDir, unid, chunk))
+        );
+
+        for (const {unid, chunk} of chunks) {
+            chunk.history = this._serializeHistoryForChunk(unid);
+        }
+
         // Fire chunk writes in parallel; fence before the index write
         // so a torn write leaves either the old skeleton + old chunks
         // or the new skeleton + new chunks, never the mixed state.
@@ -1218,6 +1277,479 @@ export class SchemaFsRepository {
                 );
             }
         }));
+    }
+
+    // -----------------------------------------------------------------------
+    // History
+    // -----------------------------------------------------------------------
+
+    /**
+     * Read the existing on-disk chunk for `fileUnid` (if any) and append
+     * the previous version of every schema/enum whose JSON has changed
+     * to the in-memory history map. Also drops history entries for
+     * items that no longer live in this chunk.
+     *
+     * No-op when the chunk file does not exist yet (first write — no
+     * prior version exists to capture).
+     */
+    private async _captureHistoryForChunk(
+        entriesDir: string,
+        fileUnid: string,
+        nextChunk: JsonEntryChunk
+    ): Promise<void> {
+        const liveItems = new Set<string>();
+
+        for (const s of nextChunk.schemas) {
+            liveItems.add(s.unid);
+        }
+
+        for (const e of nextChunk.enums) {
+            liveItems.add(e.unid);
+        }
+
+        let perItem = this._history.get(fileUnid);
+
+        if (!perItem) {
+            perItem = new Map();
+            this._history.set(fileUnid, perItem);
+        }
+
+        // Drop history for items no longer in this chunk (the schema/enum
+        // was deleted or moved into another file). Cross-file move is
+        // rare and losing history on it is acceptable — the surviving
+        // copy starts fresh wherever it landed.
+        for (const itemUnid of [...perItem.keys()]) {
+            if (!liveItems.has(itemUnid)) {
+                perItem.delete(itemUnid);
+            }
+        }
+
+        const chunkPath = path.join(entriesDir, `${fileUnid}.json`);
+        let oldRaw: string;
+
+        try {
+            oldRaw = await fsp.readFile(chunkPath, 'utf-8');
+        } catch {
+            return;
+        }
+
+        let oldParsed: unknown;
+
+        try {
+            oldParsed = JSON.parse(oldRaw);
+        } catch {
+            return;
+        }
+
+        if (!SchemaJsonEntryChunk.validate(oldParsed, [])) {
+            return;
+        }
+
+        const ts = Date.now();
+
+        const oldSchemas = new Map<string, JsonSchemaDescription>();
+
+        for (const s of oldParsed.schemas) {
+            oldSchemas.set(s.unid, s);
+        }
+
+        for (const newSchema of nextChunk.schemas) {
+            const oldSchema = oldSchemas.get(newSchema.unid);
+
+            if (!oldSchema) {
+                continue;
+            }
+
+            if (this._jsonEqual(oldSchema, newSchema)) {
+                continue;
+            }
+
+            this._appendHistoryEntry(perItem, newSchema.unid, {
+                ts,
+                kind: SchemaJsonHistoryKind.schema,
+                snapshot: oldSchema
+            });
+        }
+
+        const oldEnums = new Map<string, JsonEnumDescription>();
+
+        for (const e of oldParsed.enums) {
+            oldEnums.set(e.unid, e);
+        }
+
+        for (const newEnum of nextChunk.enums) {
+            const oldEnum = oldEnums.get(newEnum.unid);
+
+            if (!oldEnum) {
+                continue;
+            }
+
+            if (this._jsonEqual(oldEnum, newEnum)) {
+                continue;
+            }
+
+            this._appendHistoryEntry(perItem, newEnum.unid, {
+                ts,
+                kind: SchemaJsonHistoryKind.enum,
+                snapshot: oldEnum
+            });
+        }
+    }
+
+    private _appendHistoryEntry(
+        perItem: Map<string, JsonHistoryEntry[]>,
+        itemUnid: string,
+        entry: JsonHistoryEntry
+    ): void {
+        const list = perItem.get(itemUnid) ?? [];
+        list.push(entry);
+
+        while (list.length > this._historySize) {
+            list.shift();
+        }
+
+        perItem.set(itemUnid, list);
+    }
+
+    private _serializeHistoryForChunk(fileUnid: string): Record<string, JsonHistoryEntry[]>|undefined {
+        const perItem = this._history.get(fileUnid);
+
+        if (!perItem || perItem.size === 0) {
+            return undefined;
+        }
+
+        const out: Record<string, JsonHistoryEntry[]> = {};
+
+        for (const [itemUnid, entries] of perItem.entries()) {
+            if (entries.length > 0) {
+                out[itemUnid] = entries;
+            }
+        }
+
+        return Object.keys(out).length > 0 ? out : undefined;
+    }
+
+    /**
+     * Find which file-entry an item lives in. We use this to look up
+     * the per-file history map for a given schema/enum unid.
+     */
+    private _findFileUnidForItem(itemUnid: string): string|null {
+        return this._walkFiles(this._fs, (node) => {
+            for (const s of node.schemas) {
+                if (s.unid === itemUnid) {
+                    return node.unid;
+                }
+            }
+
+            for (const e of node.enums) {
+                if (e.unid === itemUnid) {
+                    return node.unid;
+                }
+            }
+
+            return null;
+        });
+    }
+
+    private _walkFiles<T>(node: JsonDataFS, visit: (n: JsonDataFS) => T|null): T|null {
+        if (node.type === SchemaJsonDataFSType.file) {
+            const hit = visit(node);
+
+            if (hit !== null) {
+                return hit;
+            }
+        }
+
+        for (const child of node.entrys as JsonDataFS[]) {
+            const sub = this._walkFiles(child, visit);
+
+            if (sub !== null) {
+                return sub;
+            }
+        }
+
+        return null;
+    }
+
+    private _jsonEqual(a: unknown, b: unknown): boolean {
+        return JSON.stringify(a) === JSON.stringify(b);
+    }
+
+    public getHistorySize(): number {
+        return this._historySize;
+    }
+
+    /**
+     * Return the historical snapshots for a schema enriched with per-entry
+     * change summaries. Newest snapshot first. The `changes` field on each
+     * entry describes the diff between that snapshot and the next-in-time
+     * state — for the most recent snapshot that's the current live schema,
+     * for older snapshots the next snapshot in time. Empty array when the
+     * schema has no recorded history.
+     */
+    public getSchemaHistory(unid: string): JsonHistoryEntryWithChange[] {
+        const ctx = SchemaFsTreeWalker.findSchema(this._fs, unid);
+
+        if (ctx === null) {
+            return [];
+        }
+
+        const fileUnid = this._findFileUnidForItem(unid);
+
+        if (fileUnid === null) {
+            return [];
+        }
+
+        const list = this._history.get(fileUnid)?.get(unid) ?? [];
+
+        // Walk newest-first. The "next state" of the most recent
+        // snapshot is the live schema; older snapshots compare to the
+        // snapshot that captured the next save.
+        const result: JsonHistoryEntryWithChange[] = [];
+        let nextSchema: JsonSchemaDescription = ctx.schema;
+
+        for (let i = list.length - 1; i >= 0; i--) {
+            const entry = list[i];
+            const snap = entry.snapshot as JsonSchemaDescription;
+            const changes = this._diffSchemaFields(snap, nextSchema);
+
+            result.push({...entry, changes});
+            nextSchema = snap;
+        }
+
+        return result;
+    }
+
+    /**
+     * Return the historical snapshots for an enum enriched with change
+     * summaries. See {@link getSchemaHistory} for the diff semantics.
+     */
+    public getEnumHistory(unid: string): JsonHistoryEntryWithChange[] {
+        const ctx = SchemaFsTreeWalker.findEnum(this._fs, unid);
+
+        if (ctx === null) {
+            return [];
+        }
+
+        const fileUnid = this._findFileUnidForItem(unid);
+
+        if (fileUnid === null) {
+            return [];
+        }
+
+        const list = this._history.get(fileUnid)?.get(unid) ?? [];
+
+        const result: JsonHistoryEntryWithChange[] = [];
+        let nextEnum: JsonEnumDescription = ctx.enumeration;
+
+        for (let i = list.length - 1; i >= 0; i--) {
+            const entry = list[i];
+            const snap = entry.snapshot as JsonEnumDescription;
+            const changes = this._diffEnumValues(snap, nextEnum);
+
+            result.push({...entry, changes});
+            nextEnum = snap;
+        }
+
+        return result;
+    }
+
+    private _diffSchemaFields(
+        before: JsonSchemaDescription,
+        after: JsonSchemaDescription
+    ): JsonHistoryChange {
+        const beforeFields = Array.isArray(before?.fields) ? before.fields : [];
+        const afterFields = Array.isArray(after?.fields) ? after.fields : [];
+
+        const beforeByUnid = new Map<string, JsonSchemaFieldDescription>();
+
+        for (const f of beforeFields) {
+            beforeByUnid.set(f.unid ?? '', f);
+        }
+
+        const afterByUnid = new Map<string, JsonSchemaFieldDescription>();
+
+        for (const f of afterFields) {
+            afterByUnid.set(f.unid ?? '', f);
+        }
+
+        let added = 0;
+        let removed = 0;
+        let modified = 0;
+
+        for (const [unid, af] of afterByUnid.entries()) {
+            const bf = beforeByUnid.get(unid);
+
+            if (!bf) {
+                added++;
+            } else if (!this._jsonEqual(bf, af)) {
+                modified++;
+            }
+        }
+
+        for (const unid of beforeByUnid.keys()) {
+            if (!afterByUnid.has(unid)) {
+                removed++;
+            }
+        }
+
+        const topLevel = (before?.name ?? '') !== (after?.name ?? '')
+            || (before?.description ?? '') !== (after?.description ?? '')
+            || !this._jsonEqual(before?.extend, after?.extend);
+
+        return {added, removed, modified, topLevel};
+    }
+
+    private _diffEnumValues(
+        before: JsonEnumDescription,
+        after: JsonEnumDescription
+    ): JsonHistoryChange {
+        const beforeValues = Array.isArray(before?.values) ? before.values : [];
+        const afterValues = Array.isArray(after?.values) ? after.values : [];
+
+        const beforeByUnid = new Map<string, JsonEnumValueDescription>();
+
+        for (const v of beforeValues) {
+            beforeByUnid.set(v.unid, v);
+        }
+
+        const afterByUnid = new Map<string, JsonEnumValueDescription>();
+
+        for (const v of afterValues) {
+            afterByUnid.set(v.unid, v);
+        }
+
+        let added = 0;
+        let removed = 0;
+        let modified = 0;
+
+        for (const [unid, av] of afterByUnid.entries()) {
+            const bv = beforeByUnid.get(unid);
+
+            if (!bv) {
+                added++;
+            } else if (!this._jsonEqual(bv, av)) {
+                modified++;
+            }
+        }
+
+        for (const unid of beforeByUnid.keys()) {
+            if (!afterByUnid.has(unid)) {
+                removed++;
+            }
+        }
+
+        const topLevel = (before?.name ?? '') !== (after?.name ?? '')
+            || (before?.description ?? '') !== (after?.description ?? '');
+
+        return {added, removed, modified, topLevel};
+    }
+
+    /**
+     * Replace the current schema with the snapshot identified by `ts`.
+     * The current state will become the newest history entry on the
+     * next flush (capture diffs against the on-disk chunk). Restoring
+     * preserves the schema's `unid`, name conflicts are not re-checked
+     * since the schema already exists under that unid.
+     *
+     * @throws {RepoNotFoundError} when schema or snapshot cannot be found
+     * @throws {RepoInvalidError} when the snapshot shape no longer matches the current schema validator
+     */
+    public restoreSchema(args: {unid: string; ts: number}, clientId?: string): void {
+        const ctx = SchemaFsTreeWalker.findSchema(this._fs, args.unid);
+
+        if (ctx === null) {
+            throw new RepoNotFoundError(`schema ${args.unid}`);
+        }
+
+        const fileUnid = this._findFileUnidForItem(args.unid);
+
+        if (fileUnid === null) {
+            throw new RepoNotFoundError(`history for schema ${args.unid}`);
+        }
+
+        const list = this._history.get(fileUnid)?.get(args.unid) ?? [];
+        const entry = list.find((h) => h.ts === args.ts && h.kind === SchemaJsonHistoryKind.schema);
+
+        if (!entry) {
+            throw new RepoNotFoundError(`schema history entry ts=${args.ts} for ${args.unid}`);
+        }
+
+        if (!SchemaJsonSchemaDescription.validate(entry.snapshot, [])) {
+            throw new RepoInvalidError(`schema history snapshot for ${args.unid} no longer matches the validator`);
+        }
+
+        const snapshot = entry.snapshot;
+        const idx = ctx.container.schemas.indexOf(ctx.schema);
+
+        if (idx < 0) {
+            throw new RepoNotFoundError(`schema ${args.unid}`);
+        }
+
+        // Replace with a structural clone of the snapshot but preserve
+        // the live unid (paranoia — snapshot.unid already matches).
+        const restored: JsonSchemaDescription = JSON.parse(JSON.stringify(snapshot));
+        restored.unid = args.unid;
+        ctx.container.schemas[idx] = restored;
+
+        this._commit({
+            op: 'schema_restore',
+            payload: {
+                unid: args.unid,
+                containerUnid: ctx.container.unid,
+                schema: restored,
+                ts: args.ts
+            }
+        }, clientId);
+    }
+
+    /**
+     * Replace the current enum with the snapshot identified by `ts`.
+     */
+    public restoreEnum(args: {unid: string; ts: number}, clientId?: string): void {
+        const ctx = SchemaFsTreeWalker.findEnum(this._fs, args.unid);
+
+        if (ctx === null) {
+            throw new RepoNotFoundError(`enum ${args.unid}`);
+        }
+
+        const fileUnid = this._findFileUnidForItem(args.unid);
+
+        if (fileUnid === null) {
+            throw new RepoNotFoundError(`history for enum ${args.unid}`);
+        }
+
+        const list = this._history.get(fileUnid)?.get(args.unid) ?? [];
+        const entry = list.find((h) => h.ts === args.ts && h.kind === SchemaJsonHistoryKind.enum);
+
+        if (!entry) {
+            throw new RepoNotFoundError(`enum history entry ts=${args.ts} for ${args.unid}`);
+        }
+
+        if (!SchemaJsonEnumDescription.validate(entry.snapshot, [])) {
+            throw new RepoInvalidError(`enum history snapshot for ${args.unid} no longer matches the validator`);
+        }
+
+        const snapshot = entry.snapshot;
+        const idx = ctx.container.enums.indexOf(ctx.enumeration);
+
+        if (idx < 0) {
+            throw new RepoNotFoundError(`enum ${args.unid}`);
+        }
+
+        const restored: JsonEnumDescription = JSON.parse(JSON.stringify(snapshot));
+        restored.unid = args.unid;
+        ctx.container.enums[idx] = restored;
+
+        this._commit({
+            op: 'enum_restore',
+            payload: {
+                unid: args.unid,
+                containerUnid: ctx.container.unid,
+                enumeration: restored,
+                ts: args.ts
+            }
+        }, clientId);
     }
 
 }

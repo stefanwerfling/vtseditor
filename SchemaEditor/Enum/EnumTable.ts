@@ -5,7 +5,9 @@ import {ConfirmDialog} from '../Base/ConfirmDialog.js';
 import {ContextMenu} from '../Base/ContextMenu.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
+import {HistoryDialog} from '../Base/HistoryDialog.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
+import {SchemaEditor} from '../SchemaEditor.js';
 import {
     JsonEnumDescription,
     JsonEnumValueDescription,
@@ -104,6 +106,12 @@ export class EnumTable extends BaseTable {
             onClick: () => {
                 this.openEditDialog();
             }
+        });
+
+        this._contextMenu.addItem({
+            icon: EditorIcons.history,
+            label: 'View history',
+            onClick: () => this._openHistoryDialog()
         });
 
         this._contextMenu.addSeparator();
@@ -208,6 +216,28 @@ export class EnumTable extends BaseTable {
 
             return true;
         });
+    }
+
+    protected _openHistoryDialog(): void {
+        if (this._readOnly) {
+            AlertDialog.showAlert('Enum', 'Enum is readonly!', AlertDialogTypes.warning);
+            return;
+        }
+
+        const editor = SchemaEditor.getActive();
+        const client = editor?.getEditorClient() ?? null;
+
+        if (client === null) {
+            AlertDialog.showAlert(
+                'History',
+                'No active project — history is unavailable.',
+                AlertDialogTypes.warning
+            );
+            return;
+        }
+
+        const dialog = new HistoryDialog('enum', this._unid, this._name, client);
+        dialog.show();
     }
 
     /**

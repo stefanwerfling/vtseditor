@@ -10,7 +10,7 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stefanwerfling/vtseditor)
 ![Node](https://img.shields.io/badge/Node-%E2%89%A5%2020-43853d?style=flat-square&logo=node.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![Version](https://img.shields.io/badge/Beta-1.1.0-f59e0b?style=flat-square)
+![Version](https://img.shields.io/badge/Beta-1.2.0-f59e0b?style=flat-square)
 ![License](https://img.shields.io/badge/License-ISC-blue?style=flat-square)
 
 [Getting started](#-getting-started) ·
@@ -89,6 +89,26 @@ Ships as a tiny CLI (`npx vtseditor`) that runs inside **your own project**, rea
 - Node ≥ 20 · ESM · TypeScript 5.x
 - No compile, no bundler config
 - `vtseditor.json` validated on startup — bad config aborts the server
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 🕘 Per-schema history
+- Every save snapshots schemas and enums into the chunk file
+- Browse versions, one-click restore from the context menu
+- Diff badges show ➕ added / 🗑 removed / 📝 modified / ℹ️ top-level
+- Configurable cap via `editor.historySize`
+
+</td>
+<td width="50%" valign="top">
+
+### 📦 Chunked schema format
+- `schemas/schema.json` is an index, per-file content in `schemas/entries/<unid>.json`
+- Auto-migrated from the legacy single file (backup kept as `schema.v1.backup.json`)
+- Smaller git diffs per save, faster boot on large schemas
+- Browser hydrates files on demand with an LRU cache (`editor.openEntryCacheSize`)
 
 </td>
 </tr>

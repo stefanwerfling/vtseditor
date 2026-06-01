@@ -3,10 +3,22 @@ import path from 'path';
 import {
     JsonData,
     JsonDataFS,
+    JsonHistoryEntry,
     SchemaJsonData,
     SchemaJsonDataFSType,
     SchemaJsonEntryChunk
 } from '../SchemaEditor/JsonData.js';
+
+/**
+ * Per-file history map captured at load time alongside the tree.
+ * Outer key: file-entry unid. Inner key: schema/enum unid. Inner
+ * value: list of historical snapshots oldest-first.
+ *
+ * The repository owns this map at runtime — `loadJsonDataFromFile`
+ * only returns the tree, so callers that care about history use
+ * {@link loadJsonDataWithHistory} instead.
+ */
+export type LoadedHistory = Map<string, Record<string, JsonHistoryEntry[]>>;
 
 /**
  * Read a `schema.json` from disk and resolve the in-memory tree.
@@ -23,6 +35,18 @@ import {
  * migration on flush.
  */
 export function loadJsonDataFromFile(schemaFile: string): JsonData|null {
+    const loaded = loadJsonDataWithHistory(schemaFile);
+    return loaded === null ? null : loaded.data;
+}
+
+/**
+ * Same as {@link loadJsonDataFromFile} but also returns the chunked
+ * per-item history. The history map is empty for v1 layouts (history
+ * lives only in v2 chunks).
+ */
+export function loadJsonDataWithHistory(
+    schemaFile: string
+): {data: JsonData; history: LoadedHistory}|null {
     if (!fs.existsSync(schemaFile)) {
         return null;
     }
@@ -47,15 +71,17 @@ export function loadJsonDataFromFile(schemaFile: string): JsonData|null {
         return null;
     }
 
+    const history: LoadedHistory = new Map();
+
     if (parsed.version === 2) {
         const entriesDir = path.join(path.dirname(schemaFile), 'entries');
-        hydrateChunks(parsed.fs, entriesDir);
+        hydrateChunks(parsed.fs, entriesDir, history);
     }
 
-    return parsed;
+    return {data: parsed, history};
 }
 
-function hydrateChunks(node: JsonDataFS, entriesDir: string): void {
+function hydrateChunks(node: JsonDataFS, entriesDir: string, history: LoadedHistory): void {
     if (node.type === SchemaJsonDataFSType.file) {
         const chunkPath = path.join(entriesDir, `${node.unid}.json`);
 
@@ -70,6 +96,22 @@ function hydrateChunks(node: JsonDataFS, entriesDir: string): void {
                     if (chunkParsed.links !== undefined) {
                         node.links = chunkParsed.links;
                     }
+
+                    if (chunkParsed.history !== undefined) {
+                        // Vts.object2 returns `RecordOf<...>` so values
+                        // are typed `T|undefined`. Strip the undefined
+                        // members so downstream consumers see a clean
+                        // `Record<string, JsonHistoryEntry[]>`.
+                        const clean: Record<string, JsonHistoryEntry[]> = {};
+
+                        for (const [itemUnid, entries] of Object.entries(chunkParsed.history)) {
+                            if (entries !== undefined) {
+                                clean[itemUnid] = entries;
+                            }
+                        }
+
+                        history.set(node.unid, clean);
+                    }
                 }
             } catch {
                 // ignore — caller sees an empty file node, same as
@@ -79,6 +121,6 @@ function hydrateChunks(node: JsonDataFS, entriesDir: string): void {
     }
 
     for (const child of node.entrys as JsonDataFS[]) {
-        hydrateChunks(child, entriesDir);
+        hydrateChunks(child, entriesDir, history);
     }
 }

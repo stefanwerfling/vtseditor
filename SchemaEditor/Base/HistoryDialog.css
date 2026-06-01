@@ -1,0 +1,146 @@
+.history-dialog {
+  min-width: 520px;
+  max-width: 720px;
+}
+
+.history-dialog-hint {
+  font-size: 13px;
+  color: var(--c-text-muted, #555);
+  margin-bottom: 12px;
+}
+
+.history-dialog-empty {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--c-text-muted, #888);
+  padding: 18px 0;
+  text-align: center;
+}
+
+.history-dialog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.history-dialog-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--c-surface, #f6f7f9);
+}
+
+.history-dialog-row-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 0 0 auto;
+  max-width: 180px;
+}
+
+.history-dialog-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 600;
+  border: 1px solid var(--c-border);
+  background: white;
+  user-select: none;
+}
+
+.history-dialog-badge-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.history-dialog-badge-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.history-dialog-badge-added {
+  background: #e8f5e9;
+  border-color: #a5d6a7;
+  color: #1b5e20;
+}
+
+.history-dialog-badge-removed {
+  background: #fdecea;
+  border-color: #f5b7b1;
+  color: #922b21;
+}
+
+.history-dialog-badge-modified {
+  background: #fff8e1;
+  border-color: #ffe082;
+  color: #6f4f00;
+}
+
+.history-dialog-badge-top-level {
+  background: #e3f2fd;
+  border-color: #90caf9;
+  color: #0d47a1;
+}
+
+.history-dialog-badge-noop {
+  background: var(--c-surface, #f0f0f0);
+  color: var(--c-text-muted, #888);
+}
+
+.history-dialog-row-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.history-dialog-row-ts {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.history-dialog-row-rel {
+  font-size: 11px;
+  color: var(--c-text-muted, #888);
+}
+
+.history-dialog-row-summary {
+  font-size: 12px;
+  color: var(--c-text-muted, #666);
+}
+
+.history-dialog-row-actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.history-dialog-row-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm, 4px);
+  background: white;
+  cursor: pointer;
+}
+
+.history-dialog-row-btn:hover {
+  background: var(--c-surface, #eef0f3);
+}
+
+.history-dialog-limit {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--c-text-muted, #888);
+  text-align: right;
+}

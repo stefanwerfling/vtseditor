@@ -100,6 +100,10 @@ function expressMiddleware(): Plugin {
             // to the client via the load-schema responses. Falls back to
             // a sane default; negative/zero values are clamped to 1.
             let openEntryCacheSize = 3;
+            // editor.historySize from vtseditor.json — how many per-item
+            // snapshots the chunk-history keeps. Same default + clamping
+            // pattern as openEntryCacheSize.
+            let historySize = 20;
 
             if (configFile) {
                 const config = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
@@ -129,6 +133,10 @@ function expressMiddleware(): Plugin {
 
                         if (typeof config.editor.openEntryCacheSize === 'number') {
                             openEntryCacheSize = Math.max(1, Math.floor(config.editor.openEntryCacheSize));
+                        }
+
+                        if (typeof config.editor.historySize === 'number') {
+                            historySize = Math.max(1, Math.floor(config.editor.historySize));
                         }
                     }
 
@@ -206,7 +214,7 @@ function expressMiddleware(): Plugin {
                         console.log(' ');
                         console.log(' ');
 
-                        repositories.register(crypto.randomUUID(), project);
+                        repositories.register(crypto.randomUUID(), project, {historySize});
                     }
                 } else {
                     console.log('Your config file has an incorrect structure, please check the!');

@@ -9,6 +9,7 @@ import {ContextMenu, ContextMenuEntry} from '../Base/ContextMenu.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
 import {EditorIcons} from '../Base/EditorIcons.js';
 import {ExtendTypeBadge} from '../Base/ExtendType/ExtendTypeBadge.js';
+import {HistoryDialog} from '../Base/HistoryDialog.js';
 import {GlobalDragDrop} from '../GlobalDragDrop.js';
 import {
     JsonSchemaDescription,
@@ -20,6 +21,7 @@ import {
     SchemaJsonSchemaFieldType
 } from '../JsonData.js';
 import jsPlumbInstance from '../jsPlumbInstance.js';
+import {SchemaEditor} from '../SchemaEditor.js';
 import {SchemaTypes} from '../Register/SchemaTypes.js';
 import {SchemaTableDialog} from './SchemaTableDialog.js';
 import {SchemaTableField} from './SchemaTableField.js';
@@ -226,6 +228,12 @@ export class SchemaTable extends BaseTable {
             }
         });
 
+        this._contextMenu.addItem({
+            icon: EditorIcons.history,
+            label: 'View history',
+            onClick: () => this._openHistoryDialog()
+        });
+
         this._contextMenu.addSeparator();
 
         this._contextMenu.addItem({
@@ -352,6 +360,28 @@ export class SchemaTable extends BaseTable {
     /**
      * open the edit dialog
      */
+    protected _openHistoryDialog(): void {
+        if (this._readOnly) {
+            AlertDialog.showAlert('Schema', 'Schema is readonly!', AlertDialogTypes.warning);
+            return;
+        }
+
+        const editor = SchemaEditor.getActive();
+        const client = editor?.getEditorClient() ?? null;
+
+        if (client === null) {
+            AlertDialog.showAlert(
+                'History',
+                'No active project — history is unavailable.',
+                AlertDialogTypes.warning
+            );
+            return;
+        }
+
+        const dialog = new HistoryDialog('schema', this._unid, this._name, client);
+        dialog.show();
+    }
+
     public openEditDialog(): void {
         if (this._readOnly) {
             AlertDialog.showAlert('Schema', 'Schema is readonly!', AlertDialogTypes.warning);

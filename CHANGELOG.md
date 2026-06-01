@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-01
+
+### Added
+
+- **Per-schema / per-enum history with one-click restore.** Every save
+  snapshots the previous version of every changed schema and enum into
+  the chunk file at `schemas/entries/<unid>.json`. A new
+  **View history** entry in the schema / enum context menu opens a
+  dialog that lists snapshots newest-first with per-row diff badges
+  computed against the next-in-time state:
+  - 🟢 ➕ N — fields / enum values that were added afterwards
+  - 🔴 🗑 N — fields / values that were removed
+  - 🟡 📝 N — fields / values renamed or otherwise modified
+  - 🔵 ℹ️ — top-level changes (name, description, `extend`)
+  - ⚪ 🟰 — no diff vs the next state
+
+  One click restores any snapshot; the displaced state becomes the
+  newest snapshot on the next save, so restore is itself reversible.
+  Backed by:
+  - `GET /api/projects/:pid/schemas/:unid/history`
+  - `POST /api/projects/:pid/schemas/:unid/history/restore` body `{ts}`
+  - matching `enums/:unid/history` pair
+  - new SSE ops `schema_restore` / `enum_restore` so other tabs apply
+    the replacement directly.
+
+  Configurable cap via new optional `editor.historySize` (default
+  `20`, minimum `1`) — see [`doc/Config.md`](doc/Config.md).
+
+- **Chunked on-disk schema layout (v2).** The monolithic
+  `schemas/schema.json` is now an index; per-file entries
+  (`type: 'file'`) carry their schemas / enums / links in
+  `schemas/entries/<unid>.json`. Smaller git diffs per save, faster
+  server boot on large projects. Auto-migration on first save after
+  loading a legacy v1 file — the original is preserved as
+  `schema.v1.backup.json`. Stale chunk files for deleted file entries
+  are cleaned up on every flush.
+
+- **Lazy hydration in the browser.** Startup fetches only
+  `/api/load-schema/skeleton` (tree + names, no fields or values).
+  File entries are hydrated on demand when activated, with an LRU
+  cache keeping the most-recently-used files in memory. New optional
+  `editor.openEntryCacheSize` (default `3`, minimum `1`) controls the
+  cap. Cross-file link targets are transparently co-hydrated so the
+  canvas never paints a dangling arrow.
+
+- **Granular load routes**:
+  - `GET /api/load-schema/skeleton` — tree only, no per-file content
+  - `GET /api/projects/:pid/entries/:unid` — full content of one
+    container (typically a file entry the user just opened)
+  - `GET /api/extern/:eid/entries/:unid` — same for read-only extern
+    packages discovered by `SchemaExternLoader`.
+
+### Changed
+
+- `SchemaJsonEntryChunk` validator gains an optional `history` field
+  (keyed by schema/enum unid, value is the snapshot list). Older
+  chunks without it still validate; the next flush rewrites them
+  with history attached.
+- `SchemaRepositoryRegistry.register(...)` takes an options bag
+  forwarded to `SchemaFsRepository` (`historySize`).
+- `SchemaPatchReducer` now handles `schema_restore` and `enum_restore`
+  events.
+
 ## [1.1.0] - 2026-04-24
 
 ### Added

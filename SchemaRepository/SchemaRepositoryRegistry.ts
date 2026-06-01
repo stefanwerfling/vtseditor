@@ -2,6 +2,10 @@ import {SchemaProject} from '../SchemaProject/SchemaProject.js';
 import {SchemaFsRepository} from './SchemaFsRepository.js';
 import {SchemaRepositoryEventBus} from './SchemaRepositoryEventBus.js';
 
+export type SchemaRepositoryRegisterOptions = {
+    historySize?: number;
+};
+
 /**
  * Registry of project repositories keyed by the runtime project UUID that the
  * frontend receives from /api/load-schema. Each project owns exactly one
@@ -12,9 +16,15 @@ export class SchemaRepositoryRegistry {
     private readonly _repos = new Map<string, SchemaFsRepository>();
     private readonly _buses = new Map<string, SchemaRepositoryEventBus>();
 
-    public register(unid: string, project: SchemaProject): SchemaFsRepository {
+    public register(
+        unid: string,
+        project: SchemaProject,
+        options: SchemaRepositoryRegisterOptions = {}
+    ): SchemaFsRepository {
         const bus = new SchemaRepositoryEventBus();
-        const repo = new SchemaFsRepository(project, bus);
+        const repo = new SchemaFsRepository(project, bus, undefined, {
+            historySize: options.historySize
+        });
 
         repo.load();
         this._repos.set(unid, repo);

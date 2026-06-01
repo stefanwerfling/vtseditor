@@ -56,6 +56,11 @@ Despite `vite.config.ts` being a "config" file, it is actually the **backend**: 
 ### The schema JSON file
 `schemaPath` (default `./schemas/schema.json`) holds the whole editor state as `{ fs: JsonDataFS, editor: { controls_width } }`. This is the user's source of truth — generated `.ts` files under `destinationPath` are derived and can be regenerated.
 
+Since v1.2.0 the on-disk layout is **chunked** (`version: 2`): `schema.json` is the tree skeleton; every `type: 'file'` entry's content lives in `schemas/entries/<unid>.json`. `SchemaJsonLoader.loadJsonDataFromFile` transparently splices chunks back into the tree, so anything reading `JsonData` sees the same shape as v1. Migration from v1 happens on the first save (backup written as `schema.v1.backup.json`); see `SchemaFsRepository._writeV2`.
+
+### Per-item history
+Each `entries/<unid>.json` chunk also stores an optional `history` map keyed by schema/enum unid. `SchemaFsRepository._captureHistoryForChunk` runs on every flush: reads the previous on-disk chunk, diffs each schema/enum, and appends the prior version as a `JsonHistoryEntry` (`{ts, kind, snapshot}`). Capped per item by `editor.historySize` (default 20). Restoring through `restoreSchema`/`restoreEnum` replaces the live item in-place and emits a `schema_restore` / `enum_restore` SSE event; `SchemaPatchReducer` applies the replacement on receiver tabs. The dialog (`SchemaEditor/Base/HistoryDialog.ts`) is reached from the schema/enum context menu **View history** entry and renders per-row diff badges (added/removed/modified/top-level) computed server-side against the next-in-time state.
+
 ## Things that will trip you up
 
 - **ESM with `.js` imports in `.ts` files.** `package.json` has `"type": "module"` and `tsconfig.json` targets ESNext. Every internal import must use the `.js` extension even though the source is `.ts` (e.g. `import { SchemaEditor } from './SchemaEditor/SchemaEditor.js'`). This is required for Vite/Node ESM resolution.

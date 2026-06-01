@@ -160,6 +160,17 @@ export class SchemaPatchReducer {
                 return 'applied';
             }
 
+            case 'schema_restore': {
+                const ctx = SchemaFsTreeWalker.findSchema(fs, event.payload.unid);
+
+                if (ctx === null) {
+                    return 'resync';
+                }
+
+                ctx.container.schemas[ctx.index] = event.payload.schema;
+                return 'applied';
+            }
+
             // Fields -----------------------------------------------------------
 
             case 'field_create': {
@@ -270,6 +281,17 @@ export class SchemaPatchReducer {
 
                 const [enumeration] = src.container.enums.splice(src.index, 1);
                 dst.container.enums.push(enumeration);
+                return 'applied';
+            }
+
+            case 'enum_restore': {
+                const ctx = SchemaFsTreeWalker.findEnum(fs, event.payload.unid);
+
+                if (ctx === null) {
+                    return 'resync';
+                }
+
+                ctx.container.enums[ctx.index] = event.payload.enumeration;
                 return 'applied';
             }
 

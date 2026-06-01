@@ -24,5 +24,6 @@ export enum EditorIcons {
     project = '🌱',
     global = '🌍',
     setting = '⚙️',
-    link = '🔗'
+    link = '🔗',
+    history = '🕘'
 }

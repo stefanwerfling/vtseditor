@@ -16,8 +16,9 @@ Configuration is handled via the **`vtseditor.json`** file.
     - [Server](#server)
     - [Browser](#browser)
     - [MCP](#mcp)
-3. [Workflow](#workflow)
-4. [Example Workflow](#example-workflow-with-the-provided-config)
+3. [Schema storage layout](#schema-storage-layout)
+4. [Workflow](#workflow)
+5. [Example Workflow](#example-workflow-with-the-provided-config)
 
 ---
 
@@ -111,13 +112,15 @@ Editor-side runtime settings. AI provider entries (`providers`, `aiProvider`) ar
 | Field                       | Type      | Description |
 |------------------------------|-----------|-------------|
 | **`openEntryCacheSize`**     | `number`  | Optional. How many recently-opened files keep their canvas tables (schemas/enums/links) hydrated in the browser besides the currently active one. Older files are dehydrated on an LRU basis and re-fetched on demand when reopened. Default `3`, minimum `1`. Raise it on projects where you frequently switch between many files; lower it to keep memory bounded on huge schemas. |
+| **`historySize`**            | `number`  | Optional. How many historical snapshots are kept per schema and per enum inside the chunk file (`schemas/entries/<unid>.json`). A snapshot is appended on every save whose state for that item differs from disk; oldest entries beyond the limit are dropped. Default `20`, minimum `1`. Browse and restore from the **View history** entry in each schema / enum context menu. |
 
 Example:
 
 ```json
 {
   "editor": {
-    "openEntryCacheSize": 5
+    "openEntryCacheSize": 5,
+    "historySize": 30
   }
 }
 ```
@@ -151,6 +154,37 @@ Opt-in Model Context Protocol endpoint so AI agents (e.g. Claude CLI) can edit t
 | **`path`**    | `string`  | Optional URL path (default `/mcp`). |
 
 See [ConfigMcp.md](ConfigMcp.md) for the full tool list and Claude CLI setup.
+
+---
+
+## Schema storage layout
+
+Since **v1.2.0** the file pointed at by `schemaPath` is an **index** plus
+per-file content chunks alongside it:
+
+```
+schemas/
+  schema.json                 ← tree skeleton (version: 2)
+  entries/
+    <fileEntryUnid>.json      ← one chunk per "file" entry
+    ...
+  schema.v1.backup.json       ← only present when migrated from v1
+```
+
+- **Auto-migration**: if you upgrade from `< 1.2.0` and your schema
+  is still in the legacy single-file (v1) layout, the next save
+  rewrites it as v2 and copies the original to
+  `schema.v1.backup.json`. The migration runs once and is safe to
+  delete the backup afterwards.
+- **Chunk shape**: each `entries/<unid>.json` carries that file
+  entry's `schemas`, `enums`, optional `links`, and an optional
+  `history` map keyed by item unid. See [`editor.historySize`](#editor)
+  for the history cap.
+- **Stale-chunk cleanup**: when a file entry is deleted, the matching
+  `entries/<unid>.json` is removed on the next flush.
+- **Hand-edited chunks** validate the same way as the index; a
+  malformed chunk shows up as an empty file entry rather than
+  crashing the server.
 
 ---
 

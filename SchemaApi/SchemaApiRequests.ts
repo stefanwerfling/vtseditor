@@ -64,6 +64,10 @@ export const SchemaMoveBody = Vts.object({
     toContainerUnid: Vts.string()
 });
 
+export const HistoryRestoreBody = Vts.object({
+    ts: Vts.number()
+});
+
 // Fields ----------------------------------------------------------------------
 
 export const FieldCreateBody = Vts.object({

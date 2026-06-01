@@ -97,7 +97,12 @@ export const SchemaConfigEditor = Vts.object({
     // Older ones are dehydrated on a LRU basis to keep memory bounded on
     // large projects. The currently active entry never counts against
     // the limit. Default 3 when omitted; minimum 1.
-    openEntryCacheSize: Vts.optional(Vts.number())
+    openEntryCacheSize: Vts.optional(Vts.number()),
+    // How many historical snapshots are kept per schema/enum inside the
+    // chunk file (`schemas/entries/<unid>.json`). A snapshot is appended
+    // on each flush that changed the item; oldest entries beyond the
+    // limit are dropped. Default 20; minimum 1.
+    historySize: Vts.optional(Vts.number())
 });
 
 /**

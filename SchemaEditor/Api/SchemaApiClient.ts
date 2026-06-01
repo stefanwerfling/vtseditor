@@ -3,6 +3,7 @@ import {
     JsonEditorSettings,
     JsonEnumDescription,
     JsonEnumValueDescription,
+    JsonHistoryEntryWithChange,
     JsonLinkDescription,
     JsonSchemaDescription,
     JsonSchemaDescriptionExtend,
@@ -11,6 +12,17 @@ import {
     JsonSchemaPositionDescription
 } from '../JsonData.js';
 import {SchemaEditorApiCall} from './SchemaEditorApiCall.js';
+
+/**
+ * Shape returned by the history GET endpoints. `history` is newest-first
+ * (server-side ordering); `limit` is `editor.historySize` so the UI can
+ * show "kept up to N versions". Each entry carries a `changes` summary
+ * computed by the server against the next-in-time state.
+ */
+export type HistoryListing = {
+    history: JsonHistoryEntryWithChange[];
+    limit: number;
+};
 
 /**
  * Error thrown by any {@link SchemaApiClient} method when the server returns
@@ -127,6 +139,14 @@ export class SchemaApiClient {
         return this._send('POST', `/schemas/${unid}/move`, args);
     }
 
+    public getSchemaHistory(unid: string): Promise<MutationResponse<HistoryListing>> {
+        return this._send<HistoryListing>('GET', `/schemas/${unid}/history`);
+    }
+
+    public restoreSchemaHistory(unid: string, ts: number): Promise<MutationResponse<never>> {
+        return this._send('POST', `/schemas/${unid}/history/restore`, {ts});
+    }
+
     // Fields ------------------------------------------------------------------
 
     public createField(
@@ -211,6 +231,14 @@ export class SchemaApiClient {
         args: {toContainerUnid: string}
     ): Promise<MutationResponse<never>> {
         return this._send('POST', `/enums/${unid}/move`, args);
+    }
+
+    public getEnumHistory(unid: string): Promise<MutationResponse<HistoryListing>> {
+        return this._send<HistoryListing>('GET', `/enums/${unid}/history`);
+    }
+
+    public restoreEnumHistory(unid: string, ts: number): Promise<MutationResponse<never>> {
+        return this._send('POST', `/enums/${unid}/history/restore`, {ts});
     }
 
     // Enum values -------------------------------------------------------------

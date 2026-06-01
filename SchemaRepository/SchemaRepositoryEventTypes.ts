@@ -40,6 +40,7 @@ export type SchemaRepositoryEventBody =
     | {op: 'schema_update'; payload: {unid: string; patch: Partial<JsonSchemaDescription>}}
     | {op: 'schema_delete'; payload: {unid: string; containerUnid: string}}
     | {op: 'schema_move'; payload: {unid: string; fromContainerUnid: string; toContainerUnid: string}}
+    | {op: 'schema_restore'; payload: {unid: string; containerUnid: string; schema: JsonSchemaDescription; ts: number}}
     // fields (inside a schema)
     | {op: 'field_create'; payload: {schemaUnid: string; field: JsonSchemaFieldDescription; index: number}}
     | {op: 'field_update'; payload: {schemaUnid: string; fieldUnid: string; patch: Partial<JsonSchemaFieldDescription>}}
@@ -50,6 +51,7 @@ export type SchemaRepositoryEventBody =
     | {op: 'enum_update'; payload: {unid: string; patch: Partial<JsonEnumDescription>}}
     | {op: 'enum_delete'; payload: {unid: string; containerUnid: string}}
     | {op: 'enum_move'; payload: {unid: string; fromContainerUnid: string; toContainerUnid: string}}
+    | {op: 'enum_restore'; payload: {unid: string; containerUnid: string; enumeration: JsonEnumDescription; ts: number}}
     // enum values (inside an enum)
     | {op: 'enum_value_create'; payload: {enumUnid: string; value: JsonEnumValueDescription; index: number}}
     | {op: 'enum_value_update'; payload: {enumUnid: string; valueUnid: string; patch: Partial<JsonEnumValueDescription>}}
@@ -80,6 +82,7 @@ export const SCHEMA_REPOSITORY_EVENT_OPS: SchemaRepositoryEventOp[] = [
     'schema_update',
     'schema_delete',
     'schema_move',
+    'schema_restore',
     'field_create',
     'field_update',
     'field_delete',
@@ -88,6 +91,7 @@ export const SCHEMA_REPOSITORY_EVENT_OPS: SchemaRepositoryEventOp[] = [
     'enum_update',
     'enum_delete',
     'enum_move',
+    'enum_restore',
     'enum_value_create',
     'enum_value_update',
     'enum_value_delete',
