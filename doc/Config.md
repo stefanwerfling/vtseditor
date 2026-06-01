@@ -12,6 +12,7 @@ Configuration is handled via the **`vtseditor.json`** file.
     - [Projects](#projects)
     - [Code Generation](#code)
     - [Scripts](#scripts)
+    - [Editor](#editor)
     - [Server](#server)
     - [Browser](#browser)
     - [MCP](#mcp)
@@ -101,6 +102,25 @@ Allows running hooks before and after code generation.
 A **script object** contains:
 - **`path`**: Working directory for the script.
 - **`script`**: Command to execute (e.g. `npm run compile`).
+
+---
+
+### `editor`
+Editor-side runtime settings. AI provider entries (`providers`, `aiProvider`) are documented in [ConfigAI.md](ConfigAI.md).
+
+| Field                       | Type      | Description |
+|------------------------------|-----------|-------------|
+| **`openEntryCacheSize`**     | `number`  | Optional. How many recently-opened files keep their canvas tables (schemas/enums/links) hydrated in the browser besides the currently active one. Older files are dehydrated on an LRU basis and re-fetched on demand when reopened. Default `3`, minimum `1`. Raise it on projects where you frequently switch between many files; lower it to keep memory bounded on huge schemas. |
+
+Example:
+
+```json
+{
+  "editor": {
+    "openEntryCacheSize": 5
+  }
+}
+```
 
 ---
 

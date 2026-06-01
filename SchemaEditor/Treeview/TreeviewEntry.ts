@@ -117,6 +117,45 @@ export class TreeviewEntry {
     protected _links: LinkTable[] = [];
 
     /**
+     * True when the canvas content for this entry (schemas, enums, links)
+     * is live in memory. Set to `false` only on `file` entries loaded
+     * through {@link setSkeletonData}; folder/project/root/extern remain
+     * `true` and just hold their children. Hydration is driven by the
+     * SchemaEditor when the user makes the file active.
+     * @protected
+     */
+    protected _isHydrated: boolean = true;
+
+    /**
+     * Placeholder schema unids/names captured from the skeleton load so
+     * the tree leaves can be re-created on demand after a dehydrate.
+     * Stays empty for entries that were never loaded as skeleton.
+     * @protected
+     */
+    protected _skeletonSchemas: {unid: string; name: string}[] = [];
+
+    /**
+     * Placeholder enum unids/names — same role as {@link _skeletonSchemas}.
+     * @protected
+     */
+    protected _skeletonEnums: {unid: string; name: string}[] = [];
+
+    /**
+     * Unid of the owning project (or extern source) — needed to address
+     * the hydrate endpoint (`/api/projects/:pid/entries/:unid` or the
+     * extern twin). Inherited from the parent during skeleton load.
+     * @protected
+     */
+    protected _projectUnid: string = '';
+
+    /**
+     * True when this entry sits under an extern (read-only) source. Used
+     * to pick the correct hydrate endpoint.
+     * @protected
+     */
+    protected _isExtern: boolean = false;
+
+    /**
      * Constructor
      * @param {string} unid
      * @param {string} name
@@ -826,6 +865,14 @@ export class TreeviewEntry {
     }
 
     /**
+     * Return the child entries (folders / files / schemas / enums).
+     * Order matches `_list` insertion / sort order.
+     */
+    public getChildren(): TreeviewEntry[] {
+        return Array.from(this._list.values());
+    }
+
+    /**
      * Get data
      * @return {JsonDataFS}
      */
@@ -844,16 +891,46 @@ export class TreeviewEntry {
 
         const enums: JsonEnumDescription[] = [];
 
-        for (const aenum of this._enums) {
-            enums.push(aenum.getData());
+        if (this._isHydrated) {
+            for (const aenum of this._enums) {
+                enums.push(aenum.getData());
+            }
+        } else {
+            // Skeleton-only file: emit placeholders so callers walking
+            // the tree (e.g. _updateTreeview, sorting, search) see the
+            // names without forcing a hydrate. Heavy fields are kept
+            // at their default-empty values so a downstream
+            // setSkeletonData round-trips cleanly.
+            for (const placeholder of this._skeletonEnums) {
+                enums.push({
+                    unid: placeholder.unid,
+                    name: placeholder.name,
+                    pos: {x: 0, y: 0},
+                    values: [],
+                    description: ''
+                });
+            }
         }
 
         // schemas -----------------------------------------------------------------------------------------------------
 
         const schemas: JsonSchemaDescription[] = [];
 
-        for (const table of this._tables) {
-            schemas.push(table.getData());
+        if (this._isHydrated) {
+            for (const table of this._tables) {
+                schemas.push(table.getData());
+            }
+        } else {
+            for (const placeholder of this._skeletonSchemas) {
+                schemas.push({
+                    unid: placeholder.unid,
+                    name: placeholder.name,
+                    extend: {type: 'object'},
+                    pos: {x: 0, y: 0},
+                    fields: [],
+                    description: ''
+                });
+            }
         }
 
         // links -------------------------------------------------------------------------------------------------------
@@ -945,6 +1022,258 @@ export class TreeviewEntry {
                 const link = new LinkTable(aLink.unid, aLink.link_unid);
                 link.setData(aLink);
                 this.addLinkTable(link);
+            }
+        }
+    }
+
+    /**
+     * Set the project / extern source this entry belongs to so the
+     * SchemaEditor can address the right hydrate endpoint when the user
+     * opens it. Propagates down on skeleton load.
+     */
+    public setProjectScope(projectUnid: string, isExtern: boolean): void {
+        this._projectUnid = projectUnid;
+        this._isExtern = isExtern;
+    }
+
+    /**
+     * Project / extern source unid this entry belongs to.
+     */
+    public getProjectUnid(): string {
+        return this._projectUnid;
+    }
+
+    /**
+     * True when this entry sits under an extern (read-only) source.
+     */
+    public isExternEntry(): boolean {
+        return this._isExtern;
+    }
+
+    /**
+     * True when canvas content (schemas/enums/links) is live. False on
+     * `file` entries that were loaded as skeleton and have not been
+     * opened yet — those carry only placeholder tree leaves.
+     */
+    public isHydrated(): boolean {
+        return this._isHydrated;
+    }
+
+    /**
+     * Lightweight counterpart to {@link setData} used by the chunked
+     * load path. Builds the tree structure from a {@link JsonDataFS} but
+     * does **not** instantiate {@link SchemaTable}/{@link EnumTable} for
+     * `file` entries — only placeholder tree leaves are added so the
+     * treeview renders and the type registry stays populated. `file`
+     * entries are marked unhydrated; the SchemaEditor calls
+     * {@link hydrate} on demand when the user opens one.
+     *
+     * Recurses into sub-containers (`folder`, `project`, `extern`)
+     * passing the same project scope down.
+     */
+    public setSkeletonData(data: JsonDataFS, projectUnid: string, isExtern: boolean): void {
+        this.removeEntrys();
+
+        this._unid = data.unid;
+        this.setType(data.type);
+        this.setName(data.name);
+
+        // Project / extern entries reset the addressing context — their
+        // own unid is the pid (or eid) used by the hydrate endpoints,
+        // and all descendants inherit it. The synthetic root sits above
+        // this and just delegates to its project children.
+        let childProjectUnid = projectUnid;
+        let childIsExtern = isExtern;
+
+        if (data.type === SchemaJsonDataFSType.project) {
+            childProjectUnid = data.unid;
+            childIsExtern = false;
+        } else if (data.type === SchemaJsonDataFSType.extern) {
+            childProjectUnid = data.unid;
+            childIsExtern = true;
+        }
+
+        this.setProjectScope(childProjectUnid, childIsExtern);
+
+        if (data.icon) {
+            this.setIcon(data.icon);
+        }
+
+        if (data.istoggle) {
+            this.setToggle(data.istoggle);
+        }
+
+        // Child containers (folder/project/extern under root, files
+        // inside folders). Recurse so the skeleton fills the whole
+        // tree below this node.
+        for (const aEntry of data.entrys) {
+            if (SchemaJsonDataFS.validate(aEntry, [])) {
+                const entry = new TreeviewEntry(aEntry.unid, aEntry.name, aEntry.type);
+                this.addEntry(entry);
+                entry.setSkeletonData(aEntry, childProjectUnid, childIsExtern);
+            }
+        }
+
+        // For schemas/enums on a `file` entry the skeleton ships
+        // {unid, name} placeholders. Stash them and render tree leaves
+        // only — full hydration creates the canvas tables later.
+        if (this._type === SchemaJsonDataFSType.file) {
+            this._skeletonSchemas = data.schemas.map((s) => ({unid: s.unid, name: s.name}));
+            this._skeletonEnums = (data.enums ?? []).map((e) => ({unid: e.unid, name: e.name}));
+            this._isHydrated = false;
+
+            this._renderSkeletonLeaves();
+        }
+    }
+
+    /**
+     * Add a tree leaf for a schema/enum placeholder without creating a
+     * {@link SchemaTable}/{@link EnumTable}. Shared by skeleton load and
+     * dehydrate.
+     * @protected
+     */
+    protected _renderSkeletonLeaves(): void {
+        // Order matches the eager-load `setData` path (enums first,
+        // then schemas) so the tree does not visibly reshuffle when a
+        // file transitions skeleton → hydrated → skeleton.
+        for (const placeholder of this._skeletonEnums) {
+            const entry = new TreeviewEntry(
+                placeholder.unid,
+                placeholder.name,
+                SchemaJsonDataFSType.enum
+            );
+
+            entry.setReadOnly(this._readonly);
+            this._list.set(entry.getUnid(), entry);
+            this._liElement.appendChild(entry.getElement());
+        }
+
+        for (const placeholder of this._skeletonSchemas) {
+            const entry = new TreeviewEntry(
+                placeholder.unid,
+                placeholder.name,
+                SchemaJsonDataFSType.schema
+            );
+
+            entry.setReadOnly(this._readonly);
+            this._list.set(entry.getUnid(), entry);
+            this._liElement.appendChild(entry.getElement());
+        }
+    }
+
+    /**
+     * Replace the placeholder tree leaves on a `file` entry with live
+     * {@link SchemaTable}/{@link EnumTable}/{@link LinkTable} instances
+     * built from the per-entry payload that
+     * `/api/projects/:pid/entries/:unid` returned. After this call the
+     * entry behaves like one loaded eagerly through {@link setData}.
+     */
+    public hydrate(data: JsonDataFS): void {
+        // Tear down whatever is live (skeleton leaves or a previous
+        // hydration that is being replaced) so we rebuild from scratch.
+        this._destroyTablesAndLeaves();
+
+        if (data.enums) {
+            for (const aEnum of data.enums) {
+                const tenum = new EnumTable(aEnum.unid, aEnum.name);
+                tenum.setPendingData(aEnum);
+                this.addEnumTable(tenum);
+            }
+        }
+
+        for (const aSchema of data.schemas) {
+            let extend: JsonSchemaDescriptionExtend|null = null;
+
+            if (SchemaJsonSchemaDescriptionExtend.validate(aSchema.extend, [])) {
+                extend = aSchema.extend;
+            }
+
+            const schema = new SchemaTable(aSchema.unid, aSchema.name, extend);
+            schema.setPendingData(aSchema);
+            this.addSchemaTable(schema);
+        }
+
+        if (data.links) {
+            for (const aLink of data.links) {
+                const link = new LinkTable(aLink.unid, aLink.link_unid);
+                link.setData(aLink);
+                this.addLinkTable(link);
+            }
+        }
+
+        // Keep the placeholder list in sync — used by dehydrate to
+        // re-render leaves and by callers (e.g. _updateTreeview) that
+        // need to know what's inside without touching the live tables.
+        this._skeletonSchemas = data.schemas.map((s) => ({unid: s.unid, name: s.name}));
+        this._skeletonEnums = (data.enums ?? []).map((e) => ({unid: e.unid, name: e.name}));
+        this._isHydrated = true;
+    }
+
+    /**
+     * Drop live {@link SchemaTable}/{@link EnumTable}/{@link LinkTable}
+     * instances and re-render the schema/enum tree leaves from the
+     * cached placeholder data. Used by the LRU when an old file falls
+     * off the cache tail.
+     *
+     * The placeholder list is refreshed from the current live tables
+     * first so any user-added/renamed schemas or enums survive the
+     * round-trip — addSchemaTable / removeSchemaTable do not maintain
+     * the placeholder list incrementally.
+     */
+    public dehydrate(): void {
+        if (!this._isHydrated) {
+            return;
+        }
+
+        this._skeletonSchemas = this._tables.map((t) => ({unid: t.getUnid(), name: t.getName()}));
+        this._skeletonEnums = this._enums.map((e) => ({unid: e.getUnid(), name: e.getName()}));
+
+        this._destroyTablesAndLeaves();
+        this._renderSkeletonLeaves();
+        this._isHydrated = false;
+    }
+
+    /**
+     * Common teardown for the schema/enum/link instances and the
+     * matching tree leaves. Shared by {@link hydrate} (which rebuilds
+     * straight after) and {@link dehydrate} (which re-renders skeleton
+     * leaves straight after).
+     * @protected
+     */
+    protected _destroyTablesAndLeaves(): void {
+        for (const aenum of this._enums) {
+            aenum.remove();
+        }
+
+        for (const atable of this._tables) {
+            atable.remove();
+        }
+
+        this._enums = [];
+        this._tables = [];
+        this._links = [];
+
+        // Tree leaves of type schema/enum live in `_list`. Folder/file
+        // children must survive because skeleton load already placed
+        // them as direct children too (e.g. project root holding
+        // folders), and dehydrate is only called on file entries which
+        // do not contain folder children anyway.
+        const toRemove: string[] = [];
+
+        for (const [unid, child] of this._list.entries()) {
+            const t = child.getType();
+
+            if (t === SchemaJsonDataFSType.schema || t === SchemaJsonDataFSType.enum) {
+                toRemove.push(unid);
+            }
+        }
+
+        for (const unid of toRemove) {
+            const child = this._list.get(unid);
+
+            if (child) {
+                this._liElement.removeChild(child.getElement());
+                this._list.delete(unid);
             }
         }
     }
@@ -1127,6 +1456,24 @@ export class TreeviewEntry {
         this._tables = [];
         this._links = [];
         this._list.clear();
+    }
+
+    /**
+     * Re-append the live `_list` children to {@link _liElement} in
+     * their current Map iteration order. Used after
+     * {@link sortingEntrys} so the DOM picks up the new order without
+     * the destructive rebuild that {@link removeEntrys} + {@link setData}
+     * would do (which dehydrates unrelated entries). Recurses so a
+     * sort at any level reorders everything below it as well.
+     */
+    public redrawChildren(recursive: boolean = true): void {
+        for (const [, entry] of this._list.entries()) {
+            this._liElement.appendChild(entry.getElement());
+
+            if (recursive) {
+                entry.redrawChildren(true);
+            }
+        }
     }
 
     /**
@@ -1385,6 +1732,18 @@ export class TreeviewEntry {
 
             if (allowDirectDeleteType.indexOf(aEntry.getType()) > -1) {
                 aEntry.removeEntrys();
+
+                // Drop the child's DOM subtree from this entry so the
+                // tree visually reflects the deletion. Previously the
+                // editor relied on _updateTreeview() to rebuild the
+                // whole tree after a delete and never cleaned up the
+                // child here; lazy hydration cannot afford that
+                // destructive rebuild anymore (it would dehydrate
+                // unrelated entries).
+                if (aEntry.getElement().parentElement === this._liElement) {
+                    this._liElement.removeChild(aEntry.getElement());
+                }
+
                 this._list.delete(unid);
 
                 return true;
@@ -1449,36 +1808,41 @@ export class TreeviewEntry {
         ): TreeviewSearchResult[] {
         const results: TreeviewSearchResult[] = [];
 
-        // schemas -----------------------------------------------------------------------------------------------------
-
-        for (const atable of this._tables) {
-            if (matcher(atable.getName(), pattern)) {
-                results.push({
-                    entry: this,
-                    enum: null,
-                    schema: atable,
-                    path: path
-                });
-            }
-        }
-
-        // enum --------------------------------------------------------------------------------------------------------
-
-        for (const aenum of this._enums) {
-            if (matcher(aenum.getName(), pattern)) {
-                results.push({
-                    entry: this,
-                    enum: aenum,
-                    schema: null,
-                    path: [...path]
-                });
-            }
-        }
-
-        // entrys ------------------------------------------------------------------------------------------------------
-
+        // Walk tree children so the result set covers both hydrated
+        // (live SchemaTable / EnumTable inside this file) and skeleton
+        // (placeholder-only) entries. `_list` is the single source of
+        // truth for "what schemas/enums exist below this node" — live
+        // tables in `_tables` / `_enums` are always mirrored as a
+        // matching tree leaf, while unhydrated files only have the
+        // tree leaves.
         for (const [, entry] of this._list.entries()) {
-            results.push(...entry.search(pattern, [...path, this], matcher));
+            const t = entry.getType();
+
+            if (t === SchemaJsonDataFSType.schema) {
+                if (matcher(entry.getName(), pattern)) {
+                    results.push({
+                        entry: this,
+                        schema: this.getTableById(entry.getUnid()),
+                        enum: null,
+                        unid: entry.getUnid(),
+                        name: entry.getName(),
+                        path: path
+                    });
+                }
+            } else if (t === SchemaJsonDataFSType.enum) {
+                if (matcher(entry.getName(), pattern)) {
+                    results.push({
+                        entry: this,
+                        schema: null,
+                        enum: this.getEnumById(entry.getUnid()),
+                        unid: entry.getUnid(),
+                        name: entry.getName(),
+                        path: path
+                    });
+                }
+            } else {
+                results.push(...entry.search(pattern, [...path, this], matcher));
+            }
         }
 
         return results;

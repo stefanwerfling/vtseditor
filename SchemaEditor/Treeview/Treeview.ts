@@ -100,6 +100,18 @@ export class Treeview {
     }
 
     /**
+     * Load a skeleton tree (no SchemaTable/EnumTable instances for
+     * `file` entries — only placeholder tree leaves). Called by
+     * {@link SchemaEditor.setData} after a {@link SchemaEditor.loadData}
+     * fetch from `/api/load-schema/skeleton`. The root carries no
+     * project scope of its own; each project/extern child resets it on
+     * the way down.
+     */
+    public setSkeletonData(data: JsonDataFS): void {
+        this._rootFolder.setSkeletonData(data, '', false);
+    }
+
+    /**
      * Remove all active name
      */
     public removeAllActiveName(): void {

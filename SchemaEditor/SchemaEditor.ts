@@ -138,6 +138,43 @@ export class SchemaEditor {
     };
 
     /**
+     * How many user-opened files (besides the currently active one)
+     * keep their hydration. Falls back to 3 when the server does not
+     * include `init.open_entry_cache_size`. Updated on every
+     * {@link loadData} so the user only has to restart the editor to
+     * pick up a config change.
+     * @protected
+     */
+    protected _openEntryLruSize: number = 3;
+
+    /**
+     * User-opened file entries, most-recently-opened first, excluding
+     * the currently active one. Trimmed to {@link _openEntryLruSize}
+     * on every activation; entries that fall off the tail are
+     * dehydrated.
+     * @protected
+     */
+    protected _hydratedLru: TreeviewEntry[] = [];
+
+    /**
+     * Files that were hydrated transparently because the active file
+     * has links pointing into them. Pinned alongside the active entry
+     * (do not count against the LRU); when the active entry changes,
+     * the previous pinned set is dehydrated unless members live in the
+     * LRU on their own.
+     * @protected
+     */
+    protected _pinnedCoHydrated: Set<TreeviewEntry> = new Set();
+
+    /**
+     * In-flight hydrate requests, keyed by entry unid, so concurrent
+     * `_updateView` and co-hydrate paths share one fetch instead of
+     * triggering duplicate requests.
+     * @protected
+     */
+    protected _pendingHydration: Map<string, Promise<void>> = new Map();
+
+    /**
      * Editor settings
      * @protected
      */
@@ -789,27 +826,13 @@ export class SchemaEditor {
             const rootEntry = this._treeview?.getRoot();
 
             if (rootEntry) {
-                const activeEntryTableId = Treeview.getActivEntryTable()?.getUnid();
-                const activeEntryId = Treeview.getActiveEntry()?.getUnid();
-
                 rootEntry.sortingEntrys();
-                this._updateTreeview();
-
-                if (activeEntryTableId) {
-                    const tentry = rootEntry.getEntryById(activeEntryTableId);
-
-                    if (tentry) {
-                        Treeview.setActivEntryTable(tentry);
-                    }
-                } else {
-                    if (activeEntryId) {
-                        const tentry = rootEntry.getEntryById(activeEntryId);
-
-                        if (tentry) {
-                            Treeview.setActivEntry(tentry);
-                        }
-                    }
-                }
+                // The Map order in `_list` is sorted, but the DOM still
+                // reflects the insertion order. Re-append children
+                // recursively to pick up the new order without
+                // rebuilding TreeviewEntries (which would dehydrate
+                // every file).
+                rootEntry.redrawChildren(true);
 
                 this._updateView();
             }
@@ -1167,6 +1190,41 @@ export class SchemaEditor {
             }
         }
 
+        // ---------------------------------------------------------------------------
+        // Lazy hydration: the skeleton load leaves `file` entries
+        // without SchemaTable/EnumTable/LinkTable instances. Before we
+        // can render the canvas we need:
+        //   (a) the active file itself hydrated; and
+        //   (b) any file that hosts a link target referenced by the
+        //       active file's links, so `parentEntry.getTableById()` in
+        //       the link-resolution loop below returns a live table.
+        // Both come from `/api/projects/:pid/entries/:unid` (or the
+        // extern twin). Kick the fetches off, re-enter `_updateView`
+        // when they settle. The canvas is left blank in the meantime —
+        // a deliberate "loading" state rather than a separate
+        // indicator widget.
+        // ---------------------------------------------------------------------------
+
+        if (entry !== null && entry.getType() === SchemaJsonDataFSType.file && !entry.isHydrated()) {
+            this._hydrateEntry(entry)
+                .then(() => this._updateView())
+                .catch((err) => this._handleApiError(err, 'Load schema file'));
+            return;
+        }
+
+        if (entry !== null && entry.getType() === SchemaJsonDataFSType.file && entry.isHydrated()) {
+            const missing = this._findUnhydratedLinkTargets(entry);
+
+            if (missing.length > 0) {
+                Promise.all(missing.map((t) => this._hydrateEntry(t)))
+                    .then(() => this._updateView())
+                    .catch((err) => this._handleApiError(err, 'Load link target'));
+                return;
+            }
+
+            this._trackActivation(entry);
+        }
+
         // -------------------------------------------------------------------------------------------------------------
 
         if (entry) {
@@ -1440,13 +1498,23 @@ export class SchemaEditor {
     }
 
     /**
-     * Update tree view
+     * Update tree view.
+     *
+     * Historically a destructive full rebuild — `getData()` snapshotted
+     * the in-memory tree, `setData()` rebuilt every TreeviewEntry from
+     * scratch. With the chunked-load architecture the rebuild would
+     * dehydrate every file (including the active one) and force a
+     * re-fetch round-trip for cosmetic reasons.
+     *
+     * Every call site that used to set `updateTreeView: true` already
+     * mutates the live tree fine-grained (addSchemaTable +
+     * addEntry on create, removeEntry on delete), so this is a no-op
+     * now. {@link redrawChildren} on the affected node covers the few
+     * remaining cases (sortEntries).
      * @protected
      */
     protected _updateTreeview(): void {
-        const data = this.getData();
-        this._treeview?.getRoot().removeEntrys();
-        this.setData(data);
+        // intentionally empty — see method doc
     }
 
     /**
@@ -1577,7 +1645,15 @@ export class SchemaEditor {
         }
 
         this._updateRegisters(rootEntry);
-        this._treeview?.setData(rootEntry);
+        this._treeview?.setSkeletonData(rootEntry);
+
+        // Clear LRU / pinned tracking — every TreeviewEntry was just
+        // rebuilt, so any prior references are stale. Hydration state
+        // will be rebuilt on demand as the user activates entries (or
+        // _restoreActiveSelection picks one).
+        this._hydratedLru = [];
+        this._pinnedCoHydrated.clear();
+        this._pendingHydration.clear();
 
         if (data.editor) {
             this._editorSettings = data.editor;
@@ -1586,6 +1662,10 @@ export class SchemaEditor {
 
         if (data.init) {
             this._editorInit = data.init;
+
+            if (typeof data.init.open_entry_cache_size === 'number') {
+                this._openEntryLruSize = Math.max(1, Math.floor(data.init.open_entry_cache_size));
+            }
         }
 
         this._treeview?.getRoot().updateView(true);
@@ -2023,6 +2103,230 @@ export class SchemaEditor {
     }
 
     /**
+     * Fetch and apply the full content for a `file` entry that was
+     * loaded as skeleton. Idempotent: an in-flight or already-resolved
+     * hydrate for the same unid returns the same promise so concurrent
+     * `_updateView` / co-hydration paths share one request.
+     */
+    protected _hydrateEntry(entry: TreeviewEntry): Promise<void> {
+        const unid = entry.getUnid();
+
+        if (entry.isHydrated()) {
+            return Promise.resolve();
+        }
+
+        const pending = this._pendingHydration.get(unid);
+
+        if (pending) {
+            return pending;
+        }
+
+        const projectUnid = entry.getProjectUnid();
+        const isExtern = entry.isExternEntry();
+
+        if (!projectUnid) {
+            return Promise.reject(new Error(`Cannot hydrate ${unid}: missing project scope`));
+        }
+
+        const url = isExtern
+            ? `/api/extern/${encodeURIComponent(projectUnid)}/entries/${encodeURIComponent(unid)}`
+            : `/api/projects/${encodeURIComponent(projectUnid)}/entries/${encodeURIComponent(unid)}`;
+
+        const promise = (async (): Promise<void> => {
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error(`Hydrate failed (${response.status}): ${response.statusText}`);
+            }
+
+            const body = await response.json();
+
+            if (!body || body.success !== true || !body.data || !body.data.fs) {
+                throw new Error('Hydrate response is malformed');
+            }
+
+            const fs = body.data.fs as JsonDataFS;
+
+            if (!SchemaJsonDataFS.validate(fs, [])) {
+                throw new Error('Hydrate payload failed schema validation');
+            }
+
+            entry.hydrate(fs);
+            // Register the freshly-hydrated tables in the type registry
+            // so field-type pickers see the real extends/fields and any
+            // schemas/enums added through the server after skeleton load
+            // are picked up.
+            this._updateRegisters(fs);
+        })();
+
+        promise.finally(() => {
+            this._pendingHydration.delete(unid);
+        });
+
+        this._pendingHydration.set(unid, promise);
+
+        return promise;
+    }
+
+    /**
+     * Return any cross-file link target files that are still
+     * unhydrated. The active entry's `LinkTable` list points at
+     * schemas/enums that might live in other files; rendering needs
+     * those parent files hydrated so {@link LinkTable.setLinkObject}
+     * can wire up a live table reference.
+     */
+    protected _findUnhydratedLinkTargets(entry: TreeviewEntry): TreeviewEntry[] {
+        const rootEntry = this._treeview?.getRoot();
+        const result: TreeviewEntry[] = [];
+        const seen = new Set<string>();
+
+        if (!rootEntry) {
+            return result;
+        }
+
+        for (const link of entry.getLinkTables()) {
+            const targetUnid = link.getLinkUnid();
+            const parent = rootEntry.findParentEntry(targetUnid);
+
+            if (!parent) {
+                continue;
+            }
+
+            if (parent === entry) {
+                continue;
+            }
+
+            if (parent.getType() !== SchemaJsonDataFSType.file) {
+                continue;
+            }
+
+            if (parent.isHydrated()) {
+                continue;
+            }
+
+            if (seen.has(parent.getUnid())) {
+                continue;
+            }
+
+            seen.add(parent.getUnid());
+            result.push(parent);
+        }
+
+        return result;
+    }
+
+    /**
+     * Bookkeeping when the user activates a file: update the LRU,
+     * evict stale entries, dehydrate link-target files that the
+     * previous active entry pinned but the new one does not need.
+     *
+     * The active entry never sits in the LRU. The active entry's
+     * link-target files are pinned in {@link _pinnedCoHydrated} so the
+     * cache size limit does not boot them out under the active
+     * entry's feet.
+     */
+    protected _trackActivation(entry: TreeviewEntry): void {
+        const rootEntry = this._treeview?.getRoot();
+
+        // 1. Recompute the new pinned set (co-hydrated link targets).
+        const newPinned = new Set<TreeviewEntry>();
+
+        if (rootEntry) {
+            for (const link of entry.getLinkTables()) {
+                const parent = rootEntry.findParentEntry(link.getLinkUnid());
+
+                if (parent
+                    && parent !== entry
+                    && parent.getType() === SchemaJsonDataFSType.file
+                    && parent.isHydrated()
+                ) {
+                    newPinned.add(parent);
+                }
+            }
+        }
+
+        // 2. Drop the new active entry from the LRU (it lives outside
+        //    the LRU while active).
+        this._hydratedLru = this._hydratedLru.filter((e) => e !== entry);
+
+        // 3. Move the previous LRU head forward — but we don't track
+        //    "previous active" explicitly. Instead, all currently
+        //    hydrated entries that aren't `entry` and aren't pinned go
+        //    into the LRU at the front (preserving recency order for
+        //    the existing tail).
+        const oldPinned = this._pinnedCoHydrated;
+        const candidates: TreeviewEntry[] = [];
+
+        // Anything pinned by the previous activation that the new one
+        // does not need is a candidate for the LRU (so the user can
+        // navigate back quickly) — but only if the user opened it
+        // explicitly at some point. Transparently co-hydrated files
+        // that were never the active entry get dehydrated outright to
+        // honour the "openEntryCacheSize counts user-opened files"
+        // semantics. We approximate "user-opened" with "was previously
+        // in the LRU" (the LRU only ever held user-opened entries).
+        for (const previously of oldPinned) {
+            if (previously === entry) {
+                continue;
+            }
+
+            if (newPinned.has(previously)) {
+                continue;
+            }
+
+            // previously pinned-only and not user-opened → dehydrate
+            this._dehydrateEntry(previously);
+        }
+
+        // The entry that was active before this call (if any) becomes
+        // a LRU candidate. We rediscover it as the unique hydrated
+        // file entry not in newPinned, not equal to `entry`, and
+        // belonging to a project (extern files do not enter the LRU
+        // because they are not user-edited).
+        if (rootEntry) {
+            const collectHydratedFiles = (node: TreeviewEntry): void => {
+                if (node.getType() === SchemaJsonDataFSType.file && node.isHydrated()) {
+                    if (node !== entry && !newPinned.has(node) && !this._hydratedLru.includes(node)) {
+                        candidates.push(node);
+                    }
+                }
+
+                for (const child of node.getChildren()) {
+                    collectHydratedFiles(child);
+                }
+            };
+
+            collectHydratedFiles(rootEntry);
+        }
+
+        // Newest candidates go to the LRU head.
+        for (const c of candidates) {
+            this._hydratedLru.unshift(c);
+        }
+
+        this._pinnedCoHydrated = newPinned;
+
+        // 4. Evict LRU tail past the configured size.
+        while (this._hydratedLru.length > this._openEntryLruSize) {
+            const evicted = this._hydratedLru.pop();
+
+            if (evicted) {
+                this._dehydrateEntry(evicted);
+            }
+        }
+    }
+
+    /**
+     * Dehydrate a previously-active file entry and clear any tracking
+     * references. Safe to call on an already-dehydrated entry.
+     */
+    protected _dehydrateEntry(entry: TreeviewEntry): void {
+        this._hydratedLru = this._hydratedLru.filter((e) => e !== entry);
+        this._pinnedCoHydrated.delete(entry);
+        entry.dehydrate();
+    }
+
+    /**
      * Presents a mutation error to the user. `SchemaApiError` carries an
      * HTTP status and a short code; unknown errors fall back to their
      * message.
@@ -2049,10 +2353,16 @@ export class SchemaEditor {
     }
 
     /**
-     * Load data by vite server
+     * Load data by vite server.
+     *
+     * Fetches the skeleton variant — the tree structure plus
+     * placeholder schema/enum unids and names — so initial render
+     * stays cheap on large projects. Per-file content is hydrated on
+     * demand by {@link _hydrateEntry} when the user activates an
+     * entry (or when a link on the active entry points into it).
      */
     public async loadData(): Promise<void> {
-        const response = await fetch('/api/load-schema');
+        const response = await fetch('/api/load-schema/skeleton');
 
         if (!response.ok) {
             throw new Error(`Can not load: ${response.statusText}`);
