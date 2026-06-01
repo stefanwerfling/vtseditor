@@ -26,6 +26,31 @@
   "engines": {
     "node": ">=20"
   },
+  "files": [
+    "cli/",
+    "Config/",
+    "SchemaApi/",
+    "SchemaEditor/",
+    "SchemaExtern/",
+    "SchemaGenerator/",
+    "SchemaMcp/",
+    "SchemaProject/",
+    "SchemaProvider/",
+    "SchemaRepository/",
+    "SchemaScript/",
+    "SchemaTypes/",
+    "SchemaUtil/",
+    "SchemaValidator/",
+    "doc/",
+    "main.css",
+    "main.ts",
+    "index.html",
+    "tsconfig.json",
+    "vite.config.ts",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE"
+  ],
   "keywords": [
     "vts",
     "editor",
