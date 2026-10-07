@@ -15,6 +15,7 @@ import {highlightRemoteNew} from './Base/RemoteNewHighlight.js';
 import {EnumTable} from './Enum/EnumTable.js';
 import {JsonDataFS, JsonEditorSettings, SchemaJsonDataFS, SchemaJsonDataFSType} from './JsonData.js';
 import jsPlumbInstance from './jsPlumbInstance.js';
+import {findEl} from './embedRoot.js';
 import {LinkTable} from './Link/LinkTable.js';
 import {SchemaTable} from './Schema/SchemaTable.js';
 import {SchemaTypes} from './Register/SchemaTypes.js';
@@ -430,7 +431,7 @@ export class SchemaEditor {
      * @protected
      */
     protected static _requireElement(id: string): HTMLElement {
-        const el = document.getElementById(id);
+        const el = findEl(id);
 
         if (el === null) {
             throw new Error(`SchemaEditor: required element #${id} not found in DOM`);
@@ -2433,7 +2434,7 @@ export class SchemaEditor {
     }
 
     private _updateTopbarHeader(schemaName: string | null): void {
-        const schemaEl = document.getElementById('topbar-schema');
+        const schemaEl = findEl('topbar-schema');
 
         if (!schemaEl) {
             return;

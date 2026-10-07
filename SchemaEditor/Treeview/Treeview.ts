@@ -1,5 +1,6 @@
 import {AlertDialog, AlertDialogTypes} from '../Base/AlertDialog.js';
 import {EditorEvents} from '../Base/EditorEvents.js';
+import {findEl} from '../embedRoot.js';
 import {JsonDataFS} from '../JsonData.js';
 import {TreeviewEntry} from './TreeviewEntry.js';
 
@@ -70,7 +71,7 @@ export class Treeview {
      * Constructor
      */
     public constructor() {
-        this._div = document.getElementById('treeview')! as HTMLDivElement;
+        this._div = findEl('treeview')! as HTMLDivElement;
         this._rootFolder = new TreeviewEntry('Root');
         this._div.appendChild(this._rootFolder.getElement());
     }
